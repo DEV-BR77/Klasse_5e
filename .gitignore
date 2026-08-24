@@ -1,0 +1,49 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# JavaScript
+node_modules/
+coverage/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Runtime data and user-generated content
+data/
+media/
+uploads/
+logs/
+backups/
+*.sqlite3
+
+# AI models and biometric artifacts
+models/
+*.onnx
+*.pt
+*.pth
+*.bin
+embeddings/
+face-crops/
+
