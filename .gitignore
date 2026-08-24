@@ -1,41 +1,43 @@
-# Secrets and local configuration
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Virtual environments and local package installs
+.venv/
+venv/
+env/
+
+# JavaScript dependencies and reports
+node_modules/
+coverage/
+
+# Local configuration and secrets
 .env
 .env.*
 !.env.example
 *.pem
 *.key
+*.p12
+*.pfx
 secrets*
 
-# Python
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-.venv/
-venv/
-dist/
-build/
-*.egg-info/
-
-# JavaScript
-node_modules/
-coverage/
-
-# Editors and operating systems
-.idea/
-.vscode/
-.DS_Store
-Thumbs.db
-
-# Runtime data and user-generated content
+# Runtime data and logs
 data/
 media/
 uploads/
 logs/
 backups/
+*.log
 *.sqlite3
 
 # AI models and biometric artifacts
@@ -47,3 +49,8 @@ models/
 embeddings/
 face-crops/
 
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -7,7 +7,7 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 | Phase | Ergebnis | Komplexität | Wesentliche Abnahme |
 |---|---|---:|---|
 | 0 | Bestandsaufnahme und Bauplan | M | diese fünf Dokumente; klare Wiederverwendung, Risiken und Grenzen |
-| 1A | internes, generisches Web-Push-Kit | M | neutrale DTOs/Payloads, Versand, 404/410-Ergebnis, An-/Abmeldung, Service-Worker-Helfer, Tests, EventMonitor-Migrationsnotiz |
+| 1A | **abgeschlossen:** internes, generisches Web-Push-Kit | M | neutrale DTOs/Payloads, Versand, 404/410-Ergebnis, An-/Abmeldung, Service-Worker-Helfer, Tests, EventMonitor-Migrationsnotiz |
 | 1B | lokale projektneutrale Vision-API | XL | Collection-Isolation, robuster Store, Jobs, bestätigter Workflow, Lösch-APIs/-tests, Modellvergleich, interner Container |
 | 2 | schlankes Django/Wagtail-Grundsystem | XL | Einladungen, Rollen, Familien, Mitgliedschaft, versionierte Einwilligungen, Audit, PWA, PostgreSQL, starke Admin-Anmeldung |
 | 3 | CMS-Kern | L | wirklich geschützte PDFs, freigegebene Lehrerfelder, Beiträge/Kommentare und fachliche CMS-Rechte |
@@ -21,15 +21,27 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 
 ## Freigabepunkte
 
-1. **Jetzt:** Phase 0 prüfen und Bauplan freigeben oder korrigieren.
-2. **Danach separat:** Phase 1A und 1B dürfen geplant/implementiert werden;
-   fremde Repositories bleiben zunächst unverändert.
+1. **Erledigt:** Phase 0 ist freigegeben und Phase 1A abgeschlossen.
+2. **Nächster Freigabepunkt:** Phase 1B darf erst nach ausdrücklicher Freigabe
+   implementiert werden; fremde Repositories bleiben unverändert.
 3. **Vor Phase 2:** Repository initialisieren, Django/Wagtail-Versionen sowie
    starke Admin-Authentisierung auswählen und Datenschutztexte fachlich klären.
 4. **Vor Produktion:** Betriebsadresse, Caddy-Route, Backupziel,
    Wiederherstellungsziele und Netz-Zugriffspolicy freigeben.
 5. **Vor Phase 6:** gesonderte Datenschutzentscheidung zur Biometrie.
 6. **Vor Phase 9:** gesonderte rechtliche und technische Machbarkeitsprüfung.
+
+## Vorgabe für die spätere Phase 1B (nicht begonnen)
+
+Der freigegebene spätere Modellvergleich verwendet einen gemeinsamen
+Pipelinevertrag für Erkennung, Ausrichtung, Embedding, Vergleich,
+Modellinformation und Health Check. Haar/LBPH dient nur als Baseline,
+YuNet/SFace ist der bevorzugte lokale CPU-Kandidat. SCRFD/ArcFace bleibt bis zu
+einer schriftlichen Erlaubnis für konkrete Gewichte deaktivierter
+Vergleichskandidat; Gewichte werden weder eingecheckt noch ungeprüft zur
+Laufzeit installiert. Bewertet werden Erkennungs-/Trefferqualität in den
+vorgegebenen Bildsituationen sowie Laufzeit, Speicher und Modellgröße. Kein
+Modell darf Treffer automatisch endgültig bestätigen.
 
 ## Bewusst zurückgestellt
 
@@ -38,4 +50,3 @@ Noten/Krankmeldungen, öffentliche Galerien, Cloud-Gesichtserkennung,
 automatische endgültige Identifikation, allgemeines IAM, Kubernetes, Event Bus,
 API-Gateway und Microservices für CRUD-Funktionen bleiben Nicht-Ziele, bis eine
 neue ausdrückliche Entscheidung sie ändert.
-

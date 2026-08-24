@@ -1,8 +1,9 @@
 # Klasse 5e
 
 Geschlossene, selbst gehostete Klassenplattform als installierbare Progressive
-Web App. Das Projekt befindet sich nach der Bestandsaufnahme in **Phase 0**:
-Es enthält einen verbindlichen Bauplan, aber noch keine Anwendung.
+Web App. Phase 0 ist freigegeben; Phase 1A stellt jetzt ein internes,
+frameworkneutrales Web-Push-Kit bereit. Eine Klassenanwendung existiert noch
+nicht.
 
 ## Dokumentation
 
@@ -11,6 +12,8 @@ Es enthält einen verbindlichen Bauplan, aber noch keine Anwendung.
 - [Entscheidungsprotokoll](docs/DecisionLog.md)
 - [Phasenplan](docs/Roadmap.md)
 - [Vorbereitete InsightFace-Lizenzanfrage](docs/licenses/InsightFace-Lizenzanfrage.md)
+- [Web-Push-Kit](packages/web-push-kit/README.md)
+- [EventMonitor-Migrationsnotiz](docs/migrations/EventMonitorAI-web-push-kit.md)
 
 ## Beschlossene technische Richtung
 
@@ -23,8 +26,10 @@ Es enthält einen verbindlichen Bauplan, aber noch keine Anwendung.
 - Caddy aus `HomeInfrastructure` als gemeinsamer HTTPS-Einstieg
 - Redis, Objektstorage und WebSockets erst bei nachgewiesenem Bedarf
 
-## Nächster Schritt
+## Aktueller Umfang
 
-Nach Freigabe werden Phase 1A (internes Web-Push-Kit) und Phase 1B
-(projektneutrale Vision-API) getrennt geplant und umgesetzt. Bis dahin werden
-`EventMonitorAI` und `The-Life-of-Mila` nicht verändert.
+Das interne Paket unter `packages/web-push-kit` enthält validierte Python-DTOs,
+VAPID-Konfiguration, einen `pywebpush`-Sender mit strukturierten Ergebnissen,
+Browser-Helfer für An-/Abmeldung und eine neutrale Service-Worker-Vorlage.
+Phase 1B und spätere Phasen sind nicht begonnen. `EventMonitorAI` und
+`The-Life-of-Mila` wurden nicht verändert.

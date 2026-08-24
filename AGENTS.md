@@ -37,6 +37,5 @@ Für dieses Projekt sind in dieser Reihenfolge maßgeblich:
 
 ## Aktueller Stand
 
-Phase 0 ist abgeschlossen. Phase 1A darf erst nach ausdrücklicher Freigabe
-implementiert werden. Phase 1B und alle späteren Phasen sind nicht freigegeben.
-
+Phase 0 und Phase 1A sind abgeschlossen. Phase 1B und alle späteren Phasen sind
+nicht freigegeben.

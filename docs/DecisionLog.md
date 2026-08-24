@@ -37,6 +37,10 @@ Extrahieren ohne EventMonitor-Fachlogik.
 Migrationsanleitung. Ein gemeinsames Repository wird erst entschieden, wenn
 beide Anwendungen dasselbe veröffentlichte Paket wirklich konsumieren sollen.
 
+Der konkrete Distributionsname lautet `klasse5e-web-push-kit`, der Importname
+`web_push_kit`. Browser-Tests verwenden ausschließlich den eingebauten
+Node-Testläufer; eine npm-/Bundler-Infrastruktur entsteht nicht.
+
 ## ADR-004: Vision als separater lokaler Dienst
 
 **Entscheidung:** OpenCV, Modelle und biometrische Daten liegen in einer
@@ -91,3 +95,39 @@ keinen zweiten öffentlichen Reverse Proxy.
 **Grund:** Zertifikate, Ports und gemeinsame Infrastruktur sollen
 projektunabhängig bleiben.
 
+## ADR-009: Keine Aktionstoken im Push-Kit
+
+**Entscheidung:** Phase 1A enthält keine signierten Aktionstoken. Neutrale
+Notification-Aktionen dürfen nur auf zugelassene URLs verweisen.
+
+**Grund:** Claims, Benutzerbezug, Autorisierung und Wirkung einer Aktion sind
+Fachlogik der einbettenden Anwendung. Ein generischer Tokenmechanismus würde
+ohne zweiten konkreten Anwendungsfall unnötige Sicherheits-API erzeugen.
+
+**Folge:** Detailseiten verlangen reguläre Anmeldung. Benötigt eine Anwendung
+später eine direkte Aktion, implementiert und testet sie kurzlebige Claims in
+ihrem eigenen Sicherheitskontext.
+
+## ADR-010: Ein portables Docker-Compose-Projekt
+
+**Entscheidung:** Alle Laufzeitbestandteile gehören zu genau einem stabil
+benannten Compose-Projekt `klasse-5e`. Vorgesehene Dienste sind
+`klasse-5e-app`, `klasse-5e-db` und `klasse-5e-vision`; ein Worker ist nur nach
+einer späteren Bedarfsentscheidung zulässig. Das Push-Kit bleibt Bibliothek im
+App-Container. Produktion veröffentlicht keine internen Host-Ports und bindet
+nur die App an das externe Netz des globalen Caddy an.
+
+**Grund:** Repository/Release, persistenter Export und Secrets sollen für einen
+Umzug auf jeden geeigneten Docker-Host genügen. Lokale Python-/Node-/Datenbank-
+Installationen, Hostnamen, absolute Windows-Pfade und manuell veränderte
+Container würden Reproduzierbarkeit und Restore-Fähigkeit verhindern.
+
+**Folge:** Phase 2 liefert versionierte Dockerfiles, Produktions-Compose,
+benannte Volumes, internes Netz, App-/DB-Healthchecks und einen ausschließlich
+lokalen Diagnosezugang. Phase 1B liefert zuvor nur Vision-Image, internen
+Healthcheck und kleine Compose-Testkonfiguration. Modelle und sämtliche
+Fachdaten werden außerhalb ersetzbarer Image-/Container-Layer gehalten.
+Backup/Restore umfasst Datenbank, Medien und Vision-Daten sowie Manifeste,
+Prüfsummen, nicht geheime Konfiguration, Secret-Referenzliste und Versionen;
+entschlüsselte Secrets sind ausgeschlossen. Vor Produktivbetrieb wird der
+vollständige Ablauf auf einem frischen zweiten Docker-Host praktisch geprüft.

@@ -122,6 +122,25 @@ Nachrichten-ID. Es gibt ein Ergebnis je Endpoint (`delivered`, `stale`,
 `temporary_failure`, `permanent_failure`); nur die Anwendung löscht ihren
 Datensatz anhand dieses Ergebnisses.
 
+### Konkrete Phase-1A-Paketstruktur
+
+```text
+packages/web-push-kit/
+├── pyproject.toml
+├── src/web_push_kit/       # DTOs, VAPID-Konfiguration, Sender und Ergebnisse
+├── tests/                  # frameworkneutrale Python-Tests
+├── browser/                # ES-Modul-Helfer und kopierbarer Classic Worker
+└── browser/tests/          # Tests mit dem eingebauten Node-Testläufer
+```
+
+Der Distributionsname ist `klasse5e-web-push-kit`, der Python-Import folgt mit
+`web_push_kit` der üblichen Unterstrichkonvention. Ein injizierbarer Transport
+hält Sendertests ohne Netz und echte Schlüssel deterministisch. Das Paket
+persistiert und löscht nichts: 404/410 wird als `stale`, temporäre HTTP-/
+Transportfehler als `temporary_failure`, andere Ablehnungen als
+`permanent_failure` und Erfolg als `delivered` zurückgegeben. Browser-Code
+erhält Anwendungs-Callbacks statt fester API-Routen.
+
 Die Vision-API verwendet ausschließlich opaque IDs: `collection_id`,
 `image_id`, `face_id`, `subject_id`, `reference_id`, `match_id`, `job_id`.
 Jede Tabelle und jeder Zugriff trägt `collection_id`; collection-übergreifende
@@ -148,6 +167,76 @@ Collection und umfassen Crops, Vergleichsdaten, Referenzen, Matches und Jobs.
 - Redis/Worker werden erst bei nachgewiesenem Bedarf an dauerhaften Jobs oder
   Echtzeitverteilung eingeführt. Bis dahin sind DB-gestützte Jobs oder direkte
   kurze Tasks vorzuziehen.
+
+## Reproduzierbarer Docker-Betrieb und Portabilität
+
+Alle Bestandteile bilden langfristig genau ein transportierbares
+Docker-Compose-Projekt mit dem stabilen Projektnamen `klasse-5e`. Das
+Web-Push-Kit bleibt Bibliothekscode im App-Image und erhält weder Container
+noch Deployment. Die Zielstruktur lautet:
+
+| Compose-Dienst | Aufgabe | Netzwerkzugang | Persistenz |
+|---|---|---|---|
+| `klasse-5e-app` | ab Phase 2 Django/Wagtail, SSR/PWA und internes Push-Kit | internes Netz und gemeinsames externes Proxy-Netz; nur über globalen Caddy erreichbar | geschützte Medien/Dokumente in dokumentiertem Volume |
+| `klasse-5e-db` | PostgreSQL | nur internes Compose-Netz, kein produktiver Host-Port | eigenes benanntes Datenbank-Volume |
+| `klasse-5e-vision` | ab Phase 1B lokale Vision-API, OpenCV/ONNX Runtime und freigegebene Modelle | ausschließlich internes Compose-Netz, kein Host-Port | eigene Vision-Daten und getrennt bereitgestellte Modelle |
+| `klasse-5e-worker` | nur später bei nachgewiesenem dauerhaftem Jobbedarf | internes Netz | keine Einführung ohne neue Entscheidung |
+
+Compose-Projekt, Dienste, internes Netz und Volumes erhalten eindeutige,
+projektbezogene Namen. Der globale Caddy aus `HomeInfrastructure` wird nicht
+kopiert. Die App wird später zusätzlich an dessen externes Docker-Netz
+angeschlossen. Für Diagnose und Abnahme darf ein gesondertes, nicht
+produktives Compose-Profil oder Override ausschließlich die App an
+`127.0.0.1` veröffentlichen; DB und Vision bleiben intern.
+
+Regulärer Betrieb setzt nur Docker Engine/Desktop, das Repository oder ein
+Release-Paket und lokal bereitgestellte Secrets voraus. Er hängt nicht von
+Windows-Python/-Node, einer lokalen Datenbank, absoluten Windows-Pfaden,
+Host-IP, Rechnernamen oder manuellen Änderungen in laufenden Containern ab.
+Entwicklung darf Quellcode per Bind Mount einbinden. Produktion verwendet
+reproduzierbar aus versionierten Dockerfiles gebaute und versionierte Images.
+Kontrollierte Datenbankmigrationen sind Teil des Deployments; Healthchecks
+decken App, Datenbank und Vision ab.
+
+Fach- und Laufzeitdaten liegen ausschließlich in dokumentierten benannten
+Volumes oder bewusst gewählten relativen Projektverzeichnissen. Modelle,
+Uploads, Fotos, Embeddings und Secrets werden nie in Images eingebaut. Modelle
+werden über einen dokumentierten, prüfsummenverifizierten Importprozess aus
+einer freigegebenen Quelle bereitgestellt. Container-Layer sind vollständig
+ersetzbar und enthalten keine einzige maßgebliche Kopie persistenter Daten.
+
+### Portabler Export und Umzug
+
+Eine portable Sicherung umfasst:
+
+- PostgreSQL-Dump;
+- geschützte Medien und Dokumente;
+- Vision-Datenbank, bestätigte Referenzdaten und Embeddings;
+- Modellmanifest und Modellprüfsummen, nicht ungeprüfte Modellgewichte im
+  Anwendungsimage;
+- relevante nicht geheime Konfiguration;
+- Liste der benötigten `secret://`-Referenzen;
+- verwendete Image- und Anwendungsversionen.
+
+Passwörter, VAPID Private Key, Diensttokens, private Schlüssel und andere
+entschlüsselte Secrets sind nie Bestandteil eines unverschlüsselten Exports.
+Sie werden am Zielhost erneut über die lokale Geheimnisverwaltung
+bereitgestellt.
+
+Der verbindliche Migrationsweg lautet:
+
+```text
+backup → Integritätsprüfung → Übertragung → restore → Datenbankmigration
+       → Start → Healthchecks → Funktionstest → Reverse-Proxy-Umschaltung
+```
+
+Ein Hostwechsel benötigt damit nur Repository/Release, geprüften Datenexport,
+Secret-Bereitstellung, `docker compose` und eine dokumentierte Proxy-Route am
+Zielsystem. Portabilität gilt erst als nachgewiesen, wenn Backup und Restore
+spätestens vor Produktivbetrieb auf einem frischen zweiten Docker-Host samt
+Health- und Funktionstests erfolgreich waren. Die konkrete Compose-Grundlage
+entsteht in Phase 2; Phase 1B erhält vorab nur die freigegebene kleine interne
+Vision-Testkonfiguration.
 
 ## Risiken und offene Entscheidungen
 
@@ -177,4 +266,3 @@ Neu gebaut werden das Django/Wagtail-Fachmodell, sämtliche Rollen- und
 Einwilligungspolicies, geschützte Medienauslieferung, PWA-Shell, neutrales
 Push-Paket, Vision-Vertrag/Persistenz/Collection-Isolation/Löschung,
 CMS-Funktionen und alle späteren Fachmodule.
-
