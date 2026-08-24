@@ -131,3 +131,51 @@ Backup/Restore umfasst Datenbank, Medien und Vision-Daten sowie Manifeste,
 Prüfsummen, nicht geheime Konfiguration, Secret-Referenzliste und Versionen;
 entschlüsselte Secrets sind ausgeschlossen. Vor Produktivbetrieb wird der
 vollständige Ablauf auf einem frischen zweiten Docker-Host praktisch geprüft.
+
+## ADR-011: Rechte auf Schülerprofile nur über verifizierte Beziehungen
+
+**Entscheidung:** Ab Phase 2 sind Schüler eigene Personen mit
+`StudentProfile` und Klassenmitgliedschaft, ohne notwendiges MVP-Benutzerkonto.
+Jeder Sorgeberechtigte verwendet ein persönliches Benutzerkonto. Rechte werden
+ausschließlich aus einer bestätigten, zeitlich gültigen
+`GuardianChildRelationship` mit getrennten Verwaltungs- und
+Einwilligungsrechten abgeleitet, nicht aus Haushalt oder Freitext.
+
+**Grund:** Gemeinsame Logins und Identitätsübernahme verhindern persönliche
+Auditierbarkeit. Haushalte bilden Sorge-, Trennungs- und Bezugspersonenmodelle
+nicht zuverlässig ab. Besonders biometrische Einwilligungen müssen pro
+entscheidungsberechtigter Person nachvollziehbar und konfliktfähig bleiben.
+
+**Folge:** Inhalte und administrative Handlungen referenzieren immer das
+tatsächlich handelnde Konto. Sichtbare Familienbezeichnungen entstehen nur aus
+verifizierten Beziehungen und unterliegen Profilfreigaben. Fehlende,
+widersprüchliche oder widerrufene erforderliche Zustimmungen blockieren oder
+stoppen sensible Verarbeitung. Phase 1B implementiert davon keinerlei Modelle.
+
+## ADR-012: SQLite für den einzelnen Vision-Container
+
+**Entscheidung:** Phase 1B verwendet SQLite mit WAL, aktivierten Fremdschlüsseln
+und kontrollierten Transaktionen. Es läuft genau eine Service-Instanz ohne
+separaten Worker.
+
+**Grund:** Gelegentliche lokale Batches benötigen Persistenz und
+Neustartfähigkeit, aber keine horizontale Parallelität. PostgreSQL, Redis und
+ein Broker würden den portablen Betrieb ohne nachgewiesenen Nutzen vergrößern.
+
+**Folge:** Horizontale Skalierung ist ausgeschlossen. Wenn Messungen später
+mehrere Instanzen erfordern, wird Store und Jobmodell neu entschieden.
+
+## ADR-013: YuNet/SFace produktiver Kandidat, InsightFace gesperrt
+
+**Entscheidung:** YuNet 2023mar plus SFace 2021dec ist die bevorzugte lokale
+CPU-Pipeline. Haar/LBPH bleibt getrennte Legacy-Baseline. Der SCRFD/ArcFace-
+Adapter meldet ohne schriftliche Erlaubnis und installierte, manifestierte
+Gewichte ausschließlich `model_not_licensed_or_installed`.
+
+**Grund:** OpenCV stellt konkrete Gewichte mit dokumentierter Herkunft,
+Lizenzen und Prüfsummen bereit. Die Lizenz der InsightFace-Gewichte ist für den
+operativen Anwendungsfall nicht geklärt.
+
+**Folge:** Kein Image und kein normaler Start lädt Modelle. Modellwechsel sind
+kontrollierte Migrationen; Embeddings verschiedener Versionen werden niemals
+direkt verglichen.

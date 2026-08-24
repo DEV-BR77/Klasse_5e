@@ -1,0 +1,36 @@
+name: klasse-5e-vision-test
+
+services:
+  klasse-5e-vision:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: klasse-5e-vision:0.1.0
+    environment:
+      VISION_DATABASE_URL: sqlite:////data/vision.sqlite3
+      VISION_SERVICE_TOKEN: ${VISION_SERVICE_TOKEN:?Provide VISION_SERVICE_TOKEN outside Git}
+      VISION_ACTIVE_PIPELINE: yunet-sface-2023mar-2021dec
+    volumes:
+      - klasse_5e_vision_data:/data
+      - klasse_5e_vision_models:/models:ro
+    networks:
+      - vision_internal
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+volumes:
+  klasse_5e_vision_data:
+    name: klasse-5e-vision-data
+  klasse_5e_vision_models:
+    name: klasse-5e-vision-models
+
+networks:
+  vision_internal:
+    name: klasse-5e-vision-internal
+    internal: true

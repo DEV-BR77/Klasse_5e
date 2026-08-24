@@ -1,9 +1,8 @@
 # Klasse 5e
 
 Geschlossene, selbst gehostete Klassenplattform als installierbare Progressive
-Web App. Phase 0 ist freigegeben; Phase 1A stellt jetzt ein internes,
-frameworkneutrales Web-Push-Kit bereit. Eine Klassenanwendung existiert noch
-nicht.
+Web App. Phase 0 und 1A sind abgeschlossen; Phase 1B stellt die lokale,
+projektneutrale Vision-API bereit. Eine Klassenanwendung existiert noch nicht.
 
 ## Dokumentation
 
@@ -14,6 +13,7 @@ nicht.
 - [Vorbereitete InsightFace-Lizenzanfrage](docs/licenses/InsightFace-Lizenzanfrage.md)
 - [Web-Push-Kit](packages/web-push-kit/README.md)
 - [EventMonitor-Migrationsnotiz](docs/migrations/EventMonitorAI-web-push-kit.md)
+- [Vision-API](services/vision/README.md)
 
 ## Beschlossene technische Richtung
 
@@ -31,5 +31,7 @@ nicht.
 Das interne Paket unter `packages/web-push-kit` enthält validierte Python-DTOs,
 VAPID-Konfiguration, einen `pywebpush`-Sender mit strukturierten Ergebnissen,
 Browser-Helfer für An-/Abmeldung und eine neutrale Service-Worker-Vorlage.
-Phase 1B und spätere Phasen sind nicht begonnen. `EventMonitorAI` und
-`The-Life-of-Mila` wurden nicht verändert.
+Die Vision-API unter `services/vision` ergänzt Collection-isolierte Persistenz,
+persistierte Jobs, Human-in-the-loop, vollständige Löschpfade und portablen
+Docker-Betrieb. Sie enthält keine Benutzer-, Klassen- oder Einwilligungslogik.
+Spätere Phasen sind nicht begonnen. Die Referenzprojekte bleiben unverändert.

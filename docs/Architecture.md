@@ -107,6 +107,32 @@ Fachmodule greifen nicht auf interne Tabellen anderer Module zu, sondern auf
 kleine Service-/Policy-Schnittstellen. Das ist eine Codegrenze innerhalb eines
 Django-Prozesses, kein Netzwerkdienst.
 
+### Verbindliches Familien- und Schülermodell ab Phase 2
+
+Ein Schüler ist eine eigene `Person` mit `StudentProfile` und aktiver
+Klassenmitgliedschaft; im MVP ist dafür kein eigenes Benutzerkonto nötig.
+Sorgeberechtigte besitzen stets getrennte persönliche Benutzerkonten. Geteilte
+Familienlogins, gemeinsame Passwörter und Identitätsübernahme eines
+Kinderkontos sind ausgeschlossen.
+
+Zugriff auf ein Schülerprofil folgt ausschließlich aus einer bestätigten,
+zeitlich gültigen `GuardianChildRelationship`, niemals allein aus einem
+gemeinsamen Haushalt. Sie enthält mindestens `guardian_person_id`,
+`student_person_id`, `relationship_type`, `is_legal_guardian`, getrennte Rechte
+für Ansicht, Profilverwaltung sowie allgemeine, Foto- und biometrische
+Einwilligungen, `valid_from`, `valid_until`, `status`, `verified_by` und
+`verified_at`. Damit bleiben getrennte Haushalte, mehrere Sorgeberechtigte,
+mehrere Kinder und sonstige autorisierte Bezugspersonen modellierbar.
+
+Jede Handlung speichert das tatsächlich authentisierte Benutzerkonto. Eine
+sichtbare Familienbezeichnung wird nur aus verifizierten Beziehungen abgeleitet
+und nie als frei behauptbarer Text gespeichert. Profilfreigaben steuern, ob
+Elternname, Beziehung und Schülerbezug sichtbar sind; Moderation und Audit
+behalten unabhängig davon den wirklichen Actor. Einwilligungsentscheidungen
+mehrerer Sorgeberechtigter bleiben einzeln. Fehlt bei besonders sensibler
+Verarbeitung die erforderliche eindeutige Zustimmung, ist sie widersprüchlich
+oder widerrufen, darf sie nicht starten beziehungsweise muss gestoppt werden.
+
 ## Kerndaten und externe Verträge
 
 Phase 2 verwendet mindestens `User`, `Invitation`, `Person`, `Household`,
@@ -266,3 +292,21 @@ Neu gebaut werden das Django/Wagtail-Fachmodell, sämtliche Rollen- und
 Einwilligungspolicies, geschützte Medienauslieferung, PWA-Shell, neutrales
 Push-Paket, Vision-Vertrag/Persistenz/Collection-Isolation/Löschung,
 CMS-Funktionen und alle späteren Fachmodule.
+
+## Konkrete Phase-1B-Struktur
+
+`services/vision` ist ein einzelner FastAPI-Dienst mit SQLAlchemy/Alembic und
+SQLite im WAL-Modus. Genau eine aktive Instanz verarbeitet gelegentliche,
+persistierte Jobs und nimmt sie nach Neustart kontrolliert wieder auf. Diese
+Last und der Verzicht auf horizontale Skalierung rechtfertigen SQLite;
+PostgreSQL wäre derzeit zusätzliche Betriebskomplexität ohne konkreten Nutzen.
+
+Zusammengesetzte Schlüssel und Fremdschlüssel führen `collection_id` durch alle
+fachlichen Tabellen. Die interne `/v1`-API verlangt außer beim Healthcheck ein
+Diensttoken. Ein Mensch bestätigt oder verwirft jeden Vorschlag; nur ein
+expliziter Parameter macht einen bestätigten Treffer zur Referenz.
+
+Das Image enthält weder Modelle noch Laufzeitdaten. Das normale Compose
+veröffentlicht keinen Host-Port und nutzt getrennte Daten- und Modellvolumes;
+der Development-Override bindet den Diagnoseport ausschließlich an
+`127.0.0.1`. Die API bleibt später Teil des einen Compose-Projekts `klasse-5e`.

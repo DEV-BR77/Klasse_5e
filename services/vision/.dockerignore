@@ -1,0 +1,12 @@
+.venv
+.pytest_cache
+.ruff_cache
+__pycache__
+tests
+docs
+models/*.onnx
+data
+backups
+*.sqlite3
+*.log
+.env*

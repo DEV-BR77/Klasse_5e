@@ -1,0 +1,12 @@
+# Development-only diagnostic override. Never use as the normal production start.
+services:
+  klasse-5e-vision:
+    ports:
+      - "127.0.0.1:8091:8000"
+    networks:
+      - vision_internal
+      - vision_diagnostic
+
+networks:
+  vision_diagnostic:
+    name: klasse-5e-vision-diagnostic

@@ -8,8 +8,8 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 |---|---|---:|---|
 | 0 | Bestandsaufnahme und Bauplan | M | diese fünf Dokumente; klare Wiederverwendung, Risiken und Grenzen |
 | 1A | **abgeschlossen:** internes, generisches Web-Push-Kit | M | neutrale DTOs/Payloads, Versand, 404/410-Ergebnis, An-/Abmeldung, Service-Worker-Helfer, Tests, EventMonitor-Migrationsnotiz |
-| 1B | lokale projektneutrale Vision-API | XL | Collection-Isolation, robuster Store, Jobs, bestätigter Workflow, Lösch-APIs/-tests, Modellvergleich, interner Container |
-| 2 | schlankes Django/Wagtail-Grundsystem | XL | Einladungen, Rollen, Familien, Mitgliedschaft, versionierte Einwilligungen, Audit, PWA, PostgreSQL, starke Admin-Anmeldung |
+| 1B | **abgeschlossen:** lokale projektneutrale Vision-API | XL | Collection-Isolation, SQLite/WAL, persistierte Jobs, bestätigter Workflow, Lösch-APIs/-tests, YuNet/SFace, getrennte Baseline, deaktiviertes InsightFace und interner Container |
+| 2 | schlankes Django/Wagtail-Grundsystem | XL | Einladungen, persönliche Konten, Schülerprofile ohne Kontozwang, verifizierte Guardian-Child-Rechte, Rollen, Mitgliedschaft, einzelne versionierte Einwilligungen, Audit, PWA, PostgreSQL, starke Admin-Anmeldung |
 | 3 | CMS-Kern | L | wirklich geschützte PDFs, freigegebene Lehrerfelder, Beiträge/Kommentare und fachliche CMS-Rechte |
 | 4 | Events und Mitbringlisten | M–L | transaktionssichere Reservierung, Eigenverwaltung, Audit und Erinnerungs-Push |
 | 5 | geschützte Galerien ohne Vision | XL | Uploadprüfung, Metadatenentfernung, Moderation, Einwilligungsprüfung, geschützte Medien und Löschfristen |
@@ -21,9 +21,9 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 
 ## Freigabepunkte
 
-1. **Erledigt:** Phase 0 ist freigegeben und Phase 1A abgeschlossen.
-2. **Nächster Freigabepunkt:** Phase 1B darf erst nach ausdrücklicher Freigabe
-   implementiert werden; fremde Repositories bleiben unverändert.
+1. **Erledigt:** Phase 0, Phase 1A und Phase 1B sind abgeschlossen.
+2. **Nächster Auftrag:** Phase 2 bis 4 gemäß den getrennten Gates unten;
+   fremde Repositories bleiben unverändert.
 3. **Vor Phase 2:** Repository initialisieren, Django/Wagtail-Versionen sowie
    starke Admin-Authentisierung auswählen und Datenschutztexte fachlich klären.
 4. **Vor Produktion:** Betriebsadresse, Caddy-Route, Backupziel,
@@ -31,9 +31,19 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 5. **Vor Phase 6:** gesonderte Datenschutzentscheidung zur Biometrie.
 6. **Vor Phase 9:** gesonderte rechtliche und technische Machbarkeitsprüfung.
 
-## Vorgabe für die spätere Phase 1B (nicht begonnen)
+## Gemeinsamer Folgeauftrag für Phase 2 bis 4
 
-Der freigegebene spätere Modellvergleich verwendet einen gemeinsamen
+Die Phasen 2, 3 und 4 werden nach Abschluss und Abnahme von Phase 1B als ein
+gemeinsamer Auftrag strikt in der Reihenfolge 2 → 3 → 4 bearbeitet. Eine
+Folgephase beginnt erst, wenn die vorherige Phase vollständig implementiert,
+migriert, getestet, im Docker-Betrieb verifiziert, sicherheits- und
+berechtigungsgeprüft, dokumentiert und in einem eigenen Git-Commit gesichert
+ist. Nach Phase 4 folgen zusätzliche phasenübergreifende Integrationstests.
+Phase 5 und spätere Phasen bleiben davon ausgeschlossen.
+
+## Umsetzung Phase 1B
+
+Der Modellvergleich verwendet einen gemeinsamen
 Pipelinevertrag für Erkennung, Ausrichtung, Embedding, Vergleich,
 Modellinformation und Health Check. Haar/LBPH dient nur als Baseline,
 YuNet/SFace ist der bevorzugte lokale CPU-Kandidat. SCRFD/ArcFace bleibt bis zu

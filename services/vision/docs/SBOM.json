@@ -1,0 +1,9 @@
+{
+  "format": "CycloneDX-inspired-minimal",
+  "service": "klasse-5e-vision",
+  "version": "0.1.0",
+  "runtime": "Python 3.12.10 / Debian bookworm-slim",
+  "components_source": "Pinned versions and licenses are maintained in pyproject.toml and models/manifest.json",
+  "generated": "2026-08-24",
+  "note": "Generate a full deployment SBOM from the built image before production. No model weight is embedded in the image."
+}
