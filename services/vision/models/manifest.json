@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "models": [
+    {
+      "model_id": "opencv-yunet-2023mar",
+      "version": "2023mar",
+      "source_url": "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx",
+      "filename": "face_detection_yunet_2023mar.onnx",
+      "sha256": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4",
+      "license": "MIT",
+      "license_url": "https://github.com/opencv/opencv_zoo/blob/main/models/face_detection_yunet/LICENSE",
+      "origin": "OpenCV Zoo, pinned logical release 2023mar",
+      "input": "BGR image; dynamic detector input size via OpenCV FaceDetectorYN",
+      "task": "face_detection_and_landmarks",
+      "usage_status": "approved_local",
+      "runtime": "OpenCV DNN CPU"
+    },
+    {
+      "model_id": "opencv-sface-2021dec",
+      "version": "2021dec",
+      "source_url": "https://github.com/opencv/opencv_zoo/raw/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx",
+      "filename": "face_recognition_sface_2021dec.onnx",
+      "sha256": "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79",
+      "license": "Apache-2.0",
+      "license_url": "https://github.com/opencv/opencv_zoo/blob/main/models/face_recognition_sface/LICENSE",
+      "origin": "OpenCV Zoo, pinned logical release 2021dec",
+      "input": "112x112 aligned BGR face",
+      "task": "face_embedding",
+      "usage_status": "approved_local_with_attribution",
+      "runtime": "OpenCV DNN CPU"
+    },
+    {
+      "model_id": "insightface-buffalo-l",
+      "version": "unapproved",
+      "source_url": "",
+      "filename": "",
+      "sha256": "",
+      "license": "written-permission-required",
+      "license_url": "../../docs/licenses/InsightFace-Lizenzanfrage.md",
+      "origin": "InsightFace; no weights accepted until written permission",
+      "input": "not enabled",
+      "task": "optional_scrfd_arcface_comparison",
+      "usage_status": "disabled_not_licensed_or_installed",
+      "runtime": "optional ONNX Runtime CPU"
+    }
+  ]
+}
