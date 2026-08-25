@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db.models import Sum
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -46,6 +47,11 @@ def upload_photos(request, gallery_id):
     uploads = request.FILES.getlist("photos")
     if not uploads or len(uploads) > settings.GALLERY_MAX_BATCH:
         return JsonResponse({"error": "invalid_batch_size"}, status=400)
+    stored_size = (
+        gallery.photos.exclude(status="deleted").aggregate(total=Sum("size"))["total"] or 0
+    )
+    if stored_size + sum(upload.size for upload in uploads) > settings.GALLERY_MAX_TOTAL_BYTES:
+        return JsonResponse({"error": "gallery_quota_exceeded"}, status=400)
     kind = request.POST.get("subject_kind", "unclear")
     if kind not in PhotoSubjectDeclaration.Kind.values:
         kind = PhotoSubjectDeclaration.Kind.UNCLEAR

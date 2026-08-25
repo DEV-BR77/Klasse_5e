@@ -6,7 +6,8 @@ Event-Organisatoren ausschließlich die ihres Events. Zugriff setzt aktuelle
 Klassenmitgliedschaft beziehungsweise eine berechtigte Klassenrolle voraus.
 
 Uploads sind auf JPEG/PNG, 20 MB, 40 Megapixel und 25 Dateien je Aktion
-begrenzt. Pillow decodiert und codiert vollständig neu. Orientierung wird
+begrenzt; das sichere Standardkontingent je Galerie beträgt 5 GB. Pillow
+decodiert und codiert vollständig neu. Orientierung wird
 angewendet; EXIF, GPS, IPTC/XMP, Profile und andere Zusatzdaten werden nicht
 übernommen. Pfade verwenden zufällige Photo-IDs. HEIC und ZIP sind nicht
 unterstützt.
