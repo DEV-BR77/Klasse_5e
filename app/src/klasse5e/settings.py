@@ -16,6 +16,7 @@ CSRF_TRUSTED_ORIGINS = [
 INSTALLED_APPS = [
     "klasse5e.core",
     "klasse5e.content",
+    "klasse5e.events",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     "wagtail.embeds",

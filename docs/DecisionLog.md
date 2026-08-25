@@ -212,3 +212,13 @@ Wagtails allgemeine Dokumentauslieferung wird dafür nicht verwendet.
 **Grund:** Ein direkter Medienpfad oder dauerhafter Link könnte Login- und
 Klassenprüfung umgehen. Der kleine konkrete Downloadpfad ist leichter zu
 prüfen als eine allgemeine Storage-Abstraktion.
+
+## ADR-017: Datenbankgestützte Event-Erinnerungen ohne Worker
+
+**Entscheidung:** Erinnerungsanlässe werden durch eine eindeutige Datenbankzeile
+dedupliziert und von einem expliziten Management-/Deployment-Aufruf versendet.
+Phase 4 führt keinen dauerhaften Worker ein.
+
+**Grund:** Das geringe Klassenvolumen rechtfertigt weder Redis noch Celery.
+Transaktionen und eindeutige Constraints liefern bereits Wiederholbarkeit;
+ein späterer Scheduler kann denselben Service aufrufen.

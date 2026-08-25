@@ -343,3 +343,13 @@ Die redaktionellen Modelle sind als Wagtail-Snippets verfügbar, ohne einen
 frei konfigurierbaren Content-Builder einzuführen. Kommentare speichern immer
 das authentisierte Konto; Familienanzeigen werden aus bestätigten Beziehungen
 abgeleitet.
+## Konkrete Phase-4-Struktur
+
+Das Modul `events` enthält klassenbezogene Veranstaltungen, zugewiesene
+Organisatoren, Kategorien, feste oder moderierbare freie Mitbringpositionen,
+Reservierungen und deduplizierte Erinnerungen. Die Reservierungsfunktion
+sperrt die Position innerhalb einer PostgreSQL-Transaktion, prüft Frist,
+Mitgliedschaft und Restmenge und dedupliziert Wiederholungen über einen
+Idempotency-Key. Stale Push-Subscriptions werden durch die Anwendung entfernt;
+temporäre Fehler bleiben wiederholbar. Pushtexte enthalten nur einen neutralen
+Hinweis und eine Login-geschützte interne Ziel-URL.

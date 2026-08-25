@@ -4,6 +4,7 @@ from wagtail.admin import urls as wagtailadmin_urls
 
 from klasse5e.content import views as content_views
 from klasse5e.core import views
+from klasse5e.events import views as event_views
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
@@ -32,5 +33,12 @@ urlpatterns = [
         "comments/<int:comment_id>/moderate/",
         content_views.moderate_comment,
         name="moderate-comment",
+    ),
+    path("events/<int:event_id>/", event_views.event_detail, name="event-detail"),
+    path("items/<int:item_id>/reserve/", event_views.reserve_item, name="reserve-item"),
+    path(
+        "reservations/<int:reservation_id>/cancel/",
+        event_views.cancel_reservation,
+        name="cancel-reservation",
     ),
 ]

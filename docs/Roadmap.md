@@ -11,7 +11,7 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 | 1B | **abgeschlossen:** lokale projektneutrale Vision-API | XL | Collection-Isolation, SQLite/WAL, persistierte Jobs, bestätigter Workflow, Lösch-APIs/-tests, YuNet/SFace, getrennte Baseline, deaktiviertes InsightFace und interner Container |
 | 2 | **abgeschlossen:** schlankes Django/Wagtail-Grundsystem | XL | Einladungen, persönliche Konten, Schülerprofile ohne Kontozwang, verifizierte Guardian-Child-Rechte, Rollen, Mitgliedschaft, einzelne versionierte Einwilligungen, Audit, PWA, PostgreSQL, starke Admin-Anmeldung |
 | 3 | **abgeschlossen:** CMS-Kern | L | wirklich geschützte PDFs, freigegebene Lehrerfelder, Beiträge/Kommentare und fachliche CMS-Rechte |
-| 4 | Events und Mitbringlisten | M–L | transaktionssichere Reservierung, Eigenverwaltung, Audit und Erinnerungs-Push |
+| 4 | **abgeschlossen:** Events und Mitbringlisten | M–L | transaktionssichere Reservierung, Eigenverwaltung, Audit und Erinnerungs-Push |
 | 5 | geschützte Galerien ohne Vision | XL | Uploadprüfung, Metadatenentfernung, Moderation, Einwilligungsprüfung, geschützte Medien und Löschfristen |
 | 6 | optionale biometrische Suche | XL | standardmäßig aus, ausdrückliche Einwilligung, nur bestätigte Treffer, Zugriff nur auf eigene Kinder, vollständiger Widerrufstest |
 | 7 | begrenzter Klassenchat | L | Klassen-/Eventräume, Zugriffsentzug, Moderation, Aufbewahrung und datensparsamer Push; Echtzeittechnik erst nach Messung |
