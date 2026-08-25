@@ -37,6 +37,7 @@ secrets*
 # Runtime data and logs
 data/
 media/
+app/.test-media/
 uploads/
 logs/
 backups/

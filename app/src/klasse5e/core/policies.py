@@ -56,6 +56,21 @@ def may_view_student(user, student):
     )
 
 
+def family_label(user):
+    if not hasattr(user, "person"):
+        return ""
+    relation = (
+        GuardianChildRelationship.objects.filter(guardian_person=user.person, status="verified")
+        .select_related("student_person")
+        .order_by("student_person__first_name")
+        .first()
+    )
+    if not relation or not relation.is_current():
+        return user.person.first_name
+    relationship = relation.get_relationship_type_display()
+    return f"{user.person.first_name} · {relationship} von {relation.student_person.first_name}"
+
+
 def consent_state(consent_type, subject):
     base = consent_type.consentdecision_set.filter(
         subject_person=subject, valid_from__lte=timezone.now()

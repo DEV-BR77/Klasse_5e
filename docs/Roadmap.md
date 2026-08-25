@@ -10,7 +10,7 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 | 1A | **abgeschlossen:** internes, generisches Web-Push-Kit | M | neutrale DTOs/Payloads, Versand, 404/410-Ergebnis, An-/Abmeldung, Service-Worker-Helfer, Tests, EventMonitor-Migrationsnotiz |
 | 1B | **abgeschlossen:** lokale projektneutrale Vision-API | XL | Collection-Isolation, SQLite/WAL, persistierte Jobs, bestätigter Workflow, Lösch-APIs/-tests, YuNet/SFace, getrennte Baseline, deaktiviertes InsightFace und interner Container |
 | 2 | **abgeschlossen:** schlankes Django/Wagtail-Grundsystem | XL | Einladungen, persönliche Konten, Schülerprofile ohne Kontozwang, verifizierte Guardian-Child-Rechte, Rollen, Mitgliedschaft, einzelne versionierte Einwilligungen, Audit, PWA, PostgreSQL, starke Admin-Anmeldung |
-| 3 | CMS-Kern | L | wirklich geschützte PDFs, freigegebene Lehrerfelder, Beiträge/Kommentare und fachliche CMS-Rechte |
+| 3 | **abgeschlossen:** CMS-Kern | L | wirklich geschützte PDFs, freigegebene Lehrerfelder, Beiträge/Kommentare und fachliche CMS-Rechte |
 | 4 | Events und Mitbringlisten | M–L | transaktionssichere Reservierung, Eigenverwaltung, Audit und Erinnerungs-Push |
 | 5 | geschützte Galerien ohne Vision | XL | Uploadprüfung, Metadatenentfernung, Moderation, Einwilligungsprüfung, geschützte Medien und Löschfristen |
 | 6 | optionale biometrische Suche | XL | standardmäßig aus, ausdrückliche Einwilligung, nur bestätigte Treffer, Zugriff nur auf eigene Kinder, vollständiger Widerrufstest |

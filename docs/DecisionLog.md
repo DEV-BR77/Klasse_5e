@@ -202,3 +202,13 @@ Testoption; regulärer Docker-Betrieb verwendet PostgreSQL.
 **Grund:** Klassenrechte, Audit und spätere Reservierungskonkurrenz benötigen
 referenzielle Integrität und transaktionale Sperren, jedoch keine Datenbank je
 Modul.
+
+## ADR-016: Geschützte Medien über Fach-Views
+
+**Entscheidung:** Klassenbezogene Dokumente werden in einem privaten Volume
+gespeichert und nur durch eine autorisierte Django-Download-View ausgeliefert.
+Wagtails allgemeine Dokumentauslieferung wird dafür nicht verwendet.
+
+**Grund:** Ein direkter Medienpfad oder dauerhafter Link könnte Login- und
+Klassenprüfung umgehen. Der kleine konkrete Downloadpfad ist leichter zu
+prüfen als eine allgemeine Storage-Abstraktion.

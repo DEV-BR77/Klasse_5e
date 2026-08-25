@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import include, path
 from wagtail.admin import urls as wagtailadmin_urls
 
+from klasse5e.content import views as content_views
 from klasse5e.core import views
 
 urlpatterns = [
@@ -16,4 +17,20 @@ urlpatterns = [
     path("manifest.webmanifest", views.manifest, name="manifest"),
     path("service-worker.js", views.service_worker, name="service-worker"),
     path("offline/", views.offline, name="offline"),
+    path(
+        "documents/<int:document_id>/<str:variant>/",
+        content_views.document_download,
+        name="document-download",
+    ),
+    path("posts/<int:post_id>/comments/", content_views.create_comment, name="create-comment"),
+    path(
+        "comments/<int:comment_id>/withdraw/",
+        content_views.withdraw_comment,
+        name="withdraw-comment",
+    ),
+    path(
+        "comments/<int:comment_id>/moderate/",
+        content_views.moderate_comment,
+        name="moderate-comment",
+    ),
 ]

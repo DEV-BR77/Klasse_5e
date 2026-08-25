@@ -331,3 +331,15 @@ und den unveränderten Vision-Dienst. Das normale Compose veröffentlicht keine
 Host-Ports; `compose.dev.yaml` bindet Diagnoseports ausschließlich an
 `127.0.0.1`. App und Vision laufen ohne root und mit read-only Root-Dateisystem;
 alle Fachdaten liegen in benannten Volumes.
+
+## Konkrete Phase-3-Struktur
+
+Das interne Modul `content` verwaltet geschützte PDF-Dokumente, Lehrerprofile,
+Beiträge, Kommentare und Meldungen. Dokumente erhalten zufällige interne
+Dateinamen und werden ausschließlich über eine Django-View nach aktueller
+Klassenprüfung ausgeliefert; es gibt keine öffentliche `MEDIA_URL`. Inhalt und
+Größe werden vor Speicherung geprüft, Downloadzugriffe datensparsam auditiert.
+Die redaktionellen Modelle sind als Wagtail-Snippets verfügbar, ohne einen
+frei konfigurierbaren Content-Builder einzuführen. Kommentare speichern immer
+das authentisierte Konto; Familienanzeigen werden aus bestätigten Beziehungen
+abgeleitet.

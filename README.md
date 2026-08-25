@@ -3,7 +3,7 @@
 Geschlossene, selbst gehostete Klassenplattform als installierbare Progressive
 Web App. Die Phasen 0, 1A, 1B und 2 sind abgeschlossen. Das portable
 Django/Wagtail-Grundsystem läuft mit PostgreSQL und der internen Vision-API in
-einem Compose-Projekt.
+einem Compose-Projekt. Phase 3 ergänzt den geschützten CMS-Kern.
 
 ## Dokumentation
 
