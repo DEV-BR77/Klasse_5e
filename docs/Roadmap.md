@@ -22,14 +22,15 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 ## Freigabepunkte
 
 1. **Erledigt:** Phase 0, Phase 1A und Phase 1B sind abgeschlossen.
-2. **Aktueller Auftrag:** Phase 3 und 4 gemäß den getrennten Gates unten;
-   fremde Repositories bleiben unverändert.
-3. **Erledigt in Phase 2:** Django 5.2 LTS, Wagtail 7.2 LTS und django-allauth
+2. **Erledigt:** Phasen 2, 3 und 4 einschließlich phasenübergreifender Abnahme.
+3. **Aktueller Auftrag:** Phase 5, geschützte Galerien ohne Vision.
+   Fremde Repositories bleiben unverändert; Phase 6 ist nicht freigegeben.
+4. **Erledigt in Phase 2:** Django 5.2 LTS, Wagtail 7.2 LTS und django-allauth
    MFA sind gepinnt; Datenschutztexte bleiben ausdrücklich fachliche Entwürfe.
-4. **Vor Produktion:** Betriebsadresse, Caddy-Route, Backupziel,
+5. **Vor Produktion:** Betriebsadresse, Caddy-Route, Backupziel,
    Wiederherstellungsziele und Netz-Zugriffspolicy freigeben.
-5. **Vor Phase 6:** gesonderte Datenschutzentscheidung zur Biometrie.
-6. **Vor Phase 9:** gesonderte rechtliche und technische Machbarkeitsprüfung.
+6. **Vor Phase 6:** gesonderte Datenschutzentscheidung zur Biometrie.
+7. **Vor Phase 9:** gesonderte rechtliche und technische Machbarkeitsprüfung.
 
 ## Gemeinsamer Folgeauftrag für Phase 2 bis 4
 
@@ -39,7 +40,8 @@ Folgephase beginnt erst, wenn die vorherige Phase vollständig implementiert,
 migriert, getestet, im Docker-Betrieb verifiziert, sicherheits- und
 berechtigungsgeprüft, dokumentiert und in einem eigenen Git-Commit gesichert
 ist. Nach Phase 4 folgen zusätzliche phasenübergreifende Integrationstests.
-Phase 5 und spätere Phasen bleiben davon ausgeschlossen.
+Dieser Auftrag ist abgeschlossen. Phase 5 wird in einem getrennten Auftrag
+umgesetzt; Phase 6 und spätere Phasen bleiben ausgeschlossen.
 
 **Phasenübergreifende Abnahme abgeschlossen (25.08.2026):** Der synthetische
 End-to-End-Test verbindet bestätigte Familienbeziehung, Einwilligung und

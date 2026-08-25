@@ -38,6 +38,5 @@ Für dieses Projekt sind in dieser Reihenfolge maßgeblich:
 ## Aktueller Stand
 
 Phase 0, Phase 1A und Phase 1B sind abgeschlossen. Danach bilden
-Phase 2 bis 4 einen gemeinsamen Auftrag mit getrennten Abnahmeetappen in der
-zwingenden Reihenfolge 2 → 3 → 4; Phase 5 und spätere Phasen sind nicht
-freigegeben.
+Phase 2 bis 4 sind abgeschlossen. Aktuell ist ausschließlich Phase 5
+freigegeben; Phase 6 und spätere Phasen sind nicht freigegeben.

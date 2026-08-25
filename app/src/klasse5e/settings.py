@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     "klasse5e.core",
     "klasse5e.content",
     "klasse5e.events",
+    "klasse5e.media",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     "wagtail.embeds",
@@ -142,3 +143,7 @@ SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 X_FRAME_OPTIONS = "DENY"
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
+GALLERY_MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+GALLERY_MAX_PIXELS = 40_000_000
+GALLERY_MAX_BATCH = 25
+GALLERY_RETENTION_GRACE_DAYS = 30
