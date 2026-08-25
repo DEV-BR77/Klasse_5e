@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<main><h1>{{ gallery.title }}</h1><p>{{ gallery.description }}</p>
+<p>Fotos dürfen nur im vereinbarten Klassenrahmen genutzt werden. Screenshots können technisch nicht verhindert werden.</p>
+<div class="photo-grid">{% for photo in photos %}<figure><a href="/photos/{{ photo.id }}/display/"><img src="/photos/{{ photo.id }}/thumbnail/" alt="{{ photo.description|default:'Klassenfoto' }}" loading="lazy"></a><figcaption>{{ photo.description }}</figcaption></figure>{% empty %}<p>Keine freigegebenen Fotos.</p>{% endfor %}</div></main>
+{% endblock %}

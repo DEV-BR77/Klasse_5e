@@ -19,3 +19,11 @@ Tokens oder vollständigen sensiblen Inhalte.
 E-Mail-Verifikation wird im Einladungsfluss durch Bindung des Tokens an die
 eingeladene Adresse hergestellt. Ein später angeschlossener E-Mail-Versand darf
 nur allauths verifizierten Flow verwenden; Phase 2 versendet nichts extern.
+# Galerien (Phase 5)
+
+Fotodateien werden inhaltlich geprüft, vollständig neu codiert und nur über
+klassenautorisierte Views ausgeliefert. Metadaten, Benutzerpfade und öffentliche
+Medien-URLs werden nicht übernommen. Consent wird bei jedem Abruf erneut
+bewertet; Datenschutzmeldungen sperren vorsorglich. Antworten tragen `private,
+no-store`; Logs und Audit enthalten keine Bilddaten, EXIF-Inhalte oder Namen
+abgebildeter Kinder.

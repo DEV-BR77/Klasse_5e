@@ -5,6 +5,9 @@ Web App. Die Phasen 0, 1A, 1B und 2 sind abgeschlossen. Das portable
 Django/Wagtail-Grundsystem läuft mit PostgreSQL und der internen Vision-API in
 einem Compose-Projekt. Phase 3 ergänzt den geschützten CMS-Kern; Phase 4
 liefert Veranstaltungen und transaktionssichere Mitbringlisten.
+Phase 5 ergänzt geschützte, moderierte Event-Fotogalerien mit neu codierten
+JPEG-/PNG-Ableitungen und zentraler Einwilligungsprüfung – ausdrücklich ohne
+Gesichtserkennung.
 
 ## Dokumentation
 

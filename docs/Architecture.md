@@ -311,6 +311,16 @@ veröffentlicht keinen Host-Port und nutzt getrennte Daten- und Modellvolumes;
 der Development-Override bindet den Diagnoseport ausschließlich an
 `127.0.0.1`. Die API bleibt später Teil des einen Compose-Projekts `klasse-5e`.
 
+## Konkrete Phase-5-Struktur
+
+Das Modul `media` hält Galerie, opaque Photo-ID, manuelle Personenangaben,
+Meldungen und Moderationsentscheidungen. Pillow codiert JPEG/PNG neu; nur
+bereinigte Anzeige-, Thumbnail- und Downloadableitungen gelangen ins private
+Medienvolume. Eine zentrale Policy verbindet Mitgliedschaft, Rolle, Status und
+versionierte Foto-, Zuordnungs- und Download-Einwilligungen aller angegebenen
+Schüler. Jeder Abruf bewertet neu, sodass Widerruf unmittelbar wirkt. Vision
+ist weder Code- noch Laufzeitabhängigkeit dieses Moduls.
+
 ## Konkrete Phase-2-Struktur
 
 Der Monolith verwendet Django 5.2 LTS, Wagtail 7.2 LTS und ein von Beginn an

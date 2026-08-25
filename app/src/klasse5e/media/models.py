@@ -27,7 +27,7 @@ class Gallery(models.Model):
     upload_allowed = models.BooleanField(default=False)
     download_allowed = models.BooleanField(default=False)
     moderation_required = models.BooleanField(default=True)
-    retention_until = models.DateTimeField()
+    retention_until = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(UserAccount, on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True)
     published_at = models.DateTimeField(null=True, blank=True)
@@ -39,6 +39,15 @@ class Gallery(models.Model):
             or self.event.school_year_id != self.school_year_id
         ):
             raise ValidationError("event_class_mismatch")
+
+    def save(self, *args, **kwargs):
+        if not self.retention_until and self.school_year_id:
+            from django.conf import settings
+
+            self.retention_until = timezone.make_aware(
+                timezone.datetime.combine(self.school_year.ends_on, timezone.datetime.min.time())
+            ) + timezone.timedelta(days=settings.GALLERY_RETENTION_GRACE_DAYS)
+        super().save(*args, **kwargs)
 
 
 class Photo(models.Model):

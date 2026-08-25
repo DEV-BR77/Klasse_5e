@@ -7,7 +7,11 @@ PHOTO_POLICY_VERSION = "photo-policy-v1"
 
 
 def may_access_gallery(user, gallery):
-    if gallery.status != "published" or gallery.retention_until <= timezone.now():
+    if (
+        gallery.status != "published"
+        or not gallery.retention_until
+        or gallery.retention_until <= timezone.now()
+    ):
         return False
     if has_active_membership(user, gallery.school_class):
         return True

@@ -28,3 +28,12 @@ erzeugten PostgreSQL-17.6-Volume wieder her und fand dort 232 angewandte
 Migrationszeilen. Nach Neustart des regulären Datenbank- und App-Containers war
 dieselbe Anzahl vorhanden. Dieser lokale synthetische Test ersetzt nicht die
 vor Produktivbetrieb geforderte Umzugsübung auf einem zweiten Docker-Host.
+
+## Galerie-Medien
+
+Galerien liegen im Volume `klasse-5e-app-media`; temporäre Uploads gehören
+nicht ins Backup. Der Export archiviert das Volume und erzeugt ein SHA-256-
+Dateimanifest. Nach Restore werden Datenbank, Volume, Manifest, geschützter
+Thumbnail-/Bildabruf und Berechtigungen gemeinsam geprüft. Aufbewahrung wird
+mit `manage.py purge_expired_photos` als Dry-Run und explizit mit `--delete`
+vollzogen.

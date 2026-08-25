@@ -140,6 +140,9 @@ def delete_photo_files(photo):
         field = getattr(photo, field_name)
         if field:
             field.delete(save=False)
+    photo.subject_declarations.all().delete()
+    photo.decisions.all().delete()
+    photo.reports.all().delete()
     photo.status = Photo.Status.DELETED
     photo.deleted_at = timezone.now()
     photo.display_file = ""

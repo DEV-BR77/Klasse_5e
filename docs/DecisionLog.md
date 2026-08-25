@@ -222,3 +222,17 @@ Phase 4 führt keinen dauerhaften Worker ein.
 **Grund:** Das geringe Klassenvolumen rechtfertigt weder Redis noch Celery.
 Transaktionen und eindeutige Constraints liefern bereits Wiederholbarkeit;
 ein späterer Scheduler kann denselben Service aufrufen.
+
+## ADR-018: Neu codierte private Galerieableitungen
+
+**Entscheidung:** Phase 5 speichert nach Pillow-Decodierung nur neu codierte
+JPEG-/PNG-Ableitungen in opaque Verzeichnissen. Originaluploads und Metadaten
+werden nicht behalten. Django liefert nach aktueller Klassen- und Consent-
+Prüfung mit privaten No-Store-Headern aus.
+
+**Grund:** Neu-Codierung entfernt EXIF/GPS und unbekannte Zusatzdaten.
+Dynamische Policy-Prüfung macht Widerruf sofort wirksam; öffentliche oder
+dauerhafte Links würden diese Grenze schwächen.
+
+**Folge:** HEIC, automatische Verpixelung und Vision bleiben ausgeschlossen.
+Download ist zweistufig standardmäßig deaktiviert.

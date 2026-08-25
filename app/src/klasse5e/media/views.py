@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -32,7 +32,9 @@ def gallery_detail(request, gallery_id):
         for photo in gallery.photos.all()
         if may_view_photo(request.user, photo)
     ]
-    return _private(JsonResponse({"id": gallery.id, "title": gallery.title, "photos": photos}))
+    return _private(
+        render(request, "media/gallery_detail.html", {"gallery": gallery, "photos": photos})
+    )
 
 
 @login_required
