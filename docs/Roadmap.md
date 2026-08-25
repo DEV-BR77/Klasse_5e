@@ -9,7 +9,7 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 | 0 | Bestandsaufnahme und Bauplan | M | diese fünf Dokumente; klare Wiederverwendung, Risiken und Grenzen |
 | 1A | **abgeschlossen:** internes, generisches Web-Push-Kit | M | neutrale DTOs/Payloads, Versand, 404/410-Ergebnis, An-/Abmeldung, Service-Worker-Helfer, Tests, EventMonitor-Migrationsnotiz |
 | 1B | **abgeschlossen:** lokale projektneutrale Vision-API | XL | Collection-Isolation, SQLite/WAL, persistierte Jobs, bestätigter Workflow, Lösch-APIs/-tests, YuNet/SFace, getrennte Baseline, deaktiviertes InsightFace und interner Container |
-| 2 | schlankes Django/Wagtail-Grundsystem | XL | Einladungen, persönliche Konten, Schülerprofile ohne Kontozwang, verifizierte Guardian-Child-Rechte, Rollen, Mitgliedschaft, einzelne versionierte Einwilligungen, Audit, PWA, PostgreSQL, starke Admin-Anmeldung |
+| 2 | **abgeschlossen:** schlankes Django/Wagtail-Grundsystem | XL | Einladungen, persönliche Konten, Schülerprofile ohne Kontozwang, verifizierte Guardian-Child-Rechte, Rollen, Mitgliedschaft, einzelne versionierte Einwilligungen, Audit, PWA, PostgreSQL, starke Admin-Anmeldung |
 | 3 | CMS-Kern | L | wirklich geschützte PDFs, freigegebene Lehrerfelder, Beiträge/Kommentare und fachliche CMS-Rechte |
 | 4 | Events und Mitbringlisten | M–L | transaktionssichere Reservierung, Eigenverwaltung, Audit und Erinnerungs-Push |
 | 5 | geschützte Galerien ohne Vision | XL | Uploadprüfung, Metadatenentfernung, Moderation, Einwilligungsprüfung, geschützte Medien und Löschfristen |
@@ -22,10 +22,10 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 ## Freigabepunkte
 
 1. **Erledigt:** Phase 0, Phase 1A und Phase 1B sind abgeschlossen.
-2. **Nächster Auftrag:** Phase 2 bis 4 gemäß den getrennten Gates unten;
+2. **Aktueller Auftrag:** Phase 3 und 4 gemäß den getrennten Gates unten;
    fremde Repositories bleiben unverändert.
-3. **Vor Phase 2:** Repository initialisieren, Django/Wagtail-Versionen sowie
-   starke Admin-Authentisierung auswählen und Datenschutztexte fachlich klären.
+3. **Erledigt in Phase 2:** Django 5.2 LTS, Wagtail 7.2 LTS und django-allauth
+   MFA sind gepinnt; Datenschutztexte bleiben ausdrücklich fachliche Entwürfe.
 4. **Vor Produktion:** Betriebsadresse, Caddy-Route, Backupziel,
    Wiederherstellungsziele und Netz-Zugriffspolicy freigeben.
 5. **Vor Phase 6:** gesonderte Datenschutzentscheidung zur Biometrie.

@@ -1,0 +1,13 @@
+services:
+  klasse-5e-app:
+    ports: ["127.0.0.1:8085:8000"]
+    environment:
+      DJANGO_DEBUG: "1"
+    networks: [klasse_5e_internal, klasse_5e_diagnostic]
+  klasse-5e-vision:
+    ports: ["127.0.0.1:8091:8000"]
+    networks: [klasse_5e_internal, klasse_5e_diagnostic]
+
+networks:
+  klasse_5e_diagnostic:
+    name: klasse-5e-diagnostic

@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<h1>Einladung annehmen</h1><form method="post">{% csrf_token %}<label>Neues Passwort <input type="password" name="password" required minlength="12"></label><button>Persönliches Konto anlegen</button></form>{% endblock %}

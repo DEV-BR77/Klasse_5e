@@ -1,0 +1,80 @@
+name: klasse-5e
+
+services:
+  klasse-5e-app:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    image: klasse-5e-app:0.2.0
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-klasse5e}:${POSTGRES_PASSWORD:?Provide database secret}@klasse-5e-db:5432/${POSTGRES_DB:-klasse5e}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Provide Django secret}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost}
+      MEDIA_ROOT: /data/media
+      VISION_BASE_URL: http://klasse-5e-vision:8000
+      VISION_SERVICE_TOKEN: ${VISION_SERVICE_TOKEN:?Provide Vision secret}
+    depends_on:
+      klasse-5e-db:
+        condition: service_healthy
+      klasse-5e-vision:
+        condition: service_healthy
+    volumes:
+      - app_media:/data/media
+    networks: [klasse_5e_internal]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+  klasse-5e-db:
+    image: postgres:17.6-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-klasse5e}
+      POSTGRES_USER: ${POSTGRES_USER:-klasse5e}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Provide database secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [klasse_5e_internal]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  klasse-5e-vision:
+    build:
+      context: services/vision
+      dockerfile: Dockerfile
+    image: klasse-5e-vision:0.1.0
+    environment:
+      VISION_DATABASE_URL: sqlite:////data/vision.sqlite3
+      VISION_SERVICE_TOKEN: ${VISION_SERVICE_TOKEN:?Provide Vision secret}
+      VISION_ACTIVE_PIPELINE: yunet-sface-2023mar-2021dec
+    volumes:
+      - vision_data:/data
+      - vision_models:/models:ro
+    networks: [klasse_5e_internal]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    name: klasse-5e-postgres-data
+  app_media:
+    name: klasse-5e-app-media
+  vision_data:
+    name: klasse-5e-vision-data
+  vision_models:
+    name: klasse-5e-vision-models
+
+networks:
+  klasse_5e_internal:
+    name: klasse-5e-internal
+    internal: true

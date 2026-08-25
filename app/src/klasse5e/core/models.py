@@ -1,0 +1,327 @@
+import hashlib
+import secrets
+from datetime import timedelta
+
+from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.utils import timezone
+
+
+class UserAccountManager(BaseUserManager):
+    use_in_migrations = True
+
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("email_required")
+        user = self.model(email=self.normalize_email(email), **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.update(is_staff=True, is_superuser=True)
+        return self.create_user(email, password, **extra_fields)
+
+
+class UserAccount(AbstractUser):
+    username = None
+    email = models.EmailField(unique=True)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+    locked_at = models.DateTimeField(null=True, blank=True)
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+    objects = UserAccountManager()
+
+
+class Visibility(models.TextChoices):
+    SELF = "self", "Nur eigene Person"
+    ADMINS = "admins", "Administratoren"
+    TEACHERS = "teachers", "Klassenlehrer und Administratoren"
+    MEMBERS = "members", "Aktive Klassenmitglieder"
+    HIDDEN = "hidden", "Nicht sichtbar"
+
+
+class Person(models.Model):
+    user = models.OneToOneField(UserAccount, null=True, blank=True, on_delete=models.SET_NULL)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=50, blank=True)
+    other_contact = models.CharField(max_length=200, blank=True)
+    email_visibility = models.CharField(
+        max_length=16, choices=Visibility, default=Visibility.HIDDEN
+    )
+    phone_visibility = models.CharField(
+        max_length=16, choices=Visibility, default=Visibility.HIDDEN
+    )
+    relationship_visibility = models.CharField(
+        max_length=16, choices=Visibility, default=Visibility.HIDDEN
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class Household(models.Model):
+    label = models.CharField(max_length=120)
+    members = models.ManyToManyField(Person, related_name="households")
+
+
+class SchoolYear(models.Model):
+    label = models.CharField(max_length=32, unique=True)
+    starts_on = models.DateField()
+    ends_on = models.DateField()
+    is_active = models.BooleanField(default=False)
+
+    def clean(self):
+        if self.ends_on <= self.starts_on:
+            raise ValidationError("Das Schuljahr muss nach seinem Beginn enden.")
+
+
+class SchoolClass(models.Model):
+    name = models.CharField(max_length=64)
+    school_year = models.ForeignKey(SchoolYear, on_delete=models.PROTECT)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["name", "school_year"], name="unique_class_year")
+        ]
+
+
+class StudentProfile(models.Model):
+    person = models.OneToOneField(Person, on_delete=models.CASCADE)
+    profile_photo_reference = models.CharField(max_length=200, blank=True)
+
+
+class MembershipStatus(models.TextChoices):
+    ACTIVE = "active", "Aktiv"
+    ENDED = "ended", "Beendet"
+    SUSPENDED = "suspended", "Gesperrt"
+
+
+class ClassMembership(models.Model):
+    school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE)
+    person = models.ForeignKey(Person, on_delete=models.CASCADE)
+    status = models.CharField(
+        max_length=16, choices=MembershipStatus, default=MembershipStatus.ACTIVE
+    )
+    valid_from = models.DateField()
+    valid_until = models.DateField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["school_class", "person"], name="unique_class_person")
+        ]
+
+    def is_current(self, on=None):
+        on = on or timezone.localdate()
+        return (
+            self.status == MembershipStatus.ACTIVE
+            and self.valid_from <= on
+            and (self.valid_until is None or self.valid_until >= on)
+            and self.school_class.school_year.starts_on
+            <= on
+            <= self.school_class.school_year.ends_on
+        )
+
+
+class Role(models.TextChoices):
+    PRIMARY_ADMIN = "primary_admin", "Hauptadministrator"
+    DEPUTY_ADMIN = "deputy_admin", "Stellvertretender Administrator"
+    TEACHER = "teacher", "Klassenlehrer"
+    EDITOR = "editor", "Redakteur"
+    MODERATOR = "moderator", "Moderator"
+    ORGANIZER = "organizer", "Organisator"
+    GUARDIAN = "guardian", "Elternteil"
+    PUSH_SUBSCRIBER = "push_subscriber", "Benachrichtigungs-Abonnent"
+
+
+class RoleAssignment(models.Model):
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+    school_class = models.ForeignKey(SchoolClass, null=True, blank=True, on_delete=models.CASCADE)
+    role = models.CharField(max_length=32, choices=Role)
+    active = models.BooleanField(default=True)
+    assigned_by = models.ForeignKey(
+        UserAccount, null=True, on_delete=models.SET_NULL, related_name="roles_assigned"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "school_class", "role"], name="unique_user_class_role"
+            )
+        ]
+
+
+class RelationshipType(models.TextChoices):
+    MOTHER = "mother", "Mutter"
+    FATHER = "father", "Vater"
+    GUARDIAN = "guardian", "Sorgeberechtigte Person"
+    FOSTER = "foster", "Pflegeelternteil"
+    STEP = "step", "Stiefelternteil"
+    OTHER = "other", "Sonstige autorisierte Bezugsperson"
+
+
+class RelationshipStatus(models.TextChoices):
+    PENDING = "pending", "Unbestätigt"
+    VERIFIED = "verified", "Bestätigt"
+    REVOKED = "revoked", "Widerrufen"
+
+
+class GuardianChildRelationship(models.Model):
+    guardian_person = models.ForeignKey(
+        Person, on_delete=models.CASCADE, related_name="guardian_relationships"
+    )
+    student_person = models.ForeignKey(
+        Person, on_delete=models.CASCADE, related_name="student_relationships"
+    )
+    relationship_type = models.CharField(max_length=24, choices=RelationshipType)
+    is_legal_guardian = models.BooleanField(default=False)
+    may_view_student_profile = models.BooleanField(default=False)
+    may_manage_profile = models.BooleanField(default=False)
+    may_manage_general_consents = models.BooleanField(default=False)
+    may_manage_photo_consents = models.BooleanField(default=False)
+    may_manage_biometric_consents = models.BooleanField(default=False)
+    valid_from = models.DateField()
+    valid_until = models.DateField(null=True, blank=True)
+    status = models.CharField(
+        max_length=16, choices=RelationshipStatus, default=RelationshipStatus.PENDING
+    )
+    verified_by = models.ForeignKey(UserAccount, null=True, blank=True, on_delete=models.SET_NULL)
+    verified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["guardian_person", "student_person"], name="unique_guardian_student"
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(guardian_person=models.F("student_person")),
+                name="guardian_not_student",
+            ),
+        ]
+
+    def is_current(self, on=None):
+        on = on or timezone.localdate()
+        return (
+            self.status == RelationshipStatus.VERIFIED
+            and self.verified_at is not None
+            and self.valid_from <= on
+            and (self.valid_until is None or self.valid_until >= on)
+        )
+
+
+class Invitation(models.Model):
+    email = models.EmailField()
+    token_hash = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    invited_by = models.ForeignKey(UserAccount, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @classmethod
+    def issue(cls, email, invited_by, lifetime=timedelta(days=7)):
+        token = secrets.token_urlsafe(32)
+        invitation = cls.objects.create(
+            email=email.casefold(),
+            token_hash=hashlib.sha256(token.encode()).hexdigest(),
+            expires_at=timezone.now() + lifetime,
+            invited_by=invited_by,
+        )
+        return invitation, token
+
+    @classmethod
+    def consume(cls, token):
+        digest = hashlib.sha256(token.encode()).hexdigest()
+        invitation = cls.objects.filter(token_hash=digest).first()
+        if invitation is None or invitation.used_at or invitation.expires_at <= timezone.now():
+            return None
+        invitation.used_at = timezone.now()
+        invitation.save(update_fields=["used_at"])
+        return invitation
+
+
+class ConsentCategory(models.TextChoices):
+    GENERAL = "general", "Allgemein"
+    PHOTO = "photo", "Foto"
+    BIOMETRIC = "biometric", "Biometrie"
+
+
+class ConsentType(models.Model):
+    key = models.SlugField(unique=True)
+    label = models.CharField(max_length=160)
+    category = models.CharField(max_length=16, choices=ConsentCategory)
+    purpose = models.TextField()
+    recipients = models.TextField()
+
+
+class ConsentTextVersion(models.Model):
+    consent_type = models.ForeignKey(ConsentType, on_delete=models.PROTECT)
+    version = models.CharField(max_length=32)
+    text = models.TextField(help_text="Fachlicher Entwurf bis zur rechtlichen Freigabe")
+    effective_from = models.DateTimeField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["consent_type", "version"], name="unique_consent_version"
+            )
+        ]
+
+
+class ConsentDecision(models.Model):
+    class Decision(models.TextChoices):
+        GRANTED = "granted", "Zugestimmt"
+        DENIED = "denied", "Abgelehnt"
+        REVOKED = "revoked", "Widerrufen"
+
+    consent_type = models.ForeignKey(ConsentType, on_delete=models.PROTECT)
+    text_version = models.ForeignKey(ConsentTextVersion, on_delete=models.PROTECT)
+    subject_person = models.ForeignKey(
+        Person, on_delete=models.CASCADE, related_name="consents_about"
+    )
+    deciding_person = models.ForeignKey(
+        Person, on_delete=models.PROTECT, related_name="consent_decisions"
+    )
+    decision = models.CharField(max_length=16, choices=Decision)
+    decided_at = models.DateTimeField(default=timezone.now)
+    valid_from = models.DateTimeField(default=timezone.now)
+    valid_until = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    source = models.CharField(max_length=64, default="web")
+
+
+class AuditEvent(models.Model):
+    occurred_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    actor = models.ForeignKey(UserAccount, null=True, on_delete=models.SET_NULL)
+    action = models.CharField(max_length=80)
+    target_type = models.CharField(max_length=80)
+    target_id = models.CharField(max_length=128, blank=True)
+    metadata = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ["-occurred_at"]
+
+
+class PushSubscription(models.Model):
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+    endpoint_hash = models.CharField(max_length=64, unique=True)
+    endpoint = models.TextField()
+    p256dh = models.TextField()
+    auth = models.TextField()
+    enabled = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @classmethod
+    def from_values(cls, user, endpoint, p256dh, auth):
+        digest = hashlib.sha256(endpoint.encode()).hexdigest()
+        return cls.objects.update_or_create(
+            endpoint_hash=digest,
+            defaults={
+                "user": user,
+                "endpoint": endpoint,
+                "p256dh": p256dh,
+                "auth": auth,
+                "enabled": True,
+            },
+        )

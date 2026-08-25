@@ -179,3 +179,26 @@ operativen Anwendungsfall nicht geklärt.
 **Folge:** Kein Image und kein normaler Start lädt Modelle. Modellwechsel sind
 kontrollierte Migrationen; Embeddings verschiedener Versionen werden niemals
 direkt verglichen.
+
+## ADR-014: Django-LTS, Wagtail-LTS und Allauth-MFA
+
+**Entscheidung:** Der Monolith pinnt Django 5.2.17 LTS, Wagtail 7.2.3 LTS und
+django-allauth 65.19.1 mit TOTP-, WebAuthn- und Recovery-Code-Unterstützung.
+
+**Grund:** Die LTS-Linien reduzieren Upgrade-Risiko. Allauth ist aktiv
+gepflegt, Wagtail-kompatibel und vermeidet eigene Kryptografie. Privilegierte
+Rollen werden zusätzlich durch eine zentrale MFA-Policy geschützt.
+
+**Folge:** Es gibt keine öffentliche Registrierung. Bootstrap erzeugt nur
+eine zeitlich begrenzte Einladung und schreibt ihr Klartexttoken ausschließlich
+in eine explizit gewählte lokale Datei mit restriktiven Rechten.
+
+## ADR-015: Ein PostgreSQL-Store für den Monolithen
+
+**Entscheidung:** Alle Fachmodule des Monolithen nutzen dieselbe PostgreSQL-
+Datenbank und gemeinsame Transaktionen. SQLite ist ausschließlich eine schnelle
+Testoption; regulärer Docker-Betrieb verwendet PostgreSQL.
+
+**Grund:** Klassenrechte, Audit und spätere Reservierungskonkurrenz benötigen
+referenzielle Integrität und transaktionale Sperren, jedoch keine Datenbank je
+Modul.

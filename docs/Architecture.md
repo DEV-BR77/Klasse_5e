@@ -1,6 +1,6 @@
 # Architektur und Bestandsaufnahme
 
-Stand: 24.08.2026. Die Prüfung war statisch und lesend; produktive Daten,
+Stand: 25.08.2026. Die Prüfung war statisch und lesend; produktive Daten,
 Geheimnisse und Dienste wurden nicht geöffnet oder verändert.
 
 ## Bestand
@@ -310,3 +310,24 @@ Das Image enthält weder Modelle noch Laufzeitdaten. Das normale Compose
 veröffentlicht keinen Host-Port und nutzt getrennte Daten- und Modellvolumes;
 der Development-Override bindet den Diagnoseport ausschließlich an
 `127.0.0.1`. Die API bleibt später Teil des einen Compose-Projekts `klasse-5e`.
+
+## Konkrete Phase-2-Struktur
+
+Der Monolith verwendet Django 5.2 LTS, Wagtail 7.2 LTS und ein von Beginn an
+eigenes E-Mail-basiertes `UserAccount`-Modell. `django-allauth` übernimmt
+TOTP, WebAuthn/Passkeys und Recovery Codes; eine zusätzliche Policy sperrt
+privilegierte Rollen ohne eingerichteten zweiten Faktor. Einladungen speichern
+nur SHA-256-Tokenwerte und sind einmalig sowie zeitlich begrenzt.
+
+Die erste Migration enthält Personen, Schülerprofile, Haushalte, bestätigte
+Guardian-Child-Beziehungen, Schuljahre, Klassenmitgliedschaften, Rollen,
+versionierte Einzelentscheidungen zu Einwilligungen, Audit und technische
+Push-Subscriptions. Zugriffe werden unmittelbar gegen aktives Konto,
+Mitgliedschaft, Rolle, Beziehung und Sichtbarkeit geprüft. Die PWA cached nur
+statische Shell-Ressourcen und niemals authentisierte Antworten.
+
+Das gemeinsame Compose-Projekt heißt `klasse-5e` und umfasst App, PostgreSQL
+und den unveränderten Vision-Dienst. Das normale Compose veröffentlicht keine
+Host-Ports; `compose.dev.yaml` bindet Diagnoseports ausschließlich an
+`127.0.0.1`. App und Vision laufen ohne root und mit read-only Root-Dateisystem;
+alle Fachdaten liegen in benannten Volumes.

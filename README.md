@@ -1,8 +1,9 @@
 # Klasse 5e
 
 Geschlossene, selbst gehostete Klassenplattform als installierbare Progressive
-Web App. Phase 0 und 1A sind abgeschlossen; Phase 1B stellt die lokale,
-projektneutrale Vision-API bereit. Eine Klassenanwendung existiert noch nicht.
+Web App. Die Phasen 0, 1A, 1B und 2 sind abgeschlossen. Das portable
+Django/Wagtail-Grundsystem läuft mit PostgreSQL und der internen Vision-API in
+einem Compose-Projekt.
 
 ## Dokumentation
 
@@ -34,4 +35,14 @@ Browser-Helfer für An-/Abmeldung und eine neutrale Service-Worker-Vorlage.
 Die Vision-API unter `services/vision` ergänzt Collection-isolierte Persistenz,
 persistierte Jobs, Human-in-the-loop, vollständige Löschpfade und portablen
 Docker-Betrieb. Sie enthält keine Benutzer-, Klassen- oder Einwilligungslogik.
-Spätere Phasen sind nicht begonnen. Die Referenzprojekte bleiben unverändert.
+Unter `app` liegen Einladungslogin, MFA-Policy, Personen-/Familien-/Klassen-
+und Einwilligungsmodell, Audit, PWA und Push-An-/Abmeldung. Phase 3 und 4 werden
+im aktuellen Auftrag nacheinander ergänzt. Die Referenzprojekte bleiben
+unverändert.
+
+## Lokaler Diagnosebetrieb
+
+Der normale Start veröffentlicht keinen Port. Für einen ausschließlich lokal
+gebundenen Diagnosezugang wird zusätzlich `compose.dev.yaml` verwendet. Die
+benötigten Geheimnisse werden nur im aufrufenden Prozess bereitgestellt; siehe
+`app/docs/OPERATIONS.md`.
