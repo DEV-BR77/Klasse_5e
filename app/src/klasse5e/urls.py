@@ -5,6 +5,7 @@ from wagtail.admin import urls as wagtailadmin_urls
 from klasse5e.content import views as content_views
 from klasse5e.core import views
 from klasse5e.events import views as event_views
+from klasse5e.media import views as media_views
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
@@ -41,4 +42,10 @@ urlpatterns = [
         event_views.cancel_reservation,
         name="cancel-reservation",
     ),
+    path("galleries/<int:gallery_id>/", media_views.gallery_detail, name="gallery-detail"),
+    path("galleries/<int:gallery_id>/upload/", media_views.upload_photos, name="gallery-upload"),
+    path("photos/<uuid:photo_id>/moderate/", media_views.moderate_photo, name="photo-moderate"),
+    path("photos/<uuid:photo_id>/report/", media_views.report_photo, name="photo-report"),
+    path("photos/<uuid:photo_id>/withdraw/", media_views.withdraw_photo, name="photo-withdraw"),
+    path("photos/<uuid:photo_id>/<str:variant>/", media_views.photo_file, name="photo-file"),
 ]
