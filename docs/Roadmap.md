@@ -41,6 +41,13 @@ berechtigungsgeprüft, dokumentiert und in einem eigenen Git-Commit gesichert
 ist. Nach Phase 4 folgen zusätzliche phasenübergreifende Integrationstests.
 Phase 5 und spätere Phasen bleiben davon ausgeschlossen.
 
+**Phasenübergreifende Abnahme abgeschlossen (25.08.2026):** Der synthetische
+End-to-End-Test verbindet bestätigte Familienbeziehung, Einwilligung und
+Widerruf, geschützten Dokumentdownload, Beitrag/Kommentar, Event und
+Reservierung. Die vollständigen App-, Push-Kit- und Vision-Suiten sowie
+Compose-Neustart und PostgreSQL-Restore wurden zusätzlich ausgeführt. Phase 5
+ist nicht begonnen.
+
 ## Umsetzung Phase 1B
 
 Der Modellvergleich verwendet einen gemeinsamen

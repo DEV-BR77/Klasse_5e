@@ -22,3 +22,9 @@ Ablauf in `services/vision/docs/BACKUP_RESTORE.md`. Ein Restore verwendet ein
 frisches Volume, `pg_restore`, danach `manage.py migrate`, Healthchecks und
 einen Funktionstest. Secrets sind nie Teil dieser Archive und werden am Ziel
 neu aus `secret://projects/klasse-5e/...` bereitgestellt.
+
+Der Abnahmelauf vom 25.08.2026 stellte einen Custom-Format-Dump in einem frisch
+erzeugten PostgreSQL-17.6-Volume wieder her und fand dort 232 angewandte
+Migrationszeilen. Nach Neustart des regulären Datenbank- und App-Containers war
+dieselbe Anzahl vorhanden. Dieser lokale synthetische Test ersetzt nicht die
+vor Produktivbetrieb geforderte Umzugsübung auf einem zweiten Docker-Host.
