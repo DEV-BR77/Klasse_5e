@@ -12,7 +12,7 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 | 2 | **abgeschlossen:** schlankes Django/Wagtail-Grundsystem | XL | Einladungen, persönliche Konten, Schülerprofile ohne Kontozwang, verifizierte Guardian-Child-Rechte, Rollen, Mitgliedschaft, einzelne versionierte Einwilligungen, Audit, PWA, PostgreSQL, starke Admin-Anmeldung |
 | 3 | **abgeschlossen:** CMS-Kern | L | wirklich geschützte PDFs, freigegebene Lehrerfelder, Beiträge/Kommentare und fachliche CMS-Rechte |
 | 4 | **abgeschlossen:** Events und Mitbringlisten | M–L | transaktionssichere Reservierung, Eigenverwaltung, Audit und Erinnerungs-Push |
-| 5 | geschützte Galerien ohne Vision | XL | Uploadprüfung, Metadatenentfernung, Moderation, Einwilligungsprüfung, geschützte Medien und Löschfristen |
+| 5 | **abgeschlossen:** geschützte Galerien ohne Vision | XL | Uploadprüfung, Metadatenentfernung, Moderation, Einwilligungsprüfung, geschützte Medien und Löschfristen |
 | 6 | optionale biometrische Suche | XL | standardmäßig aus, ausdrückliche Einwilligung, nur bestätigte Treffer, Zugriff nur auf eigene Kinder, vollständiger Widerrufstest |
 | 7 | begrenzter Klassenchat | L | Klassen-/Eventräume, Zugriffsentzug, Moderation, Aufbewahrung und datensparsamer Push; Echtzeittechnik erst nach Messung |
 | 8 | manueller Kalender und Stundenplan | L | Wochenansicht, Änderungsvergleich, deduplizierter Push und widerrufbares iCal |
@@ -23,8 +23,8 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 
 1. **Erledigt:** Phase 0, Phase 1A und Phase 1B sind abgeschlossen.
 2. **Erledigt:** Phasen 2, 3 und 4 einschließlich phasenübergreifender Abnahme.
-3. **Aktueller Auftrag:** Phase 5, geschützte Galerien ohne Vision.
-   Fremde Repositories bleiben unverändert; Phase 6 ist nicht freigegeben.
+3. **Erledigt:** Phase 5, geschützte Galerien ohne Vision. Phase 6 bleibt
+   ausdrücklich nicht freigegeben.
 4. **Erledigt in Phase 2:** Django 5.2 LTS, Wagtail 7.2 LTS und django-allauth
    MFA sind gepinnt; Datenschutztexte bleiben ausdrücklich fachliche Entwürfe.
 5. **Vor Produktion:** Betriebsadresse, Caddy-Route, Backupziel,
@@ -49,6 +49,13 @@ Widerruf, geschützten Dokumentdownload, Beitrag/Kommentar, Event und
 Reservierung. Die vollständigen App-, Push-Kit- und Vision-Suiten sowie
 Compose-Neustart und PostgreSQL-Restore wurden zusätzlich ausgeführt. Phase 5
 ist nicht begonnen.
+
+**Phase-5-Abnahme abgeschlossen (25.08.2026):** Sichere JPEG-/PNG-Neucodierung,
+Metadatenentfernung, manuelle Personenangaben, konservative Consent-Policy,
+Moderation, geschützte Auslieferung, Meldung, Rückzug und idempotente Löschung
+sind getestet. PostgreSQL und drei synthetische Bildableitungen wurden in
+frische Volumes restauriert; SHA-256-Prüfsummen waren identisch. Phase 6 ist
+nicht begonnen.
 
 ## Umsetzung Phase 1B
 

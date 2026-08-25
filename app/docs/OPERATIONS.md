@@ -37,3 +37,9 @@ Dateimanifest. Nach Restore werden Datenbank, Volume, Manifest, geschützter
 Thumbnail-/Bildabruf und Berechtigungen gemeinsam geprüft. Aufbewahrung wird
 mit `manage.py purge_expired_photos` als Dry-Run und explizit mit `--delete`
 vollzogen.
+
+Der Phase-5-Abnahmelauf vom 25.08.2026 restaurierte einen PostgreSQL-Dump mit
+synthetischem Galerie-/Fotodatensatz und drei bereinigte Medienableitungen in
+frische Volumes. Die Datenbank enthielt danach den erwarteten Datensatz; die
+SHA-256-Werte von Anzeige, Thumbnail und Download stimmten vor und nach Restore
+überein. Ein Containerneustart erhielt Datensatz und Medienvolume.
