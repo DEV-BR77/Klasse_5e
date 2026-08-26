@@ -67,8 +67,13 @@ Der geplante Einsatz ist wie folgt begrenzt:
 - ungefähr 100 Fotos pro Schulveranstaltung, die gelegentlich als Stapel verarbeitet werden
 
 Die Software würde Gesichtsembeddings und bestätigte Referenzbilder
-ausschließlich lokal und höchstens für die erforderliche Dauer beziehungsweise
-das betreffende Schuljahr speichern.
+ausschließlich lokal und nur so lange speichern, wie sie für den beschriebenen
+Zweck benötigt werden und die jeweilige Einwilligung fortbesteht. Die erbetene
+Nutzungserlaubnis soll nicht auf ein einzelnes Schuljahr beschränkt sein,
+sondern für die Dauer des bestehenden Klassenverbands gelten: beginnend in
+Klassenstufe 5 und längstens bis zum Abschluss beziehungsweise Ende der
+Klassenstufe 13. Damit soll keine jährliche Neubeantragung erforderlich sein.
+Individuelle Widerrufs- und Löschpflichten bleiben davon unberührt.
 
 Die Modelle sollen lokal mit ONNX Runtime auf einer CPU ausgeführt werden.
 Möglicherweise würden die Modelle für diesen lokalen Betrieb in eine optimierte
@@ -93,7 +98,10 @@ Könnten Sie uns bitte folgende Fragen beantworten:
    weitergegeben werden?
 7. Bestehen besondere Anforderungen an Namensnennung, Dokumentation,
    Protokollierung, Datenschutz oder Löschung?
-8. Ist die Erlaubnis zeitlich begrenzt oder an bestimmte Modellversionen gebunden?
+8. Kann die Erlaubnis ohne jährliche Neubeantragung für die gesamte Dauer des
+   Klassenverbands – ab Klassenstufe 5 und längstens bis zum Abschluss
+   beziehungsweise Ende der Klassenstufe 13 – gelten? Ist sie darüber hinaus
+   zeitlich begrenzt oder an bestimmte Modellversionen gebunden?
 
 Es handelt sich um ein von Eltern betriebenes Projekt und derzeit nicht um ein
 kommerzielles Produkt oder ein offizielles Produkt der Schule.
@@ -153,7 +161,12 @@ The intended use is limited as follows:
 - an expected workload of approximately 100 photographs per school event, processed occasionally in batches
 
 The software would store face embeddings and confirmed reference images only
-locally and only for the necessary period or the relevant school year.
+locally and only for as long as they are required for the stated purpose and
+the relevant consent remains valid. We are requesting permission that is not
+limited to a single school year, but remains valid for the lifetime of this
+specific class cohort, beginning in grade 5 and ending no later than graduation
+or the end of grade 13, so that a new application is not required every year.
+Individual withdrawal and deletion obligations would remain unaffected.
 
 The models would be executed locally on a CPU using ONNX Runtime. We may convert
 the models into an optimised or quantised ONNX representation for local
@@ -174,7 +187,10 @@ Could you please answer the following questions:
    Docker image and model weights are not published or redistributed?
 7. Are there any specific attribution, documentation, audit, privacy or
    deletion requirements that we must follow?
-8. Would the permission be time-limited or restricted to specific model versions?
+8. Could the permission remain valid, without annual reapplication, for the
+   lifetime of this class cohort, beginning in grade 5 and ending no later than
+   graduation or the end of grade 13? Would it otherwise be time-limited or
+   restricted to specific model versions?
 
 This is a parent-operated project and is currently neither a commercial product
 nor an official product of the school.
