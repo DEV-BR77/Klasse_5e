@@ -2,15 +2,19 @@
 
 Stand: 26.08.2026
 
-Empfohlener erster Empfänger: `sekretariat@thgwob.de` mit der Bitte um
-Weiterleitung an die zuständige WebUntis-Administration beziehungsweise den
-Datenschutzverantwortlichen der Schule.
+## Versand
 
-## Versandfertige Fassung
+Die Anfrage soll zunächst gestellt werden an:
+
+- `sekretariat@thgwob.de`
+
+Mit der Bitte um Weiterleitung an die zuständige WebUntis-Administration und,
+falls erforderlich, an den Datenschutzverantwortlichen beziehungsweise den
+zuständigen Schulträger.
 
 **Betreff:** Anfrage zu einem lesenden WebUntis-API-Zugang für das interne KlassenCMS der Klasse 5e
 
-```text
+```
 Guten Tag,
 
 ich bin Elternvertreter der Klasse 5e und entwickle ehrenamtlich ein kleines,
@@ -19,12 +23,12 @@ Schülerinnen und Schüler sowie die Klassenlehrkräfte unserer Klasse.
 
 Das Portal ist nicht öffentlich zugänglich. Es verwendet persönliche
 Einladungen und soll wichtige Klasseninformationen übersichtlich und
-datensparsam darstellen. Dazu möchten wir gerne den Stundenplan der Klasse 5e
-einschließlich freigegebener Änderungen aus WebUntis in ausschließlich
-lesender Form übernehmen.
+datensparsam an einem Ort darstellen. Dazu möchten wir gerne den Stundenplan
+der Klasse 5e einschließlich freigegebener Änderungen aus WebUntis in
+ausschließlich lesender Form übernehmen.
 
 Nach der offiziellen Untis-Dokumentation kann für Schulprojekte und kleinere
-Eigenentwicklungen auf Anfrage eine WebUntis-JSON-Schnittstelle
+Eigenentwicklungen auf Anfrage die WebUntis-JSON-Schnittstelle
 (`jsonrpc.do`) beziehungsweise eine aktuell empfohlene Plattform-API genutzt
 werden.
 
@@ -33,40 +37,63 @@ grundsätzlich genehmigt und eingerichtet werden kann?
 
 Benötigt würden ausschließlich folgende Daten der Klasse 5e:
 
-- reguläre Unterrichtsstunden mit Datum, Uhrzeit, Fach und Raum,
-- freigegebene Vertretungen, Raum- und Zeitänderungen,
-- Unterrichtsentfälle,
-- freigegebene Prüfungen beziehungsweise Klassenarbeiten,
-- freigegebene Informationen zur Stunde,
-- Ferien beziehungsweise unterrichtsfreie Zeiträume,
+- reguläre Unterrichtsstunden mit Datum, Uhrzeit, Fach und Raum
+- freigegebene Vertretungen, Raum- und Zeitänderungen
+- Unterrichtsentfälle
+- freigegebene Prüfungen beziehungsweise Klassenarbeiten
+- freigegebene Informationen zur Stunde
+- Ferien beziehungsweise unterrichtsfreie Zeiträume
 - nach Möglichkeit die in WebUntis für die betroffenen Schülerinnen und
-  Schüler sichtbaren Hausaufgaben.
+  Schüler sichtbaren Hausaufgaben
 
 Nicht übernommen werden sollen insbesondere Noten, Abwesenheiten,
 Entschuldigungen, Mitteilungen, Klassenbucheinträge, Kontaktdaten oder andere
 Schülerstammdaten.
 
-Für den Betrieb wünschen wir uns nach Möglichkeit einen eigenen, auf diese
-Daten und die Klasse 5e begrenzten Lesezugang. Ein persönliches Elternkonto
-soll nicht als dauerhafter technischer Zugang verwendet werden. Zugangsdaten
-würden ausschließlich verschlüsselt beziehungsweise über eine lokale
-Geheimnisverwaltung bereitgestellt und weder in den Quellcode noch in
-Protokolle aufgenommen.
+Für den nachhaltigen und sicheren Betrieb würden wir gerne einen eigenen,
+ausschließlich lesenden WebUntis-Integrationszugang verwenden, der auf die
+benötigten Daten der Klasse 5e beschränkt ist. Dieser Zugang soll unabhängig
+von einem persönlichen Elternkonto bestehen. Sämtliche Zugangsdaten würden
+ausschließlich in einer lokalen, geschützten Geheimnisverwaltung gespeichert
+und weder in den Quellcode noch in Protokolle aufgenommen.
 
-Die Daten würden nur im geschützten Klassenbereich angezeigt. Es erfolgt keine
-Weitergabe an Werbe-, Analyse- oder Cloud-KI-Anbieter. Änderungen könnten auf
-Wunsch der angemeldeten Nutzer durch eine datensparsame Push-Nachricht ohne
-Stundenplan-, Prüfungs- oder Hausaufgabentext angekündigt werden.
+Die abgerufenen Daten würden nur im geschützten Klassenbereich angezeigt. Es
+erfolgt keine Weitergabe an Werbe-, Analyse- oder Cloud-KI-Anbieter. Änderungen
+könnten auf Wunsch der angemeldeten Nutzer durch eine datensparsame
+Push-Nachricht angekündigt werden. Die Push-Nachricht selbst würde keine
+Stundenplan-, Prüfungs- oder Hausaufgabentexte enthalten.
+
+Der geplante Einsatz ist wie folgt begrenzt:
+
+- Nutzung ausschließlich für die Klasse 5e
+- Zugriff nur für eingeladene und berechtigte Klassenmitglieder
+- keine kommerzielle Nutzung, Werbung oder sonstige Monetarisierung
+- Betrieb ausschließlich auf einem privat verwalteten, selbst gehosteten Server
+- ausschließlich lesender Zugriff
+- keine Veränderung von Daten in WebUntis
+- keine Weitergabe der Zugangsdaten oder abgerufenen Daten an Dritte
+- keine öffentliche API und keine öffentliche Stundenplanansicht
+- Protokollierung ohne Zugangsdaten und ohne sensible Inhaltsdaten
+- Beendigung des Zugriffs und Löschung der importierten Daten nach Wegfall der Berechtigung
 
 Bitte teilen Sie uns nach Möglichkeit auch mit:
 
-1. welche Schnittstelle für diesen Anwendungsfall aktuell empfohlen wird,
-2. ob ein eigener read-only Integrationszugang eingerichtet werden kann,
-3. welche der oben genannten Daten darüber verfügbar sind,
-4. welche Authentisierung, Berechtigungen und Rate-Limits gelten,
-5. ob eine zusätzliche Zustimmung der Stadt Wolfsburg, von Untis oder einer
-   anderen zuständigen Stelle erforderlich ist,
-6. welche technischen Unterlagen oder Vereinbarungen wir dafür benötigen.
+1. Welche Schnittstelle wird für diesen Anwendungsfall aktuell empfohlen?
+2. Kann ein eigener, auf die Klasse 5e und die genannten Daten beschränkter
+   read-only Integrationszugang eingerichtet werden?
+3. Welche der genannten Stundenplan-, Änderungs-, Prüfungs- und
+   Hausaufgabendaten sind über diese Schnittstelle verfügbar?
+4. Welche Authentisierung, Berechtigungen, Abrufintervalle und Rate-Limits
+   gelten?
+5. Ist alternativ oder ergänzend ein dafür freigegebenes persönliches
+   iCal-Abonnement vorgesehen, und welche Daten enthält dieses am THG?
+6. Ist eine zusätzliche Zustimmung der Stadt Wolfsburg, von Untis oder einer
+   anderen zuständigen Stelle erforderlich?
+7. Welche technischen Unterlagen, Datenschutzvereinbarungen oder sonstigen
+   Nachweise werden benötigt?
+8. Kann die Erlaubnis ohne jährliche Neubeantragung für die Dauer des
+   bestehenden Klassenverbands gelten, beginnend in Klassenstufe 5 und
+   längstens bis zum Abschluss beziehungsweise Ende der Klassenstufe 13?
 
 Bis zu einer ausdrücklichen Freigabe findet kein automatisierter Abruf statt.
 Gerne stelle ich die technische Beschreibung, das Datenschutzkonzept oder den
@@ -84,9 +111,11 @@ Bjoern Radke
 Elternvertreter der Klasse 5e
 ```
 
-## Hinweis für den Versand
+Solange keine ausdrückliche Freigabe und kein geeigneter technischer Zugang
+erteilt wurden, findet kein automatisierter WebUntis-Abruf statt. Persönliche
+Eltern-Zugangsdaten, Screenshots mit Schülerdaten, iCal-Links und lokale
+`.env`-Dateien dürfen nicht versendet oder in Git aufgenommen werden.
 
-Keine WebUntis-Zugangsdaten, Screenshots mit Schülerdaten, iCal-Links oder
-`.env`-Dateien mitsenden. Falls die Schule technische Nachweise benötigt,
-zunächst nur auf das öffentliche Repository verweisen und konkrete Unterlagen
-erst nach Rückmeldung gezielt bereitstellen.
+## Nachverfolgung
+
+Anfrage noch nicht versendet.
