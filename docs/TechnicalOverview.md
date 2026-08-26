@@ -60,6 +60,5 @@ benötigten Geheimnisse werden nur im aufrufenden Prozess bereitgestellt; siehe
 - [Phasenplan](Roadmap.md)
 - [Vorbereitete InsightFace-Lizenzanfrage](licenses/InsightFace-Lizenzanfrage.md)
 - [Web-Push-Kit](../packages/web-push-kit/README.md)
-- [EventMonitor-Migrationsnotiz](migrations/EventMonitorAI-web-push-kit.md)
+- [Web-Push-Kit-Integration in Klasse 5e](migrations/Klasse-5e-web-push-kit.md)
 - [Vision-API](../services/vision/README.md)
-
