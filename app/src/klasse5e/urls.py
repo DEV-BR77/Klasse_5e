@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import include, path
 from wagtail.admin import urls as wagtailadmin_urls
 
+from klasse5e.biometrics import views as biometric_views
 from klasse5e.content import views as content_views
 from klasse5e.core import views
 from klasse5e.events import views as event_views
@@ -48,4 +49,26 @@ urlpatterns = [
     path("photos/<uuid:photo_id>/report/", media_views.report_photo, name="photo-report"),
     path("photos/<uuid:photo_id>/withdraw/", media_views.withdraw_photo, name="photo-withdraw"),
     path("photos/<uuid:photo_id>/<str:variant>/", media_views.photo_file, name="photo-file"),
+    path("biometrics/", biometric_views.search_home, name="biometric-search"),
+    path("biometrics/moderation/", biometric_views.moderation_queue, name="biometric-moderation"),
+    path(
+        "biometrics/profiles/<int:student_id>/enable/<int:class_id>/",
+        biometric_views.enable_biometric_profile,
+        name="biometric-profile-enable",
+    ),
+    path(
+        "biometrics/profiles/<uuid:public_id>/withdraw/",
+        biometric_views.withdraw_biometric_profile,
+        name="biometric-profile-withdraw",
+    ),
+    path(
+        "biometrics/photos/<uuid:photo_id>/analyze/",
+        biometric_views.analyze_photo,
+        name="biometric-photo-analyze",
+    ),
+    path(
+        "biometrics/matches/<uuid:public_id>/<str:decision>/",
+        biometric_views.decide_match,
+        name="biometric-decision",
+    ),
 ]

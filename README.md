@@ -7,7 +7,9 @@ einem Compose-Projekt. Phase 3 ergänzt den geschützten CMS-Kern; Phase 4
 liefert Veranstaltungen und transaktionssichere Mitbringlisten.
 Phase 5 ergänzt geschützte, moderierte Event-Fotogalerien mit neu codierten
 JPEG-/PNG-Ableitungen und zentraler Einwilligungsprüfung – ausdrücklich ohne
-Gesichtserkennung.
+Gesichtserkennung. Phase 6 ergänzt eine standardmäßig deaktivierte, lokale und
+einwilligungsbasierte Personensuche; sie zeigt ausschließlich menschlich
+bestätigte Vorschläge und ist nicht produktiv freigegeben.
 
 ## Dokumentation
 
@@ -40,9 +42,10 @@ Die Vision-API unter `services/vision` ergänzt Collection-isolierte Persistenz,
 persistierte Jobs, Human-in-the-loop, vollständige Löschpfade und portablen
 Docker-Betrieb. Sie enthält keine Benutzer-, Klassen- oder Einwilligungslogik.
 Unter `app` liegen Einladungslogin, MFA-Policy, Personen-/Familien-/Klassen-
-und Einwilligungsmodell, Audit, PWA und Push-An-/Abmeldung. Phase 3 und 4 werden
-im aktuellen Auftrag nacheinander ergänzt. Die Referenzprojekte bleiben
-unverändert.
+und Einwilligungsmodell, Audit, PWA und Push-An-/Abmeldung sowie die geschützten
+CMS-, Event- und Galeriemodule. `app/src/klasse5e/biometrics` koppelt die Galerie
+über opaque IDs an Vision und erzwingt Consent, Rollen, Human-in-the-loop und
+Widerrufslöschung. Die Referenzprojekte bleiben unverändert.
 
 ## Lokaler Diagnosebetrieb
 

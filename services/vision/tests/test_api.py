@@ -48,6 +48,25 @@ def test_analysis_job_and_face_listing(client, auth_headers, jpeg_bytes) -> None
     assert len(faces.json()) == 1
 
 
+def test_processed_image_source_can_be_purged_idempotently(
+    client, auth_headers, jpeg_bytes
+) -> None:
+    from vision_service.main import storage
+
+    create_collection(client, auth_headers)
+    upload_image(client, auth_headers, jpeg_bytes)
+    analyze(client, auth_headers)
+    path = storage.image_path("collection-a", "image-1")
+    assert path.exists()
+    url = "/v1/collections/collection-a/images/image-1/purge-source"
+    assert client.post(url, headers=auth_headers).status_code == 200
+    assert client.post(url, headers=auth_headers).status_code == 200
+    assert not path.exists()
+    assert client.get(
+        "/v1/collections/collection-a/images/image-1/faces", headers=auth_headers
+    ).json()
+
+
 def test_unknown_ids_use_same_response(client, auth_headers) -> None:
     create_collection(client, auth_headers)
     responses = [

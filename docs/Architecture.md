@@ -273,7 +273,7 @@ Vision-Testkonfiguration.
 | Push-Browser | iOS-PWA-Einschränkungen, Payloadgrößen, Zustellgarantie und Browser-Abmeldung praktisch testen | Phase 1A/2 |
 | Push-Datenschutz | erlaubte Inhalte pro Kategorie und Login-only-Links festlegen | vor erster Fachintegration |
 | Vision-Modell | Haar/LBPH gegen ein lokales CPU-Modell mit echten, rechtmäßig verwendbaren Testbildern vergleichen | Phase 1B |
-| Biometrie | Verantwortliche Stelle, Datenschutzprüfung, Löschfristen und Einwilligungstexte fehlen noch | vor Phase 6 |
+| Biometrie | Technischer Test ist Björn Radke zugeordnet und besitzt verbindliche Löschfristen; fachliche Texte bleiben Entwürfe, Produktivbetrieb braucht eine neue Freigabe | vor Produktion |
 | Vision-Store | PostgreSQL im Vision-Container oder SQLite mit klarer Single-Writer-Grenze entscheiden; keine JSON-Dauerhaltung | Phase 1B |
 | PDF | vorliegender PDF-SmartForms-Bestand ist nur eine Distribution; keine Codeextraktion möglich. AcroForm-Bedarf und Lizenzierung separat klären | Phase 3 |
 | Lizenzen | Mila-Code ist proprietär; nur Ideen, keine Codekopie. PDF-Lizenz ist Entwurf. Alle Python-/JS-/Modellabhängigkeiten benötigen SBOM und Lizenzprüfung | je Phase |
@@ -363,3 +363,24 @@ Mitgliedschaft und Restmenge und dedupliziert Wiederholungen über einen
 Idempotency-Key. Stale Push-Subscriptions werden durch die Anwendung entfernt;
 temporäre Fehler bleiben wiederholbar. Pushtexte enthalten nur einen neutralen
 Hinweis und eine Login-geschützte interne Ziel-URL.
+## Phase 6: lokale, einwilligungsbasierte Personensuche
+
+Das Monolith-Modul `klasse5e.biometrics` hält ausschließlich die fachliche
+Zuordnung von `StudentProfile` zu opaque Vision-IDs. Pro Klasse besteht genau
+eine `BiometricCollection`; Profile, Fotoeinreichungen und Treffer tragen diese
+Collection technisch mit. Die Vision-API bleibt im internen Compose-Netz ohne
+Host-Port und kennt weder Namen noch Benutzerkonten.
+
+Der Ablauf ist: vollständige Guardian-Einwilligung prüfen → Profil/Subject
+anlegen → separat freigegebenes, bereits bereinigtes Galeriefoto einreichen →
+persistierten Analysejob ausführen → Vorschläge importieren → menschlich
+bestätigen oder verwerfen. Ausschließlich bestätigte lokale Zuordnungen sind in
+der Suche sichtbar. Eltern sehen nur Profile eigener, aktuell verknüpfter Kinder;
+Lehrer und Moderatoren benötigen eine aktive Klassenrolle und Mitgliedschaft.
+
+`BIOMETRIC_SEARCH_ENABLED=0` ist der sichere Standard. Originale Vision-Imports
+werden nach 24 Stunden, bei dokumentierter Prüfung spätestens nach sieben Tagen
+über den idempotenten `purge-source`-Aufruf entfernt. Widerruf setzt das Profil
+zuerst auf `deletion_pending`, wodurch Suche sofort scheitert, und löscht danach
+Subject, Referenzen, Embeddings und lokale Matches. Wiederholung ist sicher.
+Die Galerieversion folgt unabhängig weiterhin ihrer Fotoeinwilligung.

@@ -28,3 +28,6 @@ wird später über `secret://klasse-5e/vision/service-token` bereitgestellt.
 Details: [API](docs/API.md), [Modelle](docs/MODELS.md),
 [Sicherheit](docs/SECURITY.md), [Backup/Restore](docs/BACKUP_RESTORE.md) und
 [Benchmark](docs/BENCHMARK.md).
+Der authentisierte, idempotente Endpunkt `purge-source` entfernt nach der
+Analyse nur die importierte Bildquelle. Dadurch kann die Fachanwendung kurze
+Quellbildfristen erzwingen, ohne Vorschläge automatisch zu bestätigen.

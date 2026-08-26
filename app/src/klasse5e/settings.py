@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     "klasse5e.content",
     "klasse5e.events",
     "klasse5e.media",
+    "klasse5e.biometrics",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     "wagtail.embeds",
@@ -148,3 +149,11 @@ GALLERY_MAX_PIXELS = 40_000_000
 GALLERY_MAX_BATCH = 25
 GALLERY_MAX_TOTAL_BYTES = 5 * 1024 * 1024 * 1024
 GALLERY_RETENTION_GRACE_DAYS = 30
+BIOMETRIC_SEARCH_ENABLED = os.environ.get("BIOMETRIC_SEARCH_ENABLED", "0") == "1"
+VISION_BASE_URL = os.environ.get("VISION_BASE_URL", "http://klasse-5e-vision:8000").rstrip("/")
+VISION_SERVICE_TOKEN = os.environ.get("VISION_SERVICE_TOKEN", "")
+BIOMETRIC_PIPELINE_ID = os.environ.get("BIOMETRIC_PIPELINE_ID", "yunet-sface-2023mar-2021dec")
+BIOMETRIC_ORIGINAL_RETENTION_HOURS = 24
+BIOMETRIC_MANUAL_REVIEW_MAX_DAYS = 7
+BIOMETRIC_PROTOCOL_RETENTION_DAYS = 30
+BIOMETRIC_SECURITY_AUDIT_RETENTION_DAYS = 90

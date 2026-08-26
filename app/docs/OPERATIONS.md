@@ -43,3 +43,37 @@ synthetischem Galerie-/Fotodatensatz und drei bereinigte Medienableitungen in
 frische Volumes. Die Datenbank enthielt danach den erwarteten Datensatz; die
 SHA-256-Werte von Anzeige, Thumbnail und Download stimmten vor und nach Restore
 überein. Ein Containerneustart erhielt Datensatz und Medienvolume.
+
+## Biometrie-Betrieb
+
+`BIOMETRIC_SEARCH_ENABLED` bleibt ohne explizite Setzung `0`. Für den
+freigegebenen technischen Test wird es kontrolliert auf `1` gesetzt; das
+Vision-Diensttoken stammt ausschließlich aus
+`secret://projects/klasse-5e/vision_service_token`. Vision bleibt ohne
+Host-Port im internen Netz.
+
+`manage.py purge_biometric_data` ist ein Dry-Run. Mit `--execute` entfernt es
+fällige Vision-Quelldateien und anschließend abgelaufene, nicht mehr benötigte
+Zuordnungen. `manage.py reconcile_biometric_consents` sperrt Profile mit
+fehlender oder widerrufener Zustimmung und wiederholt ausstehende Remote-
+Löschungen. Beide Befehle sind mindestens täglich auszuführen; so wird die
+24-Stunden-Frist eingehalten. Bei dokumentierter manueller Prüfung darf die
+Quelle höchstens sieben Tage verbleiben.
+
+Bei Testende oder Abschaltung wird zuerst der Feature-Schalter auf `0` gesetzt
+und danach `manage.py disable_biometrics` geprüft und explizit mit `--execute`
+ausgeführt. Fehlgeschlagene Collections verbleiben sichtbar als
+`deletion_pending` und werden erneut verarbeitet.
+
+Das Vision-Volume ist biometrischer Sicherungsbestand. Alte Backups können bis
+zum Ende ihrer verschlüsselten Aufbewahrungsfrist bereits widerrufene Daten
+enthalten und müssen beim Restore unmittelbar durch Consent-Abgleich und Purge
+bereinigt werden. Ein unverschlüsselter Export ist unzulässig.
+
+Der Phase-6-Abnahmelauf vom 26.08.2026 baute App und Vision neu, migrierte vier
+Biometrie-Migrationen in einem frischen PostgreSQL-Volume und startete App,
+PostgreSQL und Vision gesund ohne Host-Port. Nach einem vollständigen Neustart
+blieben die Migrationen vorhanden. Ein Custom-Format-Dump wurde in ein zweites
+frisches PostgreSQL-17.6-Volume restauriert; alle fünf biometrischen Tabellen
+einschließlich Referenzen waren vorhanden. Der Vision-Backup-/Restore-Test
+lief zusätzlich mit der vollständigen Vision-Suite erfolgreich.

@@ -87,6 +87,10 @@ class Photo(models.Model):
     description = models.CharField(max_length=500, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     download_allowed = models.BooleanField(default=False)
+    biometric_analysis_allowed = models.BooleanField(
+        default=False,
+        help_text="Separate ausdrückliche Freigabe für die lokale technische Analyse",
+    )
 
 
 class PhotoSubjectDeclaration(models.Model):

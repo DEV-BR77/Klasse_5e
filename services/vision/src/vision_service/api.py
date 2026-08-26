@@ -213,6 +213,25 @@ def get_image(collection_id: str, image_id: str, db: DatabaseSession) -> Image:
     return item
 
 
+@router.post(
+    "/collections/{collection_id}/images/{image_id}/purge-source", response_model=DeleteResult
+)
+def purge_image_source(collection_id: str, image_id: str, db: DatabaseSession) -> DeleteResult:
+    """Remove the imported source after analysis while retaining derived records.
+
+    This is deliberately separate from image deletion so an integrating application can
+    enforce a short source retention period without destroying reviewed embeddings.
+    """
+    item = db.get(Image, (collection_id, image_id))
+    if item is None:
+        return DeleteResult()
+    if item.status not in {"analyzed", "uploaded"}:
+        raise HTTPException(status_code=409, detail="image_processing_incomplete")
+    _, storage = resources()
+    storage.image_path(collection_id, image_id).unlink(missing_ok=True)
+    return DeleteResult()
+
+
 @router.delete("/collections/{collection_id}/images/{image_id}", response_model=DeleteResult)
 def delete_image(collection_id: str, image_id: str, db: DatabaseSession) -> DeleteResult:
     item = db.get(Image, (collection_id, image_id))

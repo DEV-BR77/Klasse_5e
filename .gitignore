@@ -38,6 +38,7 @@ secrets*
 data/
 /media/
 app/.test-media/
+**/.test-media/
 uploads/
 logs/
 backups/

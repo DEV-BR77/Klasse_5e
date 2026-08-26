@@ -27,3 +27,18 @@ Medien-URLs werden nicht übernommen. Consent wird bei jedem Abruf erneut
 bewertet; Datenschutzmeldungen sperren vorsorglich. Antworten tragen `private,
 no-store`; Logs und Audit enthalten keine Bilddaten, EXIF-Inhalte oder Namen
 abgebildeter Kinder.
+
+# Biometrische Suche (Phase 6)
+
+Die Funktion antwortet bei ausgeschaltetem Feature-Schalter mit 404. Aktivierung
+eines Profils verlangt die aktuelle Zustimmung jedes verifizierten, rechtlich
+sorgeberechtigten und für biometrische Einwilligungen berechtigten Guardians.
+Eltern können nur nach eigenen verknüpften Kindern suchen; Lehrer, Moderatoren
+und Administratoren benötigen eine aktive Rolle und Klassenmitgliedschaft.
+
+Nur separat freigegebene, bereits bereinigte Galeriefotos werden an Vision
+übermittelt. App und Vision tauschen ausschließlich opaque UUIDs aus. Tokens,
+Bilddaten, Embeddings und Vergleichswerte werden nicht geloggt. Scores werden
+nicht als Wahrscheinlichkeit angezeigt. Ein Modell kann niemals bestätigen.
+Widerruf setzt das Profil vor dem Remote-Löschaufruf auf `deletion_pending` und
+entzieht damit sofort jeden Suchzugriff.

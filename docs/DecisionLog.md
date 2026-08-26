@@ -236,3 +236,28 @@ dauerhafte Links würden diese Grenze schwächen.
 
 **Folge:** HEIC, automatische Verpixelung und Vision bleiben ausgeschlossen.
 Download ist zweistufig standardmäßig deaktiviert.
+
+## ADR-019: Biometrische Suche als deaktivierbare Integration
+
+**Entscheidung:** Phase 6 integriert die projektneutrale Vision-API über opaque
+UUIDs in ein eigenes Monolith-Modul. `BIOMETRIC_SEARCH_ENABLED` ist standardmäßig
+aus. Ein Profil entsteht nur, wenn jeder aktuell verifizierte, rechtlich
+sorgeberechtigte und biometrieberechtigte Guardian aktuell zugestimmt hat.
+Modellvorschläge bleiben `proposed`, bis ein berechtigter Mensch bestätigt oder
+verwirft; ein bestätigter Treffer wird nur mit einem zweiten expliziten Parameter
+und eigener Consent-Art zur Referenz.
+
+**Grund:** Die getrennte App-/Vision-Zuordnung hält Namen aus dem Vision-Dienst,
+verhindert automatische Identifikation und macht Widerruf technisch prüfbar.
+Collection- und Subject-IDs enthalten keine Fachbegriffe. Modelle und Scores
+bleiben versionsgebundene Vergleichswerte, keine Prozentwahrscheinlichkeiten.
+
+**Folge:** Verantwortliche Stelle für den freigegebenen technischen Test ist
+Björn Radke. Vision-Quelldateien werden binnen 24 Stunden, bei dokumentierter
+manueller Prüfung spätestens binnen sieben Tagen entfernt. Subject-Embeddings
+werden binnen 24 Stunden nach Widerruf, Profillöschung, Testende oder Abschaltung
+gelöscht. Zuordnungs-/Protokolldaten enden nach 30 Tagen, minimierte
+sicherheitsrelevante Auditdaten spätestens nach 90 Tagen. Ein
+`purge-source`-Endpunkt entfernt die importierte Bildquelle, ohne geprüfte
+Ableitungen vorzeitig zu vernichten. Eine Produktivnutzung erfordert eine neue
+gesonderte Freigabe.

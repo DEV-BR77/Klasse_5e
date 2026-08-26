@@ -13,7 +13,7 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 | 3 | **abgeschlossen:** CMS-Kern | L | wirklich geschützte PDFs, freigegebene Lehrerfelder, Beiträge/Kommentare und fachliche CMS-Rechte |
 | 4 | **abgeschlossen:** Events und Mitbringlisten | M–L | transaktionssichere Reservierung, Eigenverwaltung, Audit und Erinnerungs-Push |
 | 5 | **abgeschlossen:** geschützte Galerien ohne Vision | XL | Uploadprüfung, Metadatenentfernung, Moderation, Einwilligungsprüfung, geschützte Medien und Löschfristen |
-| 6 | optionale biometrische Suche | XL | standardmäßig aus, ausdrückliche Einwilligung, nur bestätigte Treffer, Zugriff nur auf eigene Kinder, vollständiger Widerrufstest |
+| 6 | **abgeschlossen:** optionale biometrische Suche | XL | standardmäßig aus, vollständige Sorgeberechtigten-Einwilligung, nur bestätigte Treffer, Zugriff nur auf eigene Kinder, vollständiger Widerrufstest |
 | 7 | begrenzter Klassenchat | L | Klassen-/Eventräume, Zugriffsentzug, Moderation, Aufbewahrung und datensparsamer Push; Echtzeittechnik erst nach Messung |
 | 8 | manueller Kalender und Stundenplan | L | Wochenansicht, Änderungsvergleich, deduplizierter Push und widerrufbares iCal |
 | 9 | Schulportaladapter | L–XL | erst nach Portal-/API-/Rechtsprüfung; idempotenter austauschbarer Adapter und manueller Fallback |
@@ -23,13 +23,15 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 
 1. **Erledigt:** Phase 0, Phase 1A und Phase 1B sind abgeschlossen.
 2. **Erledigt:** Phasen 2, 3 und 4 einschließlich phasenübergreifender Abnahme.
-3. **Erledigt:** Phase 5, geschützte Galerien ohne Vision. Phase 6 bleibt
-   ausdrücklich nicht freigegeben.
+3. **Erledigt:** Phase 5, geschützte Galerien ohne Vision.
+4. **Erledigt:** Phase 6 ist für Entwicklung und technische Prüfung mit
+   freigegebenen Testbildern umgesetzt. Der Schalter bleibt standardmäßig aus.
 4. **Erledigt in Phase 2:** Django 5.2 LTS, Wagtail 7.2 LTS und django-allauth
    MFA sind gepinnt; Datenschutztexte bleiben ausdrücklich fachliche Entwürfe.
 5. **Vor Produktion:** Betriebsadresse, Caddy-Route, Backupziel,
    Wiederherstellungsziele und Netz-Zugriffspolicy freigeben.
-6. **Vor Phase 6:** gesonderte Datenschutzentscheidung zur Biometrie.
+6. **Erledigt für den technischen Test:** Verantwortliche Stelle und
+   Löschfristen sind dokumentiert; dies ist keine Produktivfreigabe.
 7. **Vor Phase 9:** gesonderte rechtliche und technische Machbarkeitsprüfung.
 
 ## Gemeinsamer Folgeauftrag für Phase 2 bis 4
@@ -56,6 +58,14 @@ Moderation, geschützte Auslieferung, Meldung, Rückzug und idempotente Löschun
 sind getestet. PostgreSQL und drei synthetische Bildableitungen wurden in
 frische Volumes restauriert; SHA-256-Prüfsummen waren identisch. Phase 6 ist
 nicht begonnen.
+
+**Phase-6-Abnahme abgeschlossen (26.08.2026):** Die Integration ist
+standardmäßig deaktiviert, erzwingt die vollständige aktuelle Zustimmung aller
+biometrieberechtigten Sorgeberechtigten und übernimmt ausschließlich opaque
+IDs. Vorschläge werden nie automatisch bestätigt. Widerruf sperrt unmittelbar
+und löscht Subject, Referenzen, Embeddings und lokale Zuordnungen kontrolliert.
+Der importierte Vision-Quellstand besitzt eine eigene 24-Stunden-/maximal
+7-Tage-Löschkette. Phase 7 ist nicht begonnen.
 
 ## Umsetzung Phase 1B
 

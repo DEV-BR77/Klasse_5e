@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% block content %}
+<h1>Lokale Personensuche</h1>
+<p class="notice">Die Bilderkennung läuft ausschließlich auf dem selbst betriebenen Server. Fotos, Gesichtsausschnitte und biometrische Vergleichsdaten werden nicht an externe KI-Anbieter übertragen. Die KI erstellt nur Vorschläge. Personenzuordnungen werden durch berechtigte Personen bestätigt.</p>
+{% for profile in profiles %}<h2>{{ profile.student.person.first_name }}</h2>{% for match in matches %}{% if match.profile_id == profile.id %}<a href="{% url 'photo-file' match.submission.photo_id 'display' %}">Bestätigtes Foto ansehen</a>{% endif %}{% empty %}<p>Keine bestätigten Treffer.</p>{% endfor %}{% empty %}<p>Keine freigegebene Suche verfügbar.</p>{% endfor %}
+{% endblock %}

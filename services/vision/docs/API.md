@@ -7,8 +7,10 @@ Dokumentationsrouten sind deaktiviert.
 - Modelle: `GET /v1/models`, `GET /v1/models/{pipeline_id}`
 - Collections: `POST/GET/DELETE /v1/collections[/{collection_id}]`
 - Subjects: `POST /collections/{c}/subjects`, `GET/DELETE .../{subject_id}`
-- Bilder: `POST /collections/{c}/images`, `GET/DELETE .../{image_id}` und
-  `POST .../{image_id}/analyze`
+- Bilder: `POST /collections/{c}/images`, `GET/DELETE .../{image_id}`,
+  `POST .../{image_id}/analyze` und idempotentes `POST
+  .../{image_id}/purge-source` zum isolierten Entfernen der importierten Quelle
+  nach der Analyse; geprüfte Ableitungen bleiben bis zu ihrer eigenen Löschung.
 - Jobs: `GET .../jobs/{job_id}`, `POST .../jobs/{job_id}/cancel`
 - Faces/Matches: Listen, `confirm`, `reject` und `dismiss`
 - Referenzen: Anlegen, listen und widerrufen unter dem jeweiligen Subject

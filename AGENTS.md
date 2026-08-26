@@ -29,14 +29,13 @@ Für dieses Projekt sind in dieser Reihenfolge maßgeblich:
 - Nicht eingecheckte Benutzerarbeit muss erhalten bleiben.
 - Geheimnisse, personenbezogene Laufzeitdaten, Fotos, Gesichtsausschnitte,
   Embeddings, Modelle und Uploads gehören nicht in Git.
-- Biometrische Funktionen bleiben bis zur fachlichen Datenschutzfreigabe und
-  ausdrücklichen Phasenfreigabe deaktiviert.
+- Biometrische Funktionen bleiben trotz abgeschlossener Phase 6 standardmäßig
+  deaktiviert und benötigen für jeden Betrieb die dokumentierte Einwilligung.
 - Jede abgeschlossene Phase benötigt angemessene Tests, kurze Dokumentation,
   Sicherheitsprüfung und überprüfbare Abnahmekriterien.
 - Änderungen werden in kleinen, nachvollziehbaren Commits festgehalten.
 
 ## Aktueller Stand
 
-Phase 0, Phase 1A und Phase 1B sind abgeschlossen. Danach bilden
-Phase 2 bis 4 sind abgeschlossen. Aktuell ist ausschließlich Phase 5
-freigegeben; Phase 6 und spätere Phasen sind nicht freigegeben.
+Phase 0 bis Phase 6 sind abgeschlossen. Phase 7 und spätere Phasen sind nicht
+freigegeben.

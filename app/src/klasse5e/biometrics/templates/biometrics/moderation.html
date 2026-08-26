@@ -1,0 +1,3 @@
+{% extends "base.html" %}{% block content %}<h1>Vorschläge prüfen</h1>
+<p>Ähnlichkeitswerte sind Modellwerte, keine Prozentwahrscheinlichkeiten. Jeder Treffer benötigt eine menschliche Entscheidung.</p>
+{% for match in matches %}<section><p>Vorschlag Rang {{ match.rank }} · Pipeline {{ match.pipeline_id }} / {{ match.model_version }}</p><form method="post" action="{% url 'biometric-decision' match.public_id 'confirmed' %}">{% csrf_token %}<button>Bestätigen</button></form><form method="post" action="{% url 'biometric-decision' match.public_id 'rejected' %}">{% csrf_token %}<button>Verwerfen</button></form></section>{% empty %}<p>Keine offenen Vorschläge.</p>{% endfor %}{% endblock %}

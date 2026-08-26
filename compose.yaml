@@ -13,6 +13,8 @@ services:
       MEDIA_ROOT: /data/media
       VISION_BASE_URL: http://klasse-5e-vision:8000
       VISION_SERVICE_TOKEN: ${VISION_SERVICE_TOKEN:?Provide Vision secret}
+      BIOMETRIC_SEARCH_ENABLED: ${BIOMETRIC_SEARCH_ENABLED:-0}
+      BIOMETRIC_PIPELINE_ID: ${BIOMETRIC_PIPELINE_ID:-yunet-sface-2023mar-2021dec}
     depends_on:
       klasse-5e-db:
         condition: service_healthy
