@@ -118,4 +118,5 @@ Eltern-Zugangsdaten, Screenshots mit Schülerdaten, iCal-Links und lokale
 
 ## Nachverfolgung
 
-Anfrage noch nicht versendet.
+Anfrage am 26.08.2026 an das THG versendet. Der zuständige Administrator wurde
+in Kopie gesetzt. Antwort und technische Freigabe stehen noch aus.
