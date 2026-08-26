@@ -15,7 +15,7 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 | 5 | **abgeschlossen:** geschützte Galerien ohne Vision | XL | Uploadprüfung, Metadatenentfernung, Moderation, Einwilligungsprüfung, geschützte Medien und Löschfristen |
 | 6 | **abgeschlossen:** optionale biometrische Suche | XL | standardmäßig aus, vollständige Sorgeberechtigten-Einwilligung, nur bestätigte Treffer, Zugriff nur auf eigene Kinder, vollständiger Widerrufstest |
 | 7 | **abgeschlossen:** begrenzter Klassenchat | L | Klassen-/Eventräume, Zugriffsentzug, Moderation, Aufbewahrung und datensparsamer Push; kurzes Polling ohne Zusatzdienst |
-| 8 | manueller Kalender und Stundenplan | L | Wochenansicht, Änderungsvergleich, deduplizierter Push und widerrufbares iCal |
+| 8 | **abgeschlossen:** manueller Kalender und Stundenplan | L | Wochenansicht, Änderungsvergleich, deduplizierter Push und widerrufbares iCal |
 | 9 | Schulportaladapter | L–XL | erst nach Portal-/API-/Rechtsprüfung; idempotenter austauschbarer Adapter und manueller Fallback |
 | 10 | Produktion und Schuljahreswechsel | XL | Compose/Caddy, Header, Health, Export/Löschung, Backup und praktisch geübter Restore, Übergabe und Sitzungsentzug |
 
@@ -72,6 +72,11 @@ Antworten, Bearbeitung, Rückzug, Meldung, Moderation, Lesestand und opt-in
 Push-Präferenzen sind klassenisoliert umgesetzt. Der Zugriff endet unmittelbar
 mit der Mitgliedschaft; die erste Version pollt kurz und benötigt weder Redis
 noch WebSockets.
+
+**Phase-8-Abnahme abgeschlossen (26.08.2026):** Der manuelle Stundenplan,
+Kalenderarten und revidierte Änderungen sind klassenisoliert. iCal-Tokens sind
+nicht erratbar, nur gehasht gespeichert, rotierbar und nach Zugriffsentzug
+unmittelbar unwirksam.
 
 ## Umsetzung Phase 1B
 

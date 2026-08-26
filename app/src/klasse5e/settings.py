@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     "klasse5e.media",
     "klasse5e.biometrics",
     "klasse5e.chat",
+    "klasse5e.schedule",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     "wagtail.embeds",

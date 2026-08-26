@@ -271,3 +271,12 @@ Frist gelöscht. Push ist opt-in und enthält keinen Nachrichtentext.
 **Grund:** Für einen kleinen Klassenraum ist die robustere Betriebsform ohne
 Redis und zusätzliche Worker ausreichend. Ein Wechsel zu SSE oder WebSockets
 benötigt erst einen nachgewiesenen Last- oder Bedienungsbedarf.
+
+# ADR-021: Manueller Kalender vor Portaladapter
+
+**Entscheidung:** Der neutrale Wochenplan und Kalender sind eigenständige
+Django-Modelle. Änderungen werden über Revisionen verglichen; iCal erhält
+rotierbare, gehashte Zugriffstokens. Eine Portalquelle ist keine Voraussetzung.
+
+**Grund:** Die Plattform bleibt bei Portalausfall nutzbar und sendet nur für
+wirkliche neue Revisionen einen Hinweis.

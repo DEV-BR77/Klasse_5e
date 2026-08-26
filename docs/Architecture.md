@@ -393,3 +393,11 @@ persistiert in PostgreSQL. Jeder Zugriff prüft die aktive Mitgliedschaft neu.
 Die erste Version verwendet kurzes, zeitmarkenbasiertes Polling. Damit entstehen
 keine Redis-, Worker- oder WebSocket-Abhängigkeiten. Inhalte werden standardmäßig
 90 Tage aufbewahrt und über einen expliziten Management-Command gelöscht.
+
+# Phase 8: manueller Kalender und Stundenplan
+
+`schedule` speichert Wochenstunden und terminierte Änderungen im Monolithen.
+Kalendereinträge besitzen eine monotone Revision; ein separates Änderungsobjekt
+ermöglicht Deduplizierung pro Eintrag, Revision und Empfänger. iCal-Tokens sind
+zufällig, ausschließlich gehasht gespeichert, rotierbar und an die aktive
+Klassenmitgliedschaft gebunden.

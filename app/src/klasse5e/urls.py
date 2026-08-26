@@ -8,6 +8,7 @@ from klasse5e.content import views as content_views
 from klasse5e.core import views
 from klasse5e.events import views as event_views
 from klasse5e.media import views as media_views
+from klasse5e.schedule import views as schedule_views
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
@@ -74,7 +75,20 @@ urlpatterns = [
     ),
     path("chat/rooms/<uuid:room_id>/", chat_views.room_detail, name="chat-room"),
     path("chat/rooms/<uuid:room_id>/messages/", chat_views.messages, name="chat-messages"),
-    path("chat/messages/<uuid:message_id>/", chat_views.edit_or_delete_message, name="chat-message"),
+    path(
+        "chat/messages/<uuid:message_id>/", chat_views.edit_or_delete_message, name="chat-message"
+    ),
     path("chat/messages/<uuid:message_id>/report/", chat_views.report_message, name="chat-report"),
-    path("chat/messages/<uuid:message_id>/moderate/", chat_views.moderate_message, name="chat-moderate"),
+    path(
+        "chat/messages/<uuid:message_id>/moderate/",
+        chat_views.moderate_message,
+        name="chat-moderate",
+    ),
+    path("schedule/classes/<int:class_id>/week/", schedule_views.week, name="schedule-week"),
+    path("schedule/ical/<str:token>/", schedule_views.ical_feed, name="schedule-ical"),
+    path(
+        "schedule/classes/<int:class_id>/ical-token/",
+        schedule_views.issue_ical,
+        name="schedule-ical-issue",
+    ),
 ]
