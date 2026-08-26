@@ -261,3 +261,13 @@ sicherheitsrelevante Auditdaten spätestens nach 90 Tagen. Ein
 `purge-source`-Endpunkt entfernt die importierte Bildquelle, ohne geprüfte
 Ableitungen vorzeitig zu vernichten. Eine Produktivnutzung erfordert eine neue
 gesonderte Freigabe.
+# ADR-020: Klassenchat mit kurzem Polling
+
+**Entscheidung:** Phase 7 verwendet serverseitige Django-Endpunkte und kurzes
+Polling statt WebSockets. Räume sind klassenisoliert, Nachrichten werden nur
+inhaltsleer zurückgezogen oder moderativ ausgeblendet und nach der definierten
+Frist gelöscht. Push ist opt-in und enthält keinen Nachrichtentext.
+
+**Grund:** Für einen kleinen Klassenraum ist die robustere Betriebsform ohne
+Redis und zusätzliche Worker ausreichend. Ein Wechsel zu SSE oder WebSockets
+benötigt erst einen nachgewiesenen Last- oder Bedienungsbedarf.

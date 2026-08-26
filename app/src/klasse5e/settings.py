@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "klasse5e.events",
     "klasse5e.media",
     "klasse5e.biometrics",
+    "klasse5e.chat",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     "wagtail.embeds",
@@ -157,3 +158,4 @@ BIOMETRIC_ORIGINAL_RETENTION_HOURS = 24
 BIOMETRIC_MANUAL_REVIEW_MAX_DAYS = 7
 BIOMETRIC_PROTOCOL_RETENTION_DAYS = 30
 BIOMETRIC_SECURITY_AUDIT_RETENTION_DAYS = 90
+CHAT_RETENTION_DAYS = int(os.environ.get("CHAT_RETENTION_DAYS", "90"))

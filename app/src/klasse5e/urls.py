@@ -3,6 +3,7 @@ from django.urls import include, path
 from wagtail.admin import urls as wagtailadmin_urls
 
 from klasse5e.biometrics import views as biometric_views
+from klasse5e.chat import views as chat_views
 from klasse5e.content import views as content_views
 from klasse5e.core import views
 from klasse5e.events import views as event_views
@@ -71,4 +72,9 @@ urlpatterns = [
         biometric_views.decide_match,
         name="biometric-decision",
     ),
+    path("chat/rooms/<uuid:room_id>/", chat_views.room_detail, name="chat-room"),
+    path("chat/rooms/<uuid:room_id>/messages/", chat_views.messages, name="chat-messages"),
+    path("chat/messages/<uuid:message_id>/", chat_views.edit_or_delete_message, name="chat-message"),
+    path("chat/messages/<uuid:message_id>/report/", chat_views.report_message, name="chat-report"),
+    path("chat/messages/<uuid:message_id>/moderate/", chat_views.moderate_message, name="chat-moderate"),
 ]

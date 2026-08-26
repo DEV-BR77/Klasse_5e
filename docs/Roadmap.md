@@ -14,7 +14,7 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 | 4 | **abgeschlossen:** Events und Mitbringlisten | M–L | transaktionssichere Reservierung, Eigenverwaltung, Audit und Erinnerungs-Push |
 | 5 | **abgeschlossen:** geschützte Galerien ohne Vision | XL | Uploadprüfung, Metadatenentfernung, Moderation, Einwilligungsprüfung, geschützte Medien und Löschfristen |
 | 6 | **abgeschlossen:** optionale biometrische Suche | XL | standardmäßig aus, vollständige Sorgeberechtigten-Einwilligung, nur bestätigte Treffer, Zugriff nur auf eigene Kinder, vollständiger Widerrufstest |
-| 7 | begrenzter Klassenchat | L | Klassen-/Eventräume, Zugriffsentzug, Moderation, Aufbewahrung und datensparsamer Push; Echtzeittechnik erst nach Messung |
+| 7 | **abgeschlossen:** begrenzter Klassenchat | L | Klassen-/Eventräume, Zugriffsentzug, Moderation, Aufbewahrung und datensparsamer Push; kurzes Polling ohne Zusatzdienst |
 | 8 | manueller Kalender und Stundenplan | L | Wochenansicht, Änderungsvergleich, deduplizierter Push und widerrufbares iCal |
 | 9 | Schulportaladapter | L–XL | erst nach Portal-/API-/Rechtsprüfung; idempotenter austauschbarer Adapter und manueller Fallback |
 | 10 | Produktion und Schuljahreswechsel | XL | Compose/Caddy, Header, Health, Export/Löschung, Backup und praktisch geübter Restore, Übergabe und Sitzungsentzug |
@@ -66,6 +66,12 @@ IDs. Vorschläge werden nie automatisch bestätigt. Widerruf sperrt unmittelbar
 und löscht Subject, Referenzen, Embeddings und lokale Zuordnungen kontrolliert.
 Der importierte Vision-Quellstand besitzt eine eigene 24-Stunden-/maximal
 7-Tage-Löschkette. Phase 7 ist nicht begonnen.
+
+**Phase-7-Abnahme abgeschlossen (26.08.2026):** Klassen- und Eventräume,
+Antworten, Bearbeitung, Rückzug, Meldung, Moderation, Lesestand und opt-in
+Push-Präferenzen sind klassenisoliert umgesetzt. Der Zugriff endet unmittelbar
+mit der Mitgliedschaft; die erste Version pollt kurz und benötigt weder Redis
+noch WebSockets.
 
 ## Umsetzung Phase 1B
 

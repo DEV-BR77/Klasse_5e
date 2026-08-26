@@ -384,3 +384,12 @@ werden nach 24 Stunden, bei dokumentierter Prüfung spätestens nach sieben Tage
 zuerst auf `deletion_pending`, wodurch Suche sofort scheitert, und löscht danach
 Subject, Referenzen, Embeddings und lokale Matches. Wiederholung ist sicher.
 Die Galerieversion folgt unabhängig weiterhin ihrer Fotoeinwilligung.
+# Phase 7: begrenzter Klassenchat
+
+Der Chat ist ein Modul des Django-Monolithen. `ChatRoom` gehört genau einer
+Klasse und einem Schuljahr; ein optionales Event muss denselben Grenzen
+entsprechen. `ChatMessage`, Lesestand, Meldung und Push-Präferenz bleiben
+persistiert in PostgreSQL. Jeder Zugriff prüft die aktive Mitgliedschaft neu.
+Die erste Version verwendet kurzes, zeitmarkenbasiertes Polling. Damit entstehen
+keine Redis-, Worker- oder WebSocket-Abhängigkeiten. Inhalte werden standardmäßig
+90 Tage aufbewahrt und über einen expliziten Management-Command gelöscht.

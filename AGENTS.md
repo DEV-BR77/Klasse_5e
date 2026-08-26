@@ -37,5 +37,6 @@ Für dieses Projekt sind in dieser Reihenfolge maßgeblich:
 
 ## Aktueller Stand
 
-Phase 0 bis Phase 6 sind abgeschlossen. Phase 7 und spätere Phasen sind nicht
-freigegeben.
+Phase 0 bis Phase 6 sind abgeschlossen. Die Phasen 7 bis 11 sind als
+aufeinanderfolgender Auftrag freigegeben; jede Phase benötigt vor Beginn der
+nächsten ein vollständiges Qualitätsgate.

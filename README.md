@@ -53,3 +53,9 @@ Der normale Start veröffentlicht keinen Port. Für einen ausschließlich lokal
 gebundenen Diagnosezugang wird zusätzlich `compose.dev.yaml` verwendet. Die
 benötigten Geheimnisse werden nur im aufrufenden Prozess bereitgestellt; siehe
 `app/docs/OPERATIONS.md`.
+# Phase 7
+
+Der geschlossene Klassenchat ist im Django-Monolithen enthalten. Er verwendet
+kurzes Polling, prüft bei jedem Zugriff die Klassenmitgliedschaft und führt
+keine Direktnachrichten oder Dateianhänge ein. Betrieb und Grenzen stehen in
+`app/docs/CHAT.md`.
