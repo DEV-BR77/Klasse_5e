@@ -1,32 +1,105 @@
 # Lizenzanfrage für InsightFace-Modelle
 
-Stand: 24.08.2026
+Stand: 26.08.2026
 
 ## Versand
 
-Bevorzugter Empfänger:
+Die Anfrage wurde gestellt an:
 
 - `recognition-oss-pack@insightface.ai`
 
-Die Anfrage soll als normale E-Mail direkt aus dem privaten E-Mail-Postfach
-gesendet werden. Das geschäftlich ausgerichtete Kontaktformular auf
-`https://www.insightface.ai/` ist für diesen privaten Anwendungsfall nicht
-geeignet.
+**Subject:** Non-commercial model license request for a private self-hosted school-class photo platform
 
-Empfohlener Versand ist die englische Fassung. Die deutsche Fassung dient der
-inhaltlichen Kontrolle und internen Dokumentation.
+```
+Dear InsightFace Licensing Team,
 
-Falls die Adresse die Nachricht zurückweist, eine geschäftliche Adresse
-verlangt oder keine belastbare Erlaubnis erteilt wird, dürfen die betreffenden
-InsightFace-Modellgewichte nicht produktiv verwendet werden. Adapter dürfen
-vorbereitet werden; Modellgewichte, echte Klassenfotos und biometrische Daten
-dürfen ohne geklärte Lizenz nicht eingesetzt werden.
+I am developing a small, private, non-commercial, self-hosted web platform for
+the parents and teachers of a single school class in Germany.
+
+The platform will include a protected photo gallery for class events such as
+school trips. We would like to evaluate and potentially use an InsightFace face
+detection and recognition model to help parents find photographs containing
+their own child within the platform's protected area.
+
+We are particularly interested in evaluating the following models or model
+combinations:
+
+- SCRFD with an ArcFace-based recognition model
+- the buffalo_l model package
+- optionally antelopev2 as an additional quality comparison
+
+The intended use is limited as follows:
+
+- use for one school class only
+- approximately 25 to 35 children, their parents and two teachers
+- no commercial use
+- no subscription fees, advertising or other monetisation
+- no sale or redistribution of the software or model weights
+- deployment exclusively on a privately managed, self-hosted server
+- no cloud-based face recognition
+- no transfer of photographs or biometric comparison data to external providers
+- no public API and no public photo gallery
+- access restricted to authorised members of the class
+- human review and confirmation of every suggested match
+- no fully automated final identification
+- separate and explicit consent for biometric face matching
+- complete deletion of reference images, embeddings and assignments after consent is withdrawn
+- parents may search only for photographs of their own children linked to their account
+- an expected workload of approximately 100 photographs per school event, processed occasionally in batches
+
+The software would store face embeddings and confirmed reference images only
+locally and only for as long as they are required for the stated purpose and
+the relevant consent remains valid. We are requesting permission that is not
+limited to a single school year, but remains valid for the lifetime of this
+specific class cohort, beginning in grade 5 and ending no later than graduation
+or the end of grade 13, so that a new application is not required every year.
+Individual withdrawal and deletion obligations would remain unaffected.
+
+The models would be executed locally on a CPU using ONNX Runtime. We may convert
+the models into an optimised or quantised ONNX representation for local
+inference. The model weights would not be made available to third parties.
+
+Could you please answer the following questions:
+
+1. Is this private and non-commercial, but operational, use already permitted
+   under the existing model licence?
+2. If not, could you grant us written non-commercial permission or an
+   appropriate licence for this specific use case?
+3. Could this permission cover the buffalo_l model package, including its
+   SCRFD detector and ArcFace-based recognition model?
+4. Could antelopev2 also be included solely for a local quality comparison?
+5. Is conversion or optimisation of the supplied model weights into another
+   ONNX representation for local inference permitted?
+6. May the models be used in a private Docker deployment, provided that the
+   Docker image and model weights are not published or redistributed?
+7. Are there any specific attribution, documentation, audit, privacy or
+   deletion requirements that we must follow?
+8. Could the permission remain valid, without annual reapplication, for the
+   lifetime of this class cohort, beginning in grade 5 and ending no later than
+   graduation or the end of grade 13? Would it otherwise be time-limited or
+   restricted to specific model versions?
+
+This is a parent-operated project and is currently neither a commercial product
+nor an official product of the school.
+
+I would be happy to provide further technical or organisational information if
+required.
+
+Please also let us know whether a no-cost non-commercial licence is available
+for this strictly limited private use and which licence documents or licence
+files we would need to retain.
+
+Kind regards,
+
+Bjoern Radke
+Germany
+```
 
 ## Deutsche Fassung
 
 **Betreff:** Anfrage zur nichtkommerziellen Modelllizenz für eine private, selbst gehostete Klassenplattform
 
-```text
+```
 Sehr geehrtes InsightFace-Lizenzteam,
 
 ich entwickle eine kleine, private und nichtkommerzielle, selbst gehostete
@@ -119,105 +192,12 @@ Bjoern Radke
 Deutschland
 ```
 
-## Englische Versandfassung
+Solange keine belastbare Erlaubnis erteilt wird, dürfen die betreffenden
+InsightFace-Modellgewichte nicht produktiv verwendet werden. Adapter dürfen
+vorbereitet werden; Modellgewichte, echte Klassenfotos und biometrische Daten
+dürfen ohne geklärte Lizenz nicht eingesetzt werden.
 
-**Subject:** Non-commercial model license request for a private self-hosted school-class photo platform
-
-```text
-Dear InsightFace Licensing Team,
-
-I am developing a small, private, non-commercial, self-hosted web platform for
-the parents and teachers of a single school class in Germany.
-
-The platform will include a protected photo gallery for class events such as
-school trips. We would like to evaluate and potentially use an InsightFace face
-detection and recognition model to help parents find photographs containing
-their own child within the platform's protected area.
-
-We are particularly interested in evaluating the following models or model
-combinations:
-
-- SCRFD with an ArcFace-based recognition model
-- the buffalo_l model package
-- optionally antelopev2 as an additional quality comparison
-
-The intended use is limited as follows:
-
-- use for one school class only
-- approximately 25 to 35 children, their parents and two teachers
-- no commercial use
-- no subscription fees, advertising or other monetisation
-- no sale or redistribution of the software or model weights
-- deployment exclusively on a privately managed, self-hosted server
-- no cloud-based face recognition
-- no transfer of photographs or biometric comparison data to external providers
-- no public API and no public photo gallery
-- access restricted to authorised members of the class
-- human review and confirmation of every suggested match
-- no fully automated final identification
-- separate and explicit consent for biometric face matching
-- complete deletion of reference images, embeddings and assignments after consent is withdrawn
-- parents may search only for photographs of their own children linked to their account
-- an expected workload of approximately 100 photographs per school event, processed occasionally in batches
-
-The software would store face embeddings and confirmed reference images only
-locally and only for as long as they are required for the stated purpose and
-the relevant consent remains valid. We are requesting permission that is not
-limited to a single school year, but remains valid for the lifetime of this
-specific class cohort, beginning in grade 5 and ending no later than graduation
-or the end of grade 13, so that a new application is not required every year.
-Individual withdrawal and deletion obligations would remain unaffected.
-
-The models would be executed locally on a CPU using ONNX Runtime. We may convert
-the models into an optimised or quantised ONNX representation for local
-inference. The model weights would not be made available to third parties.
-
-Could you please answer the following questions:
-
-1. Is this private and non-commercial, but operational, use already permitted
-   under the existing model licence?
-2. If not, could you grant us written non-commercial permission or an
-   appropriate licence for this specific use case?
-3. Could this permission cover the buffalo_l model package, including its
-   SCRFD detector and ArcFace-based recognition model?
-4. Could antelopev2 also be included solely for a local quality comparison?
-5. Is conversion or optimisation of the supplied model weights into another
-   ONNX representation for local inference permitted?
-6. May the models be used in a private Docker deployment, provided that the
-   Docker image and model weights are not published or redistributed?
-7. Are there any specific attribution, documentation, audit, privacy or
-   deletion requirements that we must follow?
-8. Could the permission remain valid, without annual reapplication, for the
-   lifetime of this class cohort, beginning in grade 5 and ending no later than
-   graduation or the end of grade 13? Would it otherwise be time-limited or
-   restricted to specific model versions?
-
-This is a parent-operated project and is currently neither a commercial product
-nor an official product of the school.
-
-I would be happy to provide further technical or organisational information if
-required.
-
-Please also let us know whether a no-cost non-commercial licence is available
-for this strictly limited private use and which licence documents or licence
-files we would need to retain.
-
-Kind regards,
-
-Bjoern Radke
-Germany
-```
 
 ## Nachverfolgung
 
-Nach dem Versand intern ergänzen:
-
-- Versanddatum
-- verwendete Absenderadresse, sofern sie nicht veröffentlicht werden soll nur
-  außerhalb des Git-Repositorys dokumentieren
-- Antwortdatum
-- konkret erlaubte Modellpakete und Versionen
-- Laufzeit oder Einschränkungen der Erlaubnis
-- interner Ablageort des vollständigen Lizenznachweises
-
-Die erhaltene private Korrespondenz wird nicht ungeprüft in Git eingecheckt.
+Antwort von Insight noch offen.
