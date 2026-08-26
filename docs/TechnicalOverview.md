@@ -58,6 +58,10 @@ benötigten Geheimnisse werden nur im aufrufenden Prozess bereitgestellt; siehe
 - [Architektur und Bestandsaufnahme](Architecture.md)
 - [Entscheidungsprotokoll](DecisionLog.md)
 - [Phasenplan](Roadmap.md)
+- [UX-Spezifikationsgate](ux/UX-Spezifikation.md) mit
+  [Informationsarchitektur](ux/Informationsarchitektur.md),
+  [Wireframes](ux/Wireframes.md) und
+  [Abnahmeszenarien](ux/Abnahmeszenarien.md)
 - [Vorbereitete InsightFace-Lizenzanfrage](licenses/InsightFace-Lizenzanfrage.md)
 - [Web-Push-Kit](../packages/web-push-kit/README.md)
 - [Web-Push-Kit-Integration in Klasse 5e](migrations/Klasse-5e-web-push-kit.md)

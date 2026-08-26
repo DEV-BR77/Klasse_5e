@@ -21,6 +21,18 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 
 ## Freigabepunkte
 
+### Vorgeschaltetes UX-Spezifikationsgate
+
+Das reine Konzeptgate für die spätere responsive Überarbeitung ist
+abgeschlossen. Es verändert keine Phasennummer und implementiert keine
+Fachfunktion. Verbindliche Grundlage sind die
+[UX-Spezifikation](ux/UX-Spezifikation.md), die
+[Informationsarchitektur](ux/Informationsarchitektur.md), die
+[Wireframes](ux/Wireframes.md) und die
+[Abnahmeszenarien](ux/Abnahmeszenarien.md). WebUntis und Wollino erscheinen
+darin ausschließlich als synthetische, noch nicht implementierte
+Zukunftszustände.
+
 1. **Erledigt:** Phase 0, Phase 1A und Phase 1B sind abgeschlossen.
 2. **Erledigt:** Phasen 2, 3 und 4 einschließlich phasenübergreifender Abnahme.
 3. **Erledigt:** Phase 5, geschützte Galerien ohne Vision.
