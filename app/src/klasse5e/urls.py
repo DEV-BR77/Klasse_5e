@@ -5,13 +5,39 @@ from wagtail.admin import urls as wagtailadmin_urls
 from klasse5e.biometrics import views as biometric_views
 from klasse5e.chat import views as chat_views
 from klasse5e.content import views as content_views
-from klasse5e.core import views
+from klasse5e.core import ui_views, views
 from klasse5e.events import views as event_views
 from klasse5e.media import views as media_views
 from klasse5e.schedule import views as schedule_views
 
 urlpatterns = [
-    path("", views.dashboard, name="dashboard"),
+    path("", ui_views.dashboard, name="dashboard"),
+    path("kalender/", ui_views.calendar, name="ui-calendar"),
+    path("chat/", ui_views.chat_overview, name="ui-chat"),
+    path("chat/<uuid:room_id>/ansicht/", ui_views.chat_room, name="ui-chat-room"),
+    path("mehr/", ui_views.more, name="ui-more"),
+    path("mehr/dokumente/", ui_views.documents, name="ui-documents"),
+    path("mehr/aktuelles/", ui_views.posts, name="ui-posts"),
+    path("mehr/aktuelles/<int:post_id>/", ui_views.post_detail, name="ui-post-detail"),
+    path("mehr/veranstaltungen/", ui_views.events, name="ui-events"),
+    path("mehr/veranstaltungen/<int:event_id>/", ui_views.event, name="ui-event"),
+    path("mehr/mitbringen/<int:item_id>/reservieren/", ui_views.reserve, name="ui-reserve"),
+    path(
+        "mehr/veranstaltungen/<int:event_id>/freier-beitrag/",
+        ui_views.free_contribution,
+        name="ui-free-contribution",
+    ),
+    path(
+        "mehr/reservierungen/<int:reservation_id>/zuruecknehmen/",
+        ui_views.cancel_reservation,
+        name="ui-cancel-reservation",
+    ),
+    path("mehr/lehrkraefte/", ui_views.teachers, name="ui-teachers"),
+    path("mehr/fotos/", ui_views.galleries, name="ui-galleries"),
+    path("mehr/familie/", ui_views.family, name="ui-family"),
+    path("mehr/einwilligungen/", ui_views.consents, name="ui-consents"),
+    path("mehr/benachrichtigungen/", ui_views.notifications, name="ui-notifications"),
+    path("mehr/ui-zustaende/", ui_views.demo_states, name="ui-demo-states"),
     path("health/", views.health, name="health"),
     path("admin/", admin.site.urls),
     path("cms/", include(wagtailadmin_urls)),
