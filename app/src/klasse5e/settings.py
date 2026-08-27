@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "klasse5e.biometrics",
     "klasse5e.chat",
     "klasse5e.schedule",
+    "klasse5e.webuntis",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     "wagtail.embeds",
@@ -160,3 +161,6 @@ BIOMETRIC_MANUAL_REVIEW_MAX_DAYS = 7
 BIOMETRIC_PROTOCOL_RETENTION_DAYS = 30
 BIOMETRIC_SECURITY_AUDIT_RETENTION_DAYS = 90
 CHAT_RETENTION_DAYS = int(os.environ.get("CHAT_RETENTION_DAYS", "90"))
+WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY = os.environ.get("WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY", "")
+WEBUNTIS_SERVER = os.environ.get("WEBUNTIS_SERVER", "thgwob.webuntis.com")
+WEBUNTIS_SCHOOL = os.environ.get("WEBUNTIS_SCHOOL", "thgwob")

@@ -9,6 +9,7 @@ from klasse5e.core import ui_views, views
 from klasse5e.events import views as event_views
 from klasse5e.media import views as media_views
 from klasse5e.schedule import views as schedule_views
+from klasse5e.webuntis import views as webuntis_views
 
 urlpatterns = [
     path("", ui_views.dashboard, name="dashboard"),
@@ -37,6 +38,11 @@ urlpatterns = [
     path("mehr/familie/", ui_views.family, name="ui-family"),
     path("mehr/einwilligungen/", ui_views.consents, name="ui-consents"),
     path("mehr/benachrichtigungen/", ui_views.notifications, name="ui-notifications"),
+    path("mehr/webuntis/", webuntis_views.connection, name="webuntis-connection"),
+    path("mehr/webuntis/testen/", webuntis_views.test_connection, name="webuntis-test"),
+    path("mehr/webuntis/entfernen/", webuntis_views.remove_connection, name="webuntis-remove"),
+    path("mehr/webuntis/funktionen/", webuntis_views.update_features, name="webuntis-features"),
+    path("mehr/webuntis/aktuell-pruefen/", webuntis_views.sync_now, name="webuntis-sync"),
     path("mehr/ui-zustaende/", ui_views.demo_states, name="ui-demo-states"),
     path("health/", views.health, name="health"),
     path("admin/", admin.site.urls),
