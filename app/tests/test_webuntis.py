@@ -38,3 +38,25 @@ def test_close_discards_ephemeral_tokens():
         client.close()
     assert client._session_id is None
     assert client._jwt is None
+
+
+def test_json_rpc_posts_use_json_content_type():
+    client = WebUntisClient("u", "p")
+
+    class Response:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return None
+
+        def read(self):
+            return json.dumps({"result": {}}).encode()
+
+    with patch("urllib.request.urlopen", return_value=Response()) as urlopen:
+        client._request("https://thgwob.webuntis.com/WebUntis/jsonrpc.do", {"id": 1})
+
+    request = urlopen.call_args.args[0]
+    assert request.get_header("Content-type") == "application/json"

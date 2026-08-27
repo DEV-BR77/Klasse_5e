@@ -3,15 +3,21 @@
 The endpoint set is deliberately finite. No arbitrary RPC or raw response API
 is exposed to Django or users.
 """
+
 import json
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 
-
 ALLOWED_HOST = "thgwob.webuntis.com"
-ALLOWED_RPC = {"getTimetable", "getSubstitutions", "getHolidays", "getTimegridUnits", "getCurrentSchoolyear"}
+ALLOWED_RPC = {
+    "getTimetable",
+    "getSubstitutions",
+    "getHolidays",
+    "getTimegridUnits",
+    "getCurrentSchoolyear",
+}
 ALLOWED_REST = {
     "students": "/api/rest/view/v1/app/data",
     "timetable_weekly": "/api/public/timetable/weekly/data",
@@ -62,7 +68,16 @@ class EndpointResult:
 
 
 class WebUntisClient:
-    def __init__(self, username, password, *, server=ALLOWED_HOST, school="thgwob", timeout=10.0, user_agent="Klasse-5e-WebUntis-Pilot/9A"):
+    def __init__(
+        self,
+        username,
+        password,
+        *,
+        server=ALLOWED_HOST,
+        school="thgwob",
+        timeout=10.0,
+        user_agent="Klasse-5e-WebUntis-Pilot/9A",
+    ):
         if server != ALLOWED_HOST:
             raise ValueError("WebUntis-Server nicht freigegeben")
         self.base = f"https://{server}/WebUntis"
@@ -81,7 +96,16 @@ class WebUntisClient:
             delay = 0.15 - (time.monotonic() - self._last_request)
             if delay > 0:
                 time.sleep(delay)
-            request = urllib.request.Request(url, data=json.dumps(payload).encode() if payload is not None else None, headers={"User-Agent": self.user_agent, "Accept": "application/json", **(headers or {})}, method="POST" if payload is not None else "GET")
+            request_headers = {"User-Agent": self.user_agent, "Accept": "application/json"}
+            if payload is not None:
+                request_headers["Content-Type"] = "application/json"
+            request_headers.update(headers or {})
+            request = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode() if payload is not None else None,
+                headers=request_headers,
+                method="POST" if payload is not None else "GET",
+            )
             try:
                 with urllib.request.urlopen(request, timeout=self.timeout) as response:
                     self._last_request = time.monotonic()
@@ -94,16 +118,33 @@ class WebUntisClient:
                 if exc.code == 429:
                     raise RateLimited() from exc
                 if 500 <= exc.code < 600 and attempt + 1 < attempts:
-                    time.sleep(wait); wait *= 2; continue
+                    time.sleep(wait)
+                    wait *= 2
+                    continue
                 raise TemporaryNetworkError() from exc
             except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
                 if attempt + 1 < attempts:
-                    time.sleep(wait); wait *= 2; continue
+                    time.sleep(wait)
+                    wait *= 2
+                    continue
                 raise TemporaryNetworkError() from exc
         raise TemporaryNetworkError()
 
     def login(self):
-        result = self._request(f"{self.base}/jsonrpc.do?school={self.school}", {"id": 1, "method": "authenticate", "params": {"user": self.username, "password": self.password, "client": self.user_agent}, "jsonrpc": "2.0"}, attempts=1)
+        result = self._request(
+            f"{self.base}/jsonrpc.do?school={self.school}",
+            {
+                "id": 1,
+                "method": "authenticate",
+                "params": {
+                    "user": self.username,
+                    "password": self.password,
+                    "client": self.user_agent,
+                },
+                "jsonrpc": "2.0",
+            },
+            attempts=1,
+        )
         if result.get("error"):
             message = str(result["error"]).lower()
             if "mfa" in message or "sso" in message or "two" in message:
@@ -119,7 +160,11 @@ class WebUntisClient:
             raise EndpointUnsupported(method)
         if not self._session_id:
             self.login()
-        result = self._request(f"{self.base}/jsonrpc.do?school={self.school}", {"id": 1, "method": method, "params": params or {}, "jsonrpc": "2.0"}, {"Cookie": f"JSESSIONID={self._session_id}"})
+        result = self._request(
+            f"{self.base}/jsonrpc.do?school={self.school}",
+            {"id": 1, "method": method, "params": params or {}, "jsonrpc": "2.0"},
+            {"Cookie": f"JSESSIONID={self._session_id}"},
+        )
         if result.get("error"):
             raise NotAuthorized()
         return result.get("result")
@@ -130,15 +175,26 @@ class WebUntisClient:
             raise EndpointUnsupported(key)
         if not self._session_id:
             self.login()
-        result = self._request(f"{self.base}{path}", headers={"Cookie": f"JSESSIONID={self._session_id}", **({"Authorization": f"Bearer {self._jwt}"} if self._jwt else {})})
-        if not isinstance(result, (dict, list)):
+        result = self._request(
+            f"{self.base}{path}",
+            headers={
+                "Cookie": f"JSESSIONID={self._session_id}",
+                **({"Authorization": f"Bearer {self._jwt}"} if self._jwt else {}),
+            },
+        )
+        if not isinstance(result, dict | list):
             raise InvalidResponse()
         return result
 
     def close(self):
         if self._session_id:
             try:
-                self._request(f"{self.base}/jsonrpc.do?school={self.school}", {"id": 1, "method": "logout", "params": {}, "jsonrpc": "2.0"}, {"Cookie": f"JSESSIONID={self._session_id}"}, attempts=1)
+                self._request(
+                    f"{self.base}/jsonrpc.do?school={self.school}",
+                    {"id": 1, "method": "logout", "params": {}, "jsonrpc": "2.0"},
+                    {"Cookie": f"JSESSIONID={self._session_id}"},
+                    attempts=1,
+                )
             except WebUntisClientError:
                 pass
         self._session_id = None
