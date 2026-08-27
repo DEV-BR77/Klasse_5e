@@ -15,6 +15,7 @@ services:
       VISION_SERVICE_TOKEN: ${VISION_SERVICE_TOKEN:?Provide Vision secret}
       BIOMETRIC_SEARCH_ENABLED: ${BIOMETRIC_SEARCH_ENABLED:-0}
       BIOMETRIC_PIPELINE_ID: ${BIOMETRIC_PIPELINE_ID:-yunet-sface-2023mar-2021dec}
+      WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY: ${WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY:?Provide WebUntis credential encryption key}
     depends_on:
       klasse-5e-db:
         condition: service_healthy
@@ -22,7 +23,7 @@ services:
         condition: service_healthy
     volumes:
       - app_media:/data/media
-    networks: [klasse_5e_internal]
+    networks: [klasse_5e_internal, klasse_5e_egress]
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
@@ -80,3 +81,5 @@ networks:
   klasse_5e_internal:
     name: klasse-5e-internal
     internal: true
+  klasse_5e_egress:
+    name: klasse-5e-egress
