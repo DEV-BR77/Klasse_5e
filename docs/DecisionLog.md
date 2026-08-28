@@ -280,3 +280,17 @@ rotierbare, gehashte Zugriffstokens. Eine Portalquelle ist keine Voraussetzung.
 
 **Grund:** Die Plattform bleibt bei Portalausfall nutzbar und sendet nur für
 wirkliche neue Revisionen einen Hinweis.
+
+# ADR-022: Versioniertes, fortsetzbares Datenschutz-Onboarding
+
+**Entscheidung:** Der Erstlogin verwendet ein serverseitiges Zehn-Schritte-
+Onboarding und die bestehenden Modelle `ConsentType`, `ConsentTextVersion` und
+`ConsentDecision`. Ein kleiner `OnboardingState` speichert nur Schritt,
+Identitätsbestätigung, Abschluss und Richtlinienversion. Optionale Zwecke sind
+getrennt und standardmäßig aus; eine neue materielle Textversion erzwingt eine
+erneute Entscheidung. Ein Tutorial besitzt einen unabhängigen Zustand.
+
+**Grund:** Damit bleiben Nachweis, Widerruf, Rechteprüfung und Wiederaufnahme
+auch ohne JavaScript konsistent. Für Kinder zählen nur bestätigte, aktuelle
+Beziehungen mit Zweckrecht. Bei mehreren Berechtigten hält eine fehlende oder
+ablehnende Entscheidung die Funktion aus. Produktive Pilotdaten bleiben reine

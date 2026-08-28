@@ -109,3 +109,13 @@ Noten/Krankmeldungen, öffentliche Galerien, Cloud-Gesichtserkennung,
 automatische endgültige Identifikation, allgemeines IAM, Kubernetes, Event Bus,
 API-Gateway und Microservices für CRUD-Funktionen bleiben Nicht-Ziele, bis eine
 neue ausdrückliche Entscheidung sie ändert.
+
+## Datenschutz- und Onboarding-Arbeitspaket
+
+Die Aufgaben 1–13 aus `Nextsteps.md` liefern Bestandsaufnahme, Rollen-
+Entscheidungsvorlage, Informations- und Einwilligungstexte, DSFA,
+Lösch-/Betriebskonzepte, Verarbeitungsverzeichnis, TOM, Pilotunterlagen sowie
+UX-Spezifikationen. Aufgabe 14 setzt den versionierten Einwilligungskatalog,
+fortsetzbares Onboarding, Tutorial, Mehr-Sorgeberechtigten-Regel und
+Widerrufsfolgen um. Eine organisatorische Produktivfreigabe ist dadurch nicht
+vorweggenommen; offene Beschlussfelder bleiben Gate vor einem Realpilot.
