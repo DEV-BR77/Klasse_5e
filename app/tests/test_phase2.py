@@ -187,7 +187,9 @@ def test_privileged_account_requires_mfa(client, db):
     Person.objects.create(user=user, first_name="Edit", last_name="Synthetic")
     RoleAssignment.objects.create(user=user, role=Role.EDITOR)
     client.force_login(user)
-    assert client.get("/").status_code == 403
+    response = client.get("/")
+    assert response.status_code == 302
+    assert response.url == "/accounts/2fa/totp/activate/"
 
 
 @pytest.mark.django_db

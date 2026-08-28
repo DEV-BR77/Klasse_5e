@@ -52,7 +52,7 @@ class PrivilegedMfaMiddleware:
                     type__in=[Authenticator.Type.TOTP, Authenticator.Type.WEBAUTHN],
                 ).exists()
                 if not has_mfa:
-                    return HttpResponse("Zwei-Faktor-Anmeldung erforderlich", status=403)
+                    return redirect("mfa_activate_totp")
         return self.get_response(request)
 
 
