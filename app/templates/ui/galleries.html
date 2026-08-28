@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<section><h1>Fotos</h1><div class="card-grid">{% for item in galleries %}<article class="content-card"><h2><a href="/galleries/{{ item.id }}/">{{ item.title }}</a></h2></article>{% empty %}<p class="empty-state">Keine freigegebenen Galerien.</p>{% endfor %}</div></section>{% endblock %}

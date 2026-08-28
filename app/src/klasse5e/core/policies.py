@@ -72,21 +72,53 @@ def family_label(user):
 
 
 def consent_state(consent_type, subject):
-    base = consent_type.consentdecision_set.filter(
-        subject_person=subject, valid_from__lte=timezone.now()
+    now = timezone.now()
+    text_version = (
+        consent_type.consenttextversion_set.filter(effective_from__lte=now)
+        .order_by("-effective_from", "-id")
+        .first()
     )
-    if base.filter(models.Q(revoked_at__isnull=False) | models.Q(decision="revoked")).exists():
+    if text_version is None:
         return "not_allowed"
+    base = consent_type.consentdecision_set.filter(
+        subject_person=subject,
+        text_version=text_version,
+        valid_from__lte=now,
+    ).filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=now))
+
+    today = timezone.localdate()
+    relationships = GuardianChildRelationship.objects.filter(
+        student_person=subject,
+        is_legal_guardian=True,
+        status="verified",
+        verified_at__isnull=False,
+        valid_from__lte=today,
+    ).filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=today))
+    permission_field = {
+        "photo": "may_manage_photo_consents",
+        "biometric": "may_manage_biometric_consents",
+    }.get(consent_type.category, "may_manage_general_consents")
+    eligible_ids = set(
+        relationships.filter(**{permission_field: True}).values_list(
+            "guardian_person_id", flat=True
+        )
+    )
+    if eligible_ids:
+        base = base.filter(deciding_person_id__in=eligible_ids)
     decisions = []
     seen = set()
     for item in base.order_by("deciding_person_id", "-decided_at", "-id"):
         if item.deciding_person_id not in seen:
             decisions.append(item)
             seen.add(item.deciding_person_id)
-    if not decisions or any(item.decision != "granted" for item in decisions):
-        return (
-            "not_allowed"
-            if len({item.decision for item in decisions}) <= 1
-            else "clarification_required"
-        )
+    if eligible_ids and seen != eligible_ids:
+        return "not_allowed"
+    if not decisions:
+        return "not_allowed"
+    if any(item.decision != "granted" or item.revoked_at is not None for item in decisions):
+        if not eligible_ids and len({item.decision for item in decisions}) > 1:
+            # Preserve the diagnostic state for legacy/adult decisions; it is
+            # still denied by every feature gate because only "allowed" enables.
+            return "clarification_required"
+        return "not_allowed"
     return "allowed"

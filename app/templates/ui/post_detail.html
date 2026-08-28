@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<article class="content-card prose"><h1>{{ post.title }}</h1>{{ post.body|linebreaks }}<h2>Kommentare</h2><ul>{% for item in comments %}<li>{{ item.body }}</li>{% empty %}<li>Keine Kommentare.</li>{% endfor %}</ul></article>{% endblock %}

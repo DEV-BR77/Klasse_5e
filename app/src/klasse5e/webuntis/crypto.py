@@ -22,4 +22,3 @@ def decrypt(value):
         return _fernet().decrypt(bytes(value)).decode("utf-8")
     except InvalidToken as exc:
         raise CredentialKeyMissing("WebUntis-Zugang kann nicht entschlüsselt werden.") from exc
-

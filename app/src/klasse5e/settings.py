@@ -54,6 +54,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "klasse5e.core.middleware.ActiveAccessMiddleware",
+    "klasse5e.core.middleware.OnboardingRequiredMiddleware",
     "klasse5e.core.middleware.LoginRateLimitMiddleware",
     "klasse5e.core.middleware.PrivilegedMfaMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

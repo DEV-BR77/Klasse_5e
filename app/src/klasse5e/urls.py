@@ -1,17 +1,38 @@
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic import TemplateView
 from wagtail.admin import urls as wagtailadmin_urls
 
 from klasse5e.biometrics import views as biometric_views
 from klasse5e.chat import views as chat_views
 from klasse5e.content import views as content_views
-from klasse5e.core import ui_views, views
+from klasse5e.core import onboarding_views, ui_views, views
 from klasse5e.events import views as event_views
 from klasse5e.media import views as media_views
 from klasse5e.schedule import views as schedule_views
 from klasse5e.webuntis import views as webuntis_views
 
 urlpatterns = [
+    path(
+        "datenschutz/",
+        TemplateView.as_view(template_name="privacy/information.html"),
+        name="privacy-information",
+    ),
+    path("onboarding/", onboarding_views.onboarding_step, name="onboarding-resume"),
+    path(
+        "onboarding/schritt/<int:step>/",
+        onboarding_views.onboarding_step,
+        name="onboarding-step",
+    ),
+    path(
+        "einwilligungen/<slug:key>/<int:subject_id>/widerrufen/",
+        onboarding_views.consent_withdraw,
+        name="consent-withdraw",
+    ),
+    path("tutorial/", onboarding_views.tutorial_step, name="tutorial-resume"),
+    path(
+        "tutorial/schritt/<int:step>/", onboarding_views.tutorial_step, name="tutorial-step"
+    ),
     path("", ui_views.dashboard, name="dashboard"),
     path("kalender/", ui_views.calendar, name="ui-calendar"),
     path("chat/", ui_views.chat_overview, name="ui-chat"),

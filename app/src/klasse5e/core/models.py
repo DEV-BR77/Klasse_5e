@@ -325,3 +325,34 @@ class PushSubscription(models.Model):
                 "enabled": True,
             },
         )
+
+
+class PushPreference(models.Model):
+    """Per-category opt-in. Creating a subscription never enables a category."""
+
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+    key = models.SlugField(max_length=40)
+    enabled = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "key"], name="unique_push_preference")
+        ]
+
+
+class OnboardingState(models.Model):
+    user = models.OneToOneField(UserAccount, on_delete=models.CASCADE)
+    current_step = models.PositiveSmallIntegerField(default=1)
+    identity_confirmed_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    completed_policy_version = models.CharField(max_length=64, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class TutorialState(models.Model):
+    user = models.OneToOneField(UserAccount, on_delete=models.CASCADE)
+    current_step = models.PositiveSmallIntegerField(default=1)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    dismissed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)

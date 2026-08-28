@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="content-card onboarding-card" aria-labelledby="onboarding-title">
+  <p class="eyebrow">Schritt {{ step }} von {{ total_steps }}</p>
+  <progress value="{{ step }}" max="{{ total_steps }}">{{ step }} von {{ total_steps }}</progress>
+  <h1 id="onboarding-title">{{ title }}</h1>
+  <p>{{ explanation }}</p>
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+
+  {% if step == 2 %}
+    <p>Angemeldet als <strong>{{ request.user.email }}</strong>{% if request.user.person %}, {{ request.user.person.first_name }} {{ request.user.person.last_name }}{% endif %}.</p>
+  {% elif step == 3 %}
+    <h2>Bestätigte Zuordnungen</h2>
+    <ul>{% for relationship in relationships %}<li>{{ relationship.student_person.first_name }} {{ relationship.student_person.last_name }} – {{ relationship.get_relationship_type_display }}</li>{% empty %}<li>Keine bestätigte Kindzuordnung. Damit kannst du nur für dich selbst entscheiden.</li>{% endfor %}</ul>
+  {% elif step == 4 %}
+    <p>Pflichtdaten sichern Anmeldung, Klassenmitgliedschaft und Berechtigungen. Kontaktprofil, Fotos, Push, WebUntis und Gesichtssuche sind getrennt freiwillig.</p>
+    <p><a href="/datenschutz/">Ausführliche Datenschutzinformation</a></p>
+  {% elif step == 10 %}
+    <p>Du kannst jede freiwillige Entscheidung später unter <a href="/mehr/einwilligungen/">Einwilligungen</a> widerrufen. Der Widerruf ist genauso erreichbar wie die Zustimmung.</p>
+  {% endif %}
+
+  {% if choices %}
+    <form method="get" class="subject-picker" aria-label="Betroffene Person auswählen">
+      <label for="subject-picker">Entscheidung für</label>
+      <select id="subject-picker" name="subject" onchange="this.form.submit()">
+        {% for item in subjects %}<option value="{{ item.id }}"{% if item.id == subject.id %} selected{% endif %}>{{ item.first_name }} {{ item.last_name }}</option>{% endfor %}
+      </select>
+      <button type="submit">Person anzeigen</button>
+    </form>
+  {% endif %}
+
+  <form method="post" class="onboarding-form">
+    {% csrf_token %}
+    <input type="hidden" name="subject" value="{{ subject.id }}">
+    {% if step == 2 %}
+      <label class="choice"><input type="checkbox" name="identity_confirmed" value="yes"> Ja, das ist mein persönliches Konto.</label>
+    {% endif %}
+    {% for choice in choices %}
+      <fieldset>
+        <legend>{{ choice.type.label }}</legend>
+        <p>{{ choice.type.purpose }}</p>
+        {% if choice.allowed %}
+          <label class="choice"><input type="radio" name="{{ choice.type.key }}" value="denied" required> Nein, nicht aktivieren</label>
+          <label class="choice"><input type="radio" name="{{ choice.type.key }}" value="granted" required> Ja, für diesen Zweck aktivieren</label>
+        {% else %}
+          <input type="hidden" name="{{ choice.type.key }}" value="denied">
+          <p class="notice">Diese Funktion kann derzeit nicht aktiviert werden. Sie bleibt aus.</p>
+        {% endif %}
+      </fieldset>
+    {% endfor %}
+    <div class="form-actions">
+      {% if step > 1 %}<a class="button secondary" href="{% url 'onboarding-step' step=step|add:'-1' %}">Zurück</a>{% endif %}
+      <button type="submit" name="action" value="continue">{% if step == total_steps %}Onboarding abschließen{% else %}Speichern und weiter{% endif %}</button>
+      <button class="secondary" type="submit" name="action" value="pause" formnovalidate>Später fortsetzen</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

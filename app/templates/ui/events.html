@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<section><h1>Veranstaltungen</h1><div class="card-grid">{% for item in events %}<article class="content-card"><h2><a href="/mehr/veranstaltungen/{{ item.id }}/">{{ item.title }}</a></h2><p>{{ item.starts_at }}</p></article>{% empty %}<p class="empty-state">Keine Veranstaltungen.</p>{% endfor %}</div></section>{% endblock %}

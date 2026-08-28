@@ -3,8 +3,11 @@ import hashlib
 from allauth.mfa.models import Authenticator
 from django.contrib.auth import logout
 from django.core.cache import cache
+from django.db.utils import OperationalError, ProgrammingError
 from django.http import HttpResponse
+from django.shortcuts import redirect
 
+from .onboarding import onboarding_complete
 from .policies import PRIVILEGED_ROLES, active_roles
 
 
@@ -50,4 +53,35 @@ class PrivilegedMfaMiddleware:
                 ).exists()
                 if not has_mfa:
                     return HttpResponse("Zwei-Faktor-Anmeldung erforderlich", status=403)
+        return self.get_response(request)
+
+
+class OnboardingRequiredMiddleware:
+    EXEMPT_PREFIXES = (
+        "/accounts/",
+        "/admin/",
+        "/cms/",
+        "/health/",
+        "/invitation/",
+        "/onboarding/",
+        "/static/",
+        "/service-worker.js",
+        "/manifest.webmanifest",
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if (
+            request.user.is_authenticated
+            and request.user.email_verified_at
+            and not request.path.startswith(self.EXEMPT_PREFIXES)
+        ):
+            try:
+                if not onboarding_complete(request.user):
+                    return redirect("onboarding-resume")
+            except (OperationalError, ProgrammingError):
+                # Health and deployment stay available while migrations run.
+                pass
         return self.get_response(request)

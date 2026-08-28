@@ -20,13 +20,19 @@ class DataScope(models.TextChoices):
 
 
 class WebUntisConnection(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="webuntis_connections")
-    student = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="webuntis_connections")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="webuntis_connections"
+    )
+    student = models.ForeignKey(
+        Person, on_delete=models.CASCADE, related_name="webuntis_connections"
+    )
     server = models.CharField(max_length=255, default="thgwob.webuntis.com")
     school = models.CharField(max_length=80, default="thgwob")
     username_encrypted = models.BinaryField()
     password_encrypted = models.BinaryField()
-    status = models.CharField(max_length=24, choices=ConnectionStatus, default=ConnectionStatus.NOT_TESTED)
+    status = models.CharField(
+        max_length=24, choices=ConnectionStatus, default=ConnectionStatus.NOT_TESTED
+    )
     status_detail = models.CharField(max_length=160, blank=True)
     last_checked_at = models.DateTimeField(null=True, blank=True)
     last_successful_sync_at = models.DateTimeField(null=True, blank=True)
@@ -34,7 +40,9 @@ class WebUntisConnection(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["user", "student"], name="unique_webuntis_user_student")]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "student"], name="unique_webuntis_user_student")
+        ]
 
     def mark_checked(self, status, detail=""):
         self.status = status
@@ -58,7 +66,10 @@ class FeatureKey(models.TextChoices):
     STATUSDATA = "statusdata", "Status- und Änderungshinweise"
     CLASS_EVENTS = "class_reg_events", "Klassenbucheinträge (nicht aktiviert)"
     CLASS_EVENT_CATEGORIES = "class_reg_categories", "Klassenbuchkategorien (nicht aktiviert)"
-    CLASS_EVENT_GROUPS = "class_reg_category_groups", "Klassenbuch-Kategoriegruppen (nicht aktiviert)"
+    CLASS_EVENT_GROUPS = (
+        "class_reg_category_groups",
+        "Klassenbuch-Kategoriegruppen (nicht aktiviert)",
+    )
 
 
 class FeatureState(models.TextChoices):
@@ -69,18 +80,24 @@ class FeatureState(models.TextChoices):
 
 
 class WebUntisFeaturePreference(models.Model):
-    connection = models.ForeignKey(WebUntisConnection, on_delete=models.CASCADE, related_name="features")
+    connection = models.ForeignKey(
+        WebUntisConnection, on_delete=models.CASCADE, related_name="features"
+    )
     key = models.CharField(max_length=40, choices=FeatureKey)
     enabled = models.BooleanField(default=False)
     state = models.CharField(max_length=24, choices=FeatureState, default=FeatureState.NOT_CHECKED)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["connection", "key"], name="unique_webuntis_feature")]
+        constraints = [
+            models.UniqueConstraint(fields=["connection", "key"], name="unique_webuntis_feature")
+        ]
 
 
 class WebUntisLesson(models.Model):
-    connection = models.ForeignKey(WebUntisConnection, on_delete=models.CASCADE, related_name="lessons")
+    connection = models.ForeignKey(
+        WebUntisConnection, on_delete=models.CASCADE, related_name="lessons"
+    )
     external_fingerprint = models.CharField(max_length=128)
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
@@ -94,11 +111,18 @@ class WebUntisLesson(models.Model):
     delete_after = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["connection", "external_fingerprint"], name="unique_webuntis_lesson_fingerprint")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["connection", "external_fingerprint"],
+                name="unique_webuntis_lesson_fingerprint",
+            )
+        ]
 
 
 class WebUntisHomework(models.Model):
-    connection = models.ForeignKey(WebUntisConnection, on_delete=models.CASCADE, related_name="homework")
+    connection = models.ForeignKey(
+        WebUntisConnection, on_delete=models.CASCADE, related_name="homework"
+    )
     external_fingerprint = models.CharField(max_length=128)
     subject = models.CharField(max_length=100, blank=True)
     assigned_on = models.DateField(null=True, blank=True)
@@ -110,8 +134,12 @@ class WebUntisHomework(models.Model):
     delete_after = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["connection", "external_fingerprint"], name="unique_webuntis_homework_fingerprint")]
-
+        constraints = [
+            models.UniqueConstraint(
+                fields=["connection", "external_fingerprint"],
+                name="unique_webuntis_homework_fingerprint",
+            )
+        ]
 
 
 class SyncSchedule(models.Model):
@@ -142,7 +170,9 @@ class SyncRun(models.Model):
         FAILED = "failed", "Fehlgeschlagen"
         THROTTLED = "throttled", "Zu h�ufig"
 
-    connection = models.ForeignKey(WebUntisConnection, on_delete=models.CASCADE, related_name="sync_runs")
+    connection = models.ForeignKey(
+        WebUntisConnection, on_delete=models.CASCADE, related_name="sync_runs"
+    )
     trigger = models.CharField(max_length=16, choices=Trigger)
     status = models.CharField(max_length=16, choices=Status, default=Status.RUNNING)
     idempotency_key = models.CharField(max_length=80, unique=True)
@@ -151,4 +181,3 @@ class SyncRun(models.Model):
     change_count = models.PositiveIntegerField(default=0)
     categories = models.JSONField(default=list)
     error_code = models.CharField(max_length=40, blank=True)
-

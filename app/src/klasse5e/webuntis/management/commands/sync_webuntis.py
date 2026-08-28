@@ -17,7 +17,12 @@ class Command(BaseCommand):
             return
         for connection in WebUntisConnection.objects.all().iterator():
             try:
-                run = run_connection(connection, trigger=SyncRun.Trigger.AUTOMATIC if options["automatic"] else SyncRun.Trigger.MANUAL)
+                run = run_connection(
+                    connection,
+                    trigger=SyncRun.Trigger.AUTOMATIC
+                    if options["automatic"]
+                    else SyncRun.Trigger.MANUAL,
+                )
                 self.stdout.write(f"Verbindung {connection.pk}: {run.status}")
             except SyncThrottled:
                 self.stdout.write(f"Verbindung {connection.pk}: throttled")

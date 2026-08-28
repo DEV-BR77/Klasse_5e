@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<section><h1>Chat</h1><ul class="card-grid">{% for room in rooms %}<li class="content-card"><a href="/chat/{{ room.public_id }}/ansicht/"><strong>{{ room.title }}</strong></a></li>{% empty %}<li class="empty-state">Keine Chaträume.</li>{% endfor %}</ul></section>{% endblock %}

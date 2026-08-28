@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<section><h1>Lehrkräfte</h1><div class="card-grid">{% for item in teachers %}<article class="content-card"><h2>{{ item.person.first_name }} {{ item.person.last_name }}</h2></article>{% empty %}<p class="empty-state">Keine Profile.</p>{% endfor %}</div></section>{% endblock %}

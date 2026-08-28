@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<section><h1>{{ event.title }}</h1><p>{{ event.starts_at }} – {{ event.ends_at }}</p>{% for category in categories %}<article class="content-card"><h2>{{ category.name }}</h2><ul>{% for item in category.items.all %}<li>{{ item.label }}</li>{% empty %}<li>Keine Beiträge.</li>{% endfor %}</ul></article>{% endfor %}</section>{% endblock %}

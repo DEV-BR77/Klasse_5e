@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<section><h1>{{ room.title }}</h1><ol class="message-list">{% for message in messages %}<li class="content-card"><p>{{ message.body }}</p><small>{{ message.created_at }}</small></li>{% empty %}<li>Keine Nachrichten.</li>{% endfor %}</ol></section>{% endblock %}

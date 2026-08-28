@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block content %}
+<section><h1>Start</h1><p class="lead">{{ selected_day|date:"l, d. F Y" }}</p>
+<div class="card-grid"><article class="content-card"><h2>Unterricht</h2><ul>{% for lesson in lessons %}<li>{{ lesson }}</li>{% empty %}<li>Keine Einträge.</li>{% endfor %}</ul></article>
+<article class="content-card"><h2>Termine</h2><ul>{% for item in calendar_entries %}<li>{{ item }}</li>{% empty %}<li>Keine Termine.</li>{% endfor %}</ul><a href="/kalender/">Kalender öffnen</a></article>
+<article class="content-card"><h2>Aktuelles</h2><ul>{% for item in posts %}<li><a href="/mehr/aktuelles/{{ item.id }}/">{{ item.title }}</a></li>{% empty %}<li>Keine Beiträge.</li>{% endfor %}</ul></article></div></section>
+{% endblock %}

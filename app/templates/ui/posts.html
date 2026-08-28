@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<section><h1>Aktuelles</h1><div class="card-grid">{% for item in posts %}<article class="content-card"><h2><a href="/mehr/aktuelles/{{ item.id }}/">{{ item.title }}</a></h2></article>{% empty %}<p class="empty-state">Keine Beiträge.</p>{% endfor %}</div></section>{% endblock %}
