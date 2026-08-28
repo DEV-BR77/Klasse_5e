@@ -39,7 +39,13 @@ class LoginRateLimitMiddleware:
 
 
 class PrivilegedMfaMiddleware:
-    SAFE_PREFIXES = ("/accounts/2fa/", "/accounts/logout/", "/health/", "/static/")
+    SAFE_PREFIXES = (
+        "/accounts/2fa/",
+        "/accounts/logout/",
+        "/accounts/reauthenticate/",
+        "/health/",
+        "/static/",
+    )
 
     def __init__(self, get_response):
         self.get_response = get_response

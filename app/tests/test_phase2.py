@@ -190,6 +190,14 @@ def test_privileged_account_requires_mfa(client, db):
     response = client.get("/")
     assert response.status_code == 302
     assert response.url == "/accounts/2fa/totp/activate/"
+    reauthenticate = client.get(
+        "/accounts/reauthenticate/?next=%2Faccounts%2F2fa%2Ftotp%2Factivate%2F"
+    )
+    assert reauthenticate.status_code == 200
+
+
+def test_tls_terminating_proxy_is_trusted(settings):
+    assert settings.SECURE_PROXY_SSL_HEADER == ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 @pytest.mark.django_db
