@@ -41,3 +41,7 @@ Neues Elternkonto, unbestätigte Beziehung, mehrere Sorgeberechtigte, Teilzustim
 - App und Vision laufen als UID/GID `10001:10001` mit schreibgeschütztem Root-Dateisystem; PostgreSQL-Prozesse laufen als UID `999` und schreiben in ihr Datenvolume.
 - Kein Container veröffentlicht einen Host-Port; damit existiert auch keine öffentliche Development-Portbindung.
 - Die offiziellen Rechtsquellen wurden am 28. August 2026 erfolgreich abgerufen. Interne Ergebnisdateien und UI-Templates sind vorhanden beziehungsweise kompilieren im App-Image.
+
+## Laufzeit-Pilotnachweis
+
+Nach dem Rollout wurden die zwei in `Nextsteps.md` ausdrücklich vorgegebenen realen Biometrie-Pilotentscheidungen ausschließlich in der laufenden Datenbank mit aktueller Textversion, Zeitpunkt, Entscheider, Umfang und minimiertem Audit erfasst. Es wurden keine Biometrieprofile, Bilder oder Embeddings erzeugt; das globale Biometrie-Gate blieb deaktiviert. Namen und Objektkennungen sind nicht Bestandteil dieses Git-Nachweises.
