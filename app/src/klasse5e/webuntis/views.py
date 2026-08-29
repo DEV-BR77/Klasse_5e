@@ -43,6 +43,8 @@ def connection(request):
         )
         messages.success(request, "WebUntis-Zugang eingerichtet.")
         return redirect("webuntis-connection")
+    supported_keys = {"timetable", "timetable_extended", "substitutions", "homework", "exams", "holidays", "timegrid", "subjects", "rooms", "teachers", "schoolyears", "statusdata"}
+    absence_type = ConsentType.objects.filter(key="webuntis_absences").first()
     return render(
         request,
         "webuntis/connection_v2.html",
@@ -52,9 +54,10 @@ def connection(request):
             "connection": current,
             "form": form,
             "capabilities": current.features.all() if current else (),
-            "enabled_feature_count": current.features.filter(enabled=True).count() if current else 0,
-            "feature_count": current.features.count() if current else 0,
+            "enabled_feature_count": current.features.filter(enabled=True, key__in=supported_keys).count() if current else 0,
+            "feature_count": len(supported_keys),
             "latest_run": current.sync_runs.order_by("-started_at").first() if current else None,
+            "absence_consent": consent_state(absence_type, selected) if absence_type and selected else "not_allowed",
         },
     )
 

@@ -135,7 +135,7 @@ WEBUNTIS_GUIDANCE = {
     "webuntis_teachers": ("Lehrkräfte", "Freigegebene Lehrkraftbezeichnungen für Stunden und Änderungen anfragen."),
     "webuntis_schoolyears": ("Schuljahr", "Das aktuelle Schuljahr zur zeitlichen Zuordnung anfragen."),
     "webuntis_statusdata": ("Statushinweise", "Technische Änderungs- und Stundenstatus für eine verständliche Anzeige anfragen."),
-    "webuntis_absences": ("Abwesenheiten", "Diese besonders persönliche Kategorie wird vom Adapter nicht abgerufen und bleibt aus."),
+    "webuntis_absences": ("Abwesenheiten", "Diese besonders persönliche Kategorie kann freigegeben werden; der aktuelle Adapter kann sie technisch noch nicht lesen oder melden."),
 }
 
 for key, (label, summary) in WEBUNTIS_GUIDANCE.items():
