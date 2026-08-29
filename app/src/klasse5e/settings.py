@@ -121,6 +121,7 @@ USE_I18N = True
 USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "runtime-media"))
 MEDIA_URL = None
 STORAGES = {
