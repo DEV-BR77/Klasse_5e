@@ -45,13 +45,16 @@ def connection(request):
         return redirect("webuntis-connection")
     return render(
         request,
-        "webuntis/connection.html",
+        "webuntis/connection_v2.html",
         {
             "students": students,
             "selected": selected,
             "connection": current,
             "form": form,
             "capabilities": current.features.all() if current else (),
+            "enabled_feature_count": current.features.filter(enabled=True).count() if current else 0,
+            "feature_count": current.features.count() if current else 0,
+            "latest_run": current.sync_runs.order_by("-started_at").first() if current else None,
         },
     )
 
@@ -132,17 +135,17 @@ def sync_now(request):
             idempotency_key=request.POST.get("idempotency_key") or None,
         )
         if run.status == SyncRun.Status.NO_CHANGE:
-            messages.success(request, "Aktuell   keine �nderungen.")
+            messages.success(request, "Technische Prüfung abgeschlossen – keine Änderungen.")
         elif run.status == SyncRun.Status.SUCCESS:
-            messages.success(request, "�nderungen wurden �bernommen.")
+            messages.success(request, "Technische Änderungen wurden übernommen.")
         elif run.status == SyncRun.Status.THROTTLED:
             messages.warning(
-                request, "Pr�fung momentan nicht m�glich; bitte sp�ter erneut versuchen."
+                request, "Prüfung momentan nicht möglich; bitte später erneut versuchen."
             )
         else:
             messages.error(request, "WebUntis ist momentan nicht erreichbar.")
     except SyncThrottled:
         messages.warning(
-            request, "Pr�fung momentan nicht m�glich; Mindestabstand noch nicht erreicht."
+            request, "Prüfung momentan nicht möglich; Mindestabstand noch nicht erreicht."
         )
     return redirect("webuntis-connection")

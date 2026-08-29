@@ -105,7 +105,7 @@ def dashboard(request):
             "chat_unread": _unread_count(request.user, school_class),
         }
     )
-    return render(request, "ui/dashboard.html", context)
+    return render(request, "ui/dashboard_v2.html", context)
 
 
 def _unread_count(user, school_class):
@@ -144,7 +144,7 @@ def calendar(request):
             ),
         }
     )
-    return render(request, "ui/calendar.html", context)
+    return render(request, "ui/calendar_v2.html", context)
 
 
 @login_required
@@ -338,7 +338,7 @@ def consents(request):
     context["decisions"] = ConsentDecision.objects.filter(
         deciding_person=request.user.person
     ).select_related("consent_type", "subject_person", "text_version")
-    return render(request, "ui/consents.html", context)
+    return render(request, "ui/consents_v2.html", context)
 
 
 @login_required

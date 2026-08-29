@@ -1,0 +1,11 @@
+<div class="tour-visual tour-visual--{{ illustration }}" role="img" aria-label="Illustration zu {{ title }}">
+  <div class="tour-window">
+    <span class="tour-window__dot"></span><span class="tour-window__dot"></span><span class="tour-window__dot"></span>
+    <div class="tour-window__content">
+      <span class="tour-icon" aria-hidden="true">
+        {% if illustration == "webuntis" %}↻{% elif illustration == "calendar" %}17{% elif illustration == "biometric" %}◎{% elif illustration == "family" %}♡{% elif illustration == "privacy" %}✓{% elif illustration == "notifications" %}!{% elif illustration == "chat" %}…{% else %}5e{% endif %}
+      </span>
+      <span class="tour-line tour-line--strong"></span><span class="tour-line"></span><span class="tour-line tour-line--short"></span>
+    </div>
+  </div>
+</div>

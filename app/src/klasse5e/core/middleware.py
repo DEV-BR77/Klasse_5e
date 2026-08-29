@@ -67,6 +67,7 @@ class OnboardingRequiredMiddleware:
         "/accounts/",
         "/admin/",
         "/cms/",
+        "/datenschutz/",
         "/health/",
         "/invitation/",
         "/onboarding/",
