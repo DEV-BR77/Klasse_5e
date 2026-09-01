@@ -110,7 +110,7 @@ def import_schools(path, *, dry_run=False, batch_size=500, source_name="schools.
     stats = ImportStats()
     seen_duplicates = {}
     rows = []
-    for position, source in enumerate(reader, start=2):
+    for _position, source in enumerate(reader, start=2):
         stats.rows += 1
         try:
             source_id = nfc(source.get("id"), limit=80)

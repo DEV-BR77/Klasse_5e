@@ -1,11 +1,12 @@
 FROM python:3.12.10-slim-bookworm@sha256:fd95fa221297a88e1cf49c55ec1828edd7c5a428187e67b5d1805692d11588db
 
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN groupadd --system --gid 10001 klasse5e && useradd --system --uid 10001 --gid klasse5e --home-dir /nonexistent --shell /usr/sbin/nologin klasse5e
 WORKDIR /srv/app
 COPY packages/web-push-kit /packages/web-push-kit
 COPY app /srv/app
 RUN python -m pip install /packages/web-push-kit /srv/app \
+    && python -m playwright install --with-deps chromium \
     && chmod 0555 /srv/app/docker/entrypoint.sh \
     && mkdir -p /srv/app/staticfiles /data/media /tmp/app \
     && DJANGO_DEBUG=0 python manage.py collectstatic --noinput --verbosity 0 \

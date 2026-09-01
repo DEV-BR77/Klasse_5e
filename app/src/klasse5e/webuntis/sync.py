@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from klasse5e.core.models import ConsentType
+from klasse5e.core.module_flags import module_enabled
 from klasse5e.core.policies import consent_state
 
 from .adapter import CAPABILITIES, WebUntisAdapter, classify_error
@@ -51,7 +52,13 @@ def begin_run(connection, *, trigger, idempotency_key=None, minimum_minutes=None
 
 def _enabled_categories(connection):
     categories = []
+    membership = connection.student.classmembership_set.select_related(
+        "school_class__school"
+    ).filter(status="active").first()
     for key in connection.features.filter(enabled=True).values_list("key", flat=True):
+        module_key = "webuntis_homework" if key == "homework" else "webuntis_timetable"
+        if not module_enabled(module_key, membership.school_class if membership else None):
+            continue
         consent_type = ConsentType.objects.filter(key=f"webuntis_{key}").first()
         if consent_type and consent_state(consent_type, connection.student) == "allowed":
             categories.append(key)

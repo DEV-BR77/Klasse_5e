@@ -49,6 +49,10 @@ class Person(models.Model):
     last_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=50, blank=True)
     other_contact = models.CharField(max_length=200, blank=True)
+    street = models.CharField(max_length=180, blank=True)
+    postal_code = models.CharField(max_length=10, blank=True)
+    city = models.CharField(max_length=120, blank=True)
+    profile_photo = models.ImageField(upload_to="profiles/opaque/", blank=True)
     email_visibility = models.CharField(
         max_length=16, choices=Visibility, default=Visibility.HIDDEN
     )
@@ -112,6 +116,69 @@ class School(models.Model):
 
     def __str__(self):
         return self.short_name or self.name
+
+
+class RegistrationApplication(models.Model):
+    class Status(models.TextChoices):
+        EMAIL_PENDING = "email_pending", "E-Mail-Prüfung ausstehend"
+        REVIEW_PENDING = "review_pending", "Wartet auf Prüfung"
+        APPROVED = "approved", "Freigegeben"
+        REJECTED = "rejected", "Abgelehnt"
+        ACTIVATED = "activated", "Aktiviert"
+
+    email = models.EmailField(unique=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    password_hash = models.CharField(max_length=256)
+    status = models.CharField(max_length=24, choices=Status, default=Status.EMAIL_PENDING)
+    email_token_hash = models.CharField(max_length=64, unique=True)
+    email_token_expires_at = models.DateTimeField()
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+    school = models.ForeignKey("School", null=True, blank=True, on_delete=models.PROTECT)
+    school_class = models.ForeignKey("SchoolClass", null=True, blank=True, on_delete=models.PROTECT)
+    reviewed_by = models.ForeignKey(
+        UserAccount, null=True, blank=True, on_delete=models.SET_NULL, related_name="reviewed_registrations"
+    )
+    review_reason = models.CharField(max_length=500, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def issue(cls, *, email, first_name, last_name, password_hash, lifetime=timedelta(hours=24)):
+        token = secrets.token_urlsafe(32)
+        item = cls.objects.create(
+            email=email.casefold(),
+            first_name=first_name,
+            last_name=last_name,
+            password_hash=password_hash,
+            email_token_hash=hashlib.sha256(token.encode()).hexdigest(),
+            email_token_expires_at=timezone.now() + lifetime,
+        )
+        return item, token
+
+
+class ActivationGrant(models.Model):
+    application = models.OneToOneField(RegistrationApplication, on_delete=models.CASCADE)
+    token_hash = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @classmethod
+    def issue(cls, application, lifetime=timedelta(hours=24)):
+        token = secrets.token_urlsafe(32)
+        grant, _ = cls.objects.update_or_create(
+            application=application,
+            defaults={
+                "token_hash": hashlib.sha256(token.encode()).hexdigest(),
+                "expires_at": timezone.now() + lifetime,
+                "used_at": None,
+                "revoked_at": None,
+            },
+        )
+        return grant, token
 
 
 class SchoolClass(models.Model):
@@ -529,6 +596,7 @@ class PushSubscription(models.Model):
     p256dh = models.TextField()
     auth = models.TextField()
     enabled = models.BooleanField(default=True)
+    device_label = models.CharField(max_length=80, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     @classmethod
@@ -544,6 +612,30 @@ class PushSubscription(models.Model):
                 "enabled": True,
             },
         )
+
+
+class UserNotification(models.Model):
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="notifications")
+    school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE)
+    category = models.SlugField(max_length=40)
+    object_type = models.CharField(max_length=80)
+    object_id = models.CharField(max_length=128)
+    revision = models.CharField(max_length=64)
+    title = models.CharField(max_length=160)
+    summary = models.CharField(max_length=240, blank=True)
+    target_url = models.CharField(max_length=300)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "school_class", "object_type", "object_id", "revision"],
+                name="unique_personal_notification_revision",
+            )
+        ]
+        indexes = [models.Index(fields=["user", "school_class", "read_at"])]
 
 
 class PushPreference(models.Model):

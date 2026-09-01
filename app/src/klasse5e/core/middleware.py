@@ -70,6 +70,8 @@ class OnboardingRequiredMiddleware:
         "/datenschutz/",
         "/health/",
         "/invitation/",
+        "/registrieren/",
+        "/aktivieren/",
         "/onboarding/",
         "/static/",
         "/service-worker.js",

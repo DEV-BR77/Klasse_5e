@@ -148,6 +148,7 @@ CACHES = {
 }
 WAGTAIL_SITE_NAME = "Klasse 5e"
 WAGTAILADMIN_BASE_URL = os.environ.get("APP_BASE_URL", "http://localhost:8080")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "KlassID <noreply@klassid.de>")
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = not DEBUG

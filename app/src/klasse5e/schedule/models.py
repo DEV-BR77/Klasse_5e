@@ -2,9 +2,61 @@ import hashlib
 import secrets
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from klasse5e.core.models import SchoolClass, SchoolYear
+
+
+class TimeGrid(models.Model):
+    school = models.ForeignKey("core.School", on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    valid_from = models.DateField()
+    valid_until = models.DateField(null=True, blank=True)
+
+    def clean(self):
+        if self.valid_until and self.valid_until < self.valid_from:
+            raise ValidationError("Das Ende des Stundenrasters liegt vor seinem Beginn.")
+
+
+class LessonPeriod(models.Model):
+    time_grid = models.ForeignKey(TimeGrid, on_delete=models.CASCADE, related_name="periods")
+    number = models.PositiveSmallIntegerField()
+    starts_at = models.TimeField()
+    ends_at = models.TimeField()
+
+    class Meta:
+        ordering = ["number"]
+        constraints = [models.UniqueConstraint(fields=["time_grid", "number"], name="unique_grid_period")]
+
+    def clean(self):
+        if self.ends_at <= self.starts_at:
+            raise ValidationError("Eine Unterrichtsstunde muss nach ihrem Beginn enden.")
+        overlap = LessonPeriod.objects.filter(time_grid=self.time_grid, starts_at__lt=self.ends_at, ends_at__gt=self.starts_at)
+        if self.pk:
+            overlap = overlap.exclude(pk=self.pk)
+        if overlap.exists():
+            raise ValidationError("Unterrichtsstunden dürfen sich nicht überschneiden.")
+
+
+class SchoolBreak(models.Model):
+    time_grid = models.ForeignKey(TimeGrid, on_delete=models.CASCADE, related_name="breaks")
+    label = models.CharField(max_length=80)
+    starts_at = models.TimeField()
+    ends_at = models.TimeField()
+    after_period = models.PositiveSmallIntegerField()
+
+    class Meta:
+        ordering = ["starts_at"]
+
+    def clean(self):
+        if self.ends_at <= self.starts_at:
+            raise ValidationError("Eine Pause muss nach ihrem Beginn enden.")
+        overlap = SchoolBreak.objects.filter(time_grid=self.time_grid, starts_at__lt=self.ends_at, ends_at__gt=self.starts_at)
+        if self.pk:
+            overlap = overlap.exclude(pk=self.pk)
+        if overlap.exists():
+            raise ValidationError("Pausen dürfen sich nicht überschneiden.")
 
 
 class TimetableEntry(models.Model):

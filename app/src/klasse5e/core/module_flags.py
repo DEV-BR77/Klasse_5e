@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import Http404
 
-from .models import AuditEvent, PortalModule, PortalModuleOverride
+from .models import AuditEvent, PortalModule, PortalModuleOverride, UserNotification
 from .policies import active_class_for_user
 
 MODULE_PATHS = {
@@ -54,6 +54,11 @@ def module_context(request):
         return {"enabled_modules": {}, "personal_display_name": ""}
     school_class = active_class_for_user(request.user) if request.user.is_authenticated else None
     keys = PortalModule.objects.values_list("key", flat=True)
+    unread_count = 0
+    if school_class:
+        unread_count = UserNotification.objects.filter(
+            user=request.user, school_class=school_class, read_at__isnull=True
+        ).count()
     return {
         "enabled_modules": {key: module_enabled(key, school_class) for key in keys},
         "personal_display_name": (
@@ -61,6 +66,7 @@ def module_context(request):
             if request.user.is_authenticated and hasattr(request.user, "person")
             else ""
         ),
+        "notification_unread_count": unread_count,
     }
 
 

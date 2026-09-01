@@ -5,13 +5,14 @@ services:
     build:
       context: .
       dockerfile: app/Dockerfile
-    image: klasse-5e-app:0.2.0
+    image: klasse-5e-app:0.2.0b1
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-klasse5e}:${POSTGRES_PASSWORD:?Provide database secret}@klasse-5e-db:5432/${POSTGRES_DB:-klasse5e}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Provide Django secret}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,5e.eventmonitor.eu}
-      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-https://5e.eventmonitor.eu}
-      APP_BASE_URL: ${APP_BASE_URL:-https://5e.eventmonitor.eu}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,klassid.de,5e.klassid.de}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-https://klassid.de,https://5e.klassid.de}
+      APP_BASE_URL: ${APP_BASE_URL:-https://5e.klassid.de}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-KlassID <noreply@klassid.de>}
       MEDIA_ROOT: /data/media
       VISION_BASE_URL: http://klasse-5e-vision:8000
       VISION_SERVICE_TOKEN: ${VISION_SERVICE_TOKEN:?Provide Vision secret}

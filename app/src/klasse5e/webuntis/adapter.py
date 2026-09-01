@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from .browser_homework import PlaywrightHomeworkClient
 from .client import ALLOWED_REST, ALLOWED_RPC, WebUntisClient
 
 
@@ -50,12 +51,17 @@ class WebUntisAdapter:
         self.client = WebUntisClient(
             username, password, server=server, school=school, user_agent=useragent
         )
+        self.homework_client = PlaywrightHomeworkClient(
+            username, password, server=server, school=school
+        )
 
     def test_connection(self):
         with self.client:
             return {"status": "ok", "methods": public_methods()}
 
     def call_readonly(self, method, *args, **kwargs):
+        if method == "homework":
+            return self.homework_client.fetch()
         if method in ALLOWED_RPC:
             return self.client.rpc(method, kwargs or (args[0] if args else {}))
         if method in ALLOWED_REST:

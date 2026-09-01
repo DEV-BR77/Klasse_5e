@@ -2,11 +2,11 @@ import codecs
 from pathlib import Path
 
 import pytest
+from django.core.exceptions import ValidationError
 
 from klasse5e.core.models import School
 from klasse5e.core.school_domains import propose_class_hostname, validate_class_hostname
 from klasse5e.core.school_import import detect_encoding, import_schools, search_value
-
 
 HEADER = "id,name,address,address2,zip,city,website,email,school_type,legal_status,provider,fax,phone,director,raw,location\n"
 
@@ -47,5 +47,5 @@ def test_import_is_idempotent_preserves_zero_zip_and_updates(tmp_path: Path):
 def test_hostname_rules():
     assert propose_class_hostname("5.1", "THG") == "5-1-thg.klassid.de"
     assert validate_class_hostname("5e.klassid.de", reserved_exception=True)
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         validate_class_hostname("admin.klassid.de")

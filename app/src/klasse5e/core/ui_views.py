@@ -4,7 +4,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -31,9 +31,11 @@ from .models import (
     ClassMembership,
     ConsentDecision,
     GuardianChildRelationship,
+    Person,
     PortalModule,
     PushSubscription,
     Role,
+    UserNotification,
 )
 from .policies import active_roles, family_label, has_active_membership
 
@@ -144,6 +146,14 @@ def dashboard(request):
                 school_class=school_class, status=ProtectedDocument.Status.PUBLISHED
             ).order_by("-is_updated", "-created_at")[:2],
             "chat_unread": _unread_count(request.user, school_class),
+            "notification_counts": {
+                row["category"]: row["total"]
+                for row in UserNotification.objects.filter(
+                    user=request.user, school_class=school_class, read_at__isnull=True
+                )
+                .values("category")
+                .annotate(total=Count("id"))
+            },
             "itslearning_entries": ItslearningCalendarItem.objects.filter(
                 connection__in=portal_connections, starts_at__date=day
             ).order_by("starts_at")[:5],
@@ -368,6 +378,47 @@ def family(request):
 
 
 @login_required
+def contacts(request):
+    school_class = _class_or_404(request.user)
+    memberships = ClassMembership.objects.filter(
+        school_class=school_class, status="active", person__user__isnull=False
+    ).select_related("person__user")
+    rows = []
+    for membership in memberships:
+        person = membership.person
+        children = GuardianChildRelationship.objects.filter(
+            guardian_person=person,
+            status="verified",
+            student_person__classmembership__school_class=school_class,
+            student_person__classmembership__status="active",
+        ).select_related("student_person")
+        rows.append(
+            {
+                "person": person,
+                "children": [relationship.student_person for relationship in children],
+                "email": person.user.email if person.email_visibility == "members" else "",
+                "phone": person.phone if person.phone_visibility == "members" else "",
+            }
+        )
+    context = _shared(request, "Kontakte", "contacts")
+    context["contacts"] = rows
+    return render(request, "ui/contacts.html", context)
+
+
+@login_required
+def students(request):
+    school_class = _class_or_404(request.user)
+    students = Person.objects.filter(
+        studentprofile__isnull=False,
+        classmembership__school_class=school_class,
+        classmembership__status="active",
+    ).distinct().order_by("last_name", "first_name")
+    context = _shared(request, "Schülerübersicht", "contacts")
+    context["students"] = students
+    return render(request, "ui/students.html", context)
+
+
+@login_required
 def consents(request):
     _class_or_404(request.user)
     context = _shared(request, "Einwilligungen", "more")
@@ -384,6 +435,8 @@ def notifications(request):
     context["push_active"] = PushSubscription.objects.filter(
         user=request.user, enabled=True
     ).exists()
+    context["push_subscriptions"] = PushSubscription.objects.filter(user=request.user, enabled=True)
+    context["vapid_configured"] = bool(settings.VAPID_PUBLIC_KEY)
     return render(request, "ui/notifications.html", context)
 
 

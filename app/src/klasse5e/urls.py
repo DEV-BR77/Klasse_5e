@@ -15,6 +15,9 @@ from klasse5e.schedule import views as schedule_views
 from klasse5e.webuntis import views as webuntis_views
 
 urlpatterns = [
+    path("registrieren/", views.register, name="register"),
+    path("registrieren/email/<str:token>/", views.verify_registration_email, name="registration-email-verify"),
+    path("aktivieren/<str:token>/", views.activate_registration, name="registration-activate"),
     path(
         "datenschutz/",
         TemplateView.as_view(template_name="privacy/information_v2.html"),
@@ -37,7 +40,14 @@ urlpatterns = [
         "tutorial/schritt/<int:step>/", onboarding_experience_views.tutorial_step, name="tutorial-step"
     ),
     path("", ui_views.dashboard, name="dashboard"),
+    path("einstellungen/profil/", views.personal_profile, name="personal-profile"),
+    path("profile/<int:person_id>/foto/", views.profile_photo, name="profile-photo"),
+    path("benachrichtigungen/", views.notification_list, name="notification-list"),
+    path("benachrichtigungen/<int:notification_id>/lesen/", views.notification_read, name="notification-read"),
+    path("benachrichtigungen/alle-lesen/", views.notifications_read_all, name="notifications-read-all"),
     path("kalender/", ui_views.calendar, name="ui-calendar"),
+    path("kontakte/", ui_views.contacts, name="ui-contacts"),
+    path("schueler/", ui_views.students, name="ui-students"),
     path("chat/", ui_views.chat_overview, name="ui-chat"),
     path("chat/<uuid:room_id>/ansicht/", ui_views.chat_room, name="ui-chat-room"),
     path("mehr/", ui_views.more, name="ui-more"),
@@ -99,6 +109,8 @@ urlpatterns = [
     path("invitation/<str:token>/", views.accept_invitation, name="accept-invitation"),
     path("sessions/revoke-all/", views.revoke_all_sessions, name="revoke-all-sessions"),
     path("push/subscriptions/", views.push_subscriptions, name="push-subscriptions"),
+    path("push/configuration/", views.push_configuration, name="push-configuration"),
+    path("push/self-test/", views.push_self_test, name="push-self-test"),
     path("manifest.webmanifest", views.manifest, name="manifest"),
     path("service-worker.js", views.service_worker, name="service-worker"),
     path("offline/", views.offline, name="offline"),

@@ -4,7 +4,8 @@ Stand: 1. September 2026
 
 ## Kurzfassung
 
-Das Klassenportal ist unter https://5e.eventmonitor.eu erreichbar und der
+Das Klassenportal war zu diesem historischen Prüfzeitpunkt unter dem inzwischen
+abgelösten Host erreichbar; das aktuelle Ziel ist https://5e.klassid.de und der
 Produktionscontainer laeuft stabil. Der persoenliche WebUntis-Stundenplan ist
 importiert, die numerischen Fach- und Lehrkraft-IDs sind in der laufenden
 Datenbank durch lesbare Bezeichnungen ersetzt und die Kalenderseite ist jetzt
@@ -26,7 +27,7 @@ aber es wurden weiterhin keine echten Hausaufgaben gespeichert.
 - Branch: main
 - Code-Commit: f3fa80d
 - Produktionsimage: klasse-5e-app:0.2.0
-- Oeffentliche URL: https://5e.eventmonitor.eu
+- damalige öffentliche URL: abgelöster Legacy-Host (nur noch als Übergangsweiterleitung vorgesehen)
 - App-, Datenbank- und Vision-Container laufen.
 - Das App-Root-Dateisystem bleibt schreibgeschuetzt.
 - Private Referenzdateien, Zugangsdaten und Laufzeitantworten sind nicht in Git.
