@@ -13,6 +13,13 @@ from klasse5e.chat.models import ChatReadState, ChatRoom
 from klasse5e.content.models import Post, ProtectedDocument, TeacherProfile
 from klasse5e.events.models import ContributionCategory, ContributionItem, Event, Reservation
 from klasse5e.events.services import cancel_reservation_for_user, create_reservation
+from klasse5e.itslearning.models import (
+    ItslearningCalendarItem,
+    ItslearningConnection,
+    ItslearningUpdate,
+    WebDavSpace,
+)
+from klasse5e.itslearning.webdav import used_bytes
 from klasse5e.media.models import Gallery
 from klasse5e.media.policies import may_access_gallery
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
@@ -77,11 +84,22 @@ def _shared(request, title, section):
     }
 
 
+def _itslearning_connections(user):
+    student_ids = GuardianChildRelationship.objects.filter(
+        guardian_person=user.person,
+        status="verified",
+        verified_at__isnull=False,
+        may_view_student_profile=True,
+    ).values("student_person__studentprofile")
+    return ItslearningConnection.objects.filter(owner=user, student_id__in=student_ids, active=True)
+
+
 @login_required
 def dashboard(request):
     school_class = _class_or_404(request.user)
     day = _day_from_request(request)
     context = _shared(request, "Start", "start")
+    portal_connections = _itslearning_connections(request.user)
     context.update(
         {
             "selected_day": day,
@@ -103,6 +121,12 @@ def dashboard(request):
                 school_class=school_class, status=ProtectedDocument.Status.PUBLISHED
             ).order_by("-is_updated", "-created_at")[:2],
             "chat_unread": _unread_count(request.user, school_class),
+            "itslearning_entries": ItslearningCalendarItem.objects.filter(
+                connection__in=portal_connections, starts_at__date=day
+            ).order_by("starts_at")[:5],
+            "itslearning_updates": ItslearningUpdate.objects.filter(
+                course__connection__in=portal_connections
+            ).select_related("course")[:3],
         }
     )
     return render(request, "ui/dashboard_v2.html", context)
@@ -125,6 +149,7 @@ def calendar(request):
     day = _day_from_request(request)
     week_start = day - timedelta(days=day.weekday())
     context = _shared(request, "Kalender", "calendar")
+    portal_connections = _itslearning_connections(request.user)
     context.update(
         {
             "selected_day": day,
@@ -142,6 +167,9 @@ def calendar(request):
                 starts_at__date__gte=week_start,
                 starts_at__date__lt=week_start + timedelta(days=7),
             ),
+            "itslearning_entries": ItslearningCalendarItem.objects.filter(
+                connection__in=portal_connections, starts_at__date=day
+            ).order_by("starts_at"),
         }
     )
     return render(request, "ui/calendar_v2.html", context)
@@ -357,3 +385,28 @@ def demo_states(request):
         raise Http404
     context = _shared(request, "UI-Zustände", "more")
     return render(request, "ui/demo_states.html", context)
+
+
+@login_required
+def system_status(request):
+    if not active_roles(request.user) & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN}:
+        raise Http404
+    from django.db import connection
+
+    database_ok = True
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    except Exception:
+        database_ok = False
+    spaces = list(WebDavSpace.objects.select_related("student__person"))
+    context = _shared(request, "Systemstatus", "more")
+    context.update(
+        {
+            "database_ok": database_ok,
+            "spaces": [{"space": space, "used": used_bytes(space)} for space in spaces],
+            "connections": ItslearningConnection.objects.select_related("student__person"),
+        }
+    )
+    return render(request, "ui/system_status.html", context)

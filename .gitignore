@@ -28,6 +28,7 @@ coverage/
 .env
 .env.*
 !.env.example
+.webuntis.env
 *.pem
 *.key
 *.p12
@@ -44,6 +45,12 @@ logs/
 backups/
 *.log
 *.sqlite3
+
+# Local school-portal reference data and personal design drafts
+references/webuntis/private/
+docs/design/*-ePortfolio.html
+app/static/itslearning/*-blogger-header.png
+5e logo_V1.png
 
 # AI models and biometric artifacts
 models/

@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "klasse5e.chat",
     "klasse5e.schedule",
     "klasse5e.webuntis",
+    "klasse5e.itslearning",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     "wagtail.embeds",
@@ -126,7 +127,13 @@ MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "runtime-media"))
 MEDIA_URL = None
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        )
+    },
 }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CACHES = {
@@ -167,3 +174,8 @@ CHAT_RETENTION_DAYS = int(os.environ.get("CHAT_RETENTION_DAYS", "90"))
 WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY = os.environ.get("WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY", "")
 WEBUNTIS_SERVER = os.environ.get("WEBUNTIS_SERVER", "thgwob.webuntis.com")
 WEBUNTIS_SCHOOL = os.environ.get("WEBUNTIS_SCHOOL", "thgwob")
+ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY = os.environ.get(
+    "ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY", ""
+)
+WEBDAV_ROOT = Path(os.environ.get("WEBDAV_ROOT", MEDIA_ROOT / "webdav"))
+DATA_UPLOAD_MAX_MEMORY_SIZE = max(DATA_UPLOAD_MAX_MEMORY_SIZE, 100 * 1024 * 1024)

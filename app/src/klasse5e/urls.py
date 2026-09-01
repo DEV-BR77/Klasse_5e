@@ -8,6 +8,8 @@ from klasse5e.chat import views as chat_views
 from klasse5e.content import views as content_views
 from klasse5e.core import onboarding_experience_views, onboarding_views, ui_views, views
 from klasse5e.events import views as event_views
+from klasse5e.itslearning import views as itslearning_views
+from klasse5e.itslearning.webdav import webdav
 from klasse5e.media import views as media_views
 from klasse5e.schedule import views as schedule_views
 from klasse5e.webuntis import views as webuntis_views
@@ -65,7 +67,16 @@ urlpatterns = [
     path("mehr/webuntis/entfernen/", webuntis_views.remove_connection, name="webuntis-remove"),
     path("mehr/webuntis/funktionen/", webuntis_views.update_features, name="webuntis-features"),
     path("mehr/webuntis/aktuell-pruefen/", webuntis_views.sync_now, name="webuntis-sync"),
+    path("itslearning/", itslearning_views.portal, name="itslearning-portal"),
+    path("itslearning/zugang/", itslearning_views.save_connection, name="itslearning-save"),
+    path("itslearning/<int:student_id>/kurse/", itslearning_views.add_course, name="itslearning-course"),
+    path("itslearning/<int:student_id>/synchronisieren/", itslearning_views.sync_now, name="itslearning-sync"),
+    path("itslearning/speicher/", itslearning_views.storage, name="itslearning-storage"),
+    path("itslearning/speicher/einrichten/", itslearning_views.save_storage, name="itslearning-storage-save"),
+    path("dav/<uuid:public_id>/", webdav, name="webdav-root"),
+    path("dav/<uuid:public_id>/<path:resource>", webdav, name="webdav-resource"),
     path("mehr/ui-zustaende/", ui_views.demo_states, name="ui-demo-states"),
+    path("mehr/systemstatus/", ui_views.system_status, name="ui-system-status"),
     path("health/", views.health, name="health"),
     path("admin/", admin.site.urls),
     path("cms/", include(wagtailadmin_urls)),
