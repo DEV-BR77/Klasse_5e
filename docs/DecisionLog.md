@@ -294,3 +294,59 @@ erneute Entscheidung. Ein Tutorial besitzt einen unabhängigen Zustand.
 auch ohne JavaScript konsistent. Für Kinder zählen nur bestätigte, aktuelle
 Beziehungen mit Zweckrecht. Bei mehreren Berechtigten hält eine fehlende oder
 ablehnende Entscheidung die Funktion aus. Produktive Pilotdaten bleiben reine
+
+# ADR-023: Schulen als Mandantenebene und delegierte Klassenverwaltung
+
+**Entscheidung:** Das bisherige Ein-Klassen-Modell wird migrationssicher um
+Schulen erweitert. Jede Klasse gehört genau einer Schule; bestehende Klassen
+werden bei der Migration einer Standardschule zugeordnet. Branding, aktivierte
+Funktionen und sichtbare Menüpunkte können auf Schulebene und überschreibend
+auf Klassenebene konfiguriert werden. Diese Darstellungskonfiguration ersetzt
+niemals objektbezogene Berechtigungsprüfungen. Ein Hauptadministrator verwaltet
+schulübergreifend, während die neue Rolle `class_admin` ausschließlich im
+Kontext ihrer konkret zugewiesenen Klasse gilt.
+
+**Grund:** Der ausdrücklich freigegebene Folgeauftrag hebt das frühere
+Mehrschulen-Nichtziel auf. Eine explizite Mandantenachse verhindert implizite
+globale Abfragen und ermöglicht später delegierte Verwaltung, ohne globale
+Staff- oder Superuserrechte an Klassenadministratoren zu vergeben.
+
+**Folge:** Alle fachlichen Abfragen und Adminaktionen werden schrittweise auf
+Schul- und Klassenisolation geprüft. Logo- und Menüfelder sind private Medien
+beziehungsweise Darstellungsdaten; serverseitige Policies bleiben maßgeblich.
+
+# ADR-024: Kontrollierte Registrierung ohne unmittelbaren Fachzugriff
+
+**Entscheidung:** Das frühere Verbot öffentlicher Registrierung wird durch
+einen rate-limitierten Bewerbungsprozess mit E-Mail-Verifikation ersetzt. Ein
+neues Konto bleibt bis zur administrativen Prüfung, expliziten Schul- und
+Klassenzuweisung sowie abgeschlossenem Pflicht-Onboarding ohne Zugriff auf
+Fachbereiche. Selbst erklärte Kinderbeziehungen beginnen stets unbestätigt.
+Freigabelinks sind zufällig, gehasht gespeichert, kurz befristet, widerrufbar
+und genau einmal verwendbar.
+
+**Grund:** Interessierte Mitglieder sollen einen Antrag stellen können, ohne
+dass eine behauptete Rolle oder Zuordnung eine Berechtigung erzeugt. Die
+Trennung von Identitätsprüfung, Mandantenzuweisung, Beziehungsbestätigung und
+Einwilligung erhält Least Privilege und persönliche Auditierbarkeit.
+
+**Folge:** Registrierung, erneuter Mailversand und Login erhalten
+Missbrauchsschutz ohne Tracker oder Benutzeraufzählung. Aktivierungs- und
+Onboarding-Statusübergänge werden transaktionssicher und auditierbar.
+
+# ADR-025: classid.de als kanonische Portal- und Versanddomain
+
+**Entscheidung:** `https://classid.de` wird nach kontrollierter DNS-, TLS- und
+Proxy-Migration die kanonische Portaladresse. Der bisherige Host bleibt
+vorübergehend als HTTPS-Weiterleitung bestehen. Ausgehende Systemmail nutzt
+ausschließlich freigegebene Absender der verifizierten Domain über Resend;
+Reply-To ist fest konfiguriert und nicht frei durch Benutzer wählbar.
+
+**Grund:** Portal- und Kommunikationsidentität sollen stabil und unabhängig
+von der bisherigen Sammeldomain sein. Ein stufenweiser Wechsel erhält alte
+Links und erlaubt einen klaren Rollback.
+
+**Folge:** Vor produktiven Änderungen werden IONOS-Zone, Split-DNS, Caddy und
+Zertifikate gesichert. Bestehende MX-, Mail- und sonstige Dienste bleiben
+unangetastet; SPF wird pro Domain konsolidiert, DKIM ergänzt und DMARC zunächst
+beobachtend betrieben. Resend ist kein Posteingang.

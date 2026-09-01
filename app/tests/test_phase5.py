@@ -100,7 +100,7 @@ def add_decision(key, person, decider, decision="granted"):
 def test_gallery_event_must_match_class(gallery, guardian, year):
     from klasse5e.core.models import SchoolClass
 
-    other = SchoolClass.objects.create(name="Other", school_year=year)
+    other = SchoolClass.objects.create(school=school_class.school, name="Other", school_year=year)
     event = Event.objects.create(
         school_class=other,
         school_year=year,

@@ -77,13 +77,37 @@ class SchoolYear(models.Model):
             raise ValidationError("Das Schuljahr muss nach seinem Beginn enden.")
 
 
+class School(models.Model):
+    name = models.CharField(max_length=160)
+    short_name = models.CharField(max_length=64, blank=True)
+    slug = models.SlugField(unique=True)
+    logo = models.ImageField(upload_to="branding/schools/", blank=True)
+    enabled_features = models.JSONField(default=list, blank=True)
+    visible_menu_items = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.short_name or self.name
+
+
 class SchoolClass(models.Model):
+    school = models.ForeignKey(
+        School, on_delete=models.PROTECT, related_name="classes"
+    )
     name = models.CharField(max_length=64)
     school_year = models.ForeignKey(SchoolYear, on_delete=models.PROTECT)
+    display_name = models.CharField(max_length=100, blank=True)
+    logo = models.ImageField(upload_to="branding/classes/", blank=True)
+    enabled_features = models.JSONField(default=list, blank=True)
+    visible_menu_items = models.JSONField(default=list, blank=True)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["name", "school_year"], name="unique_class_year")
+            models.UniqueConstraint(
+                fields=["school", "name", "school_year"], name="unique_school_class_year"
+            )
         ]
 
 
@@ -126,6 +150,7 @@ class ClassMembership(models.Model):
 
 class Role(models.TextChoices):
     PRIMARY_ADMIN = "primary_admin", "Hauptadministrator"
+    CLASS_ADMIN = "class_admin", "Klassenadministrator"
     DEPUTY_ADMIN = "deputy_admin", "Stellvertretender Administrator"
     TEACHER = "teacher", "Klassenlehrer"
     EDITOR = "editor", "Redakteur"

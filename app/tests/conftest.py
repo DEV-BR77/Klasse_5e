@@ -10,6 +10,7 @@ from klasse5e.core.models import (
     ClassMembership,
     Person,
     RoleAssignment,
+    School,
     SchoolClass,
     SchoolYear,
     UserAccount,
@@ -24,8 +25,13 @@ def year(db):
 
 
 @pytest.fixture
-def school_class(year):
-    return SchoolClass.objects.create(name="Synthetische 5e", school_year=year)
+def school(db):
+    return School.objects.create(name="Synthetische Schule", slug="synthetische-schule")
+
+
+@pytest.fixture
+def school_class(year, school):
+    return SchoolClass.objects.create(school=school, name="Synthetische 5e", school_year=year)
 
 
 @pytest.fixture

@@ -13,6 +13,7 @@ from .models import (
     Person,
     PushSubscription,
     RoleAssignment,
+    School,
     SchoolClass,
     SchoolYear,
     StudentProfile,
@@ -33,6 +34,7 @@ class AccountAdmin(UserAdmin):
 for model in [
     Person,
     Household,
+    School,
     SchoolYear,
     SchoolClass,
     StudentProfile,
