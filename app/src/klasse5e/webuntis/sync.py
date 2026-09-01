@@ -1,3 +1,4 @@
+import time
 import uuid
 from datetime import timedelta
 
@@ -17,6 +18,7 @@ from .models import (
     WebUntisConnection,
     WebUntisFeaturePreference,
 )
+from .scheduling import is_temporary_error
 
 
 class SyncThrottled(Exception):
@@ -62,7 +64,7 @@ def _set_feature_state(connection, key, state):
     )
 
 
-def execute_run(run):
+def _execute_once(run):
     categories = _enabled_categories(run.connection)
     total_changes = 0
     successes = 0
@@ -135,6 +137,29 @@ def execute_run(run):
             "finished_at",
         ]
     )
+    return run
+
+
+def execute_run(run, *, sleep=time.sleep, notifier=None):
+    """Execute one logical run at most three times for temporary failures."""
+    for attempt in range(1, 4):
+        run.attempt_count = attempt
+        run.save(update_fields=["attempt_count"])
+        run = _execute_once(run)
+        if run.status != SyncRun.Status.FAILED or not is_temporary_error(run.error_code):
+            return run
+        if attempt < 3:
+            sleep(0.25 * (2 ** (attempt - 1)))
+            run.status = SyncRun.Status.RUNNING
+            run.finished_at = None
+            run.error_code = ""
+            run.save(update_fields=["status", "finished_at", "error_code"])
+    if run.status == SyncRun.Status.FAILED and run.attempt_count == 3:
+        if notifier is None:
+            from .notifications import notify_terminal_sync_failure
+
+            notifier = notify_terminal_sync_failure
+        notifier(run)
     return run
 
 

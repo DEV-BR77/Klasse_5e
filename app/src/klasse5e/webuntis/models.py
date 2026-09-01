@@ -146,7 +146,14 @@ class WebUntisHomework(models.Model):
 
 
 class SyncSchedule(models.Model):
+    class Mode(models.TextChoices):
+        INTERVAL = "interval", "Festes Intervall"
+        FIXED_TIMES = "fixed_times", "Feste Uhrzeiten"
+
+    source = models.CharField(max_length=40, default="webuntis", unique=True)
     enabled = models.BooleanField(default=False)
+    mode = models.CharField(max_length=16, choices=Mode, default=Mode.FIXED_TIMES)
+    interval_minutes = models.PositiveIntegerField(null=True, blank=True)
     timezone_name = models.CharField(max_length=64, default="Europe/Berlin")
     times = models.JSONField(default=list)
     weekdays_only = models.BooleanField(default=True)
@@ -155,6 +162,18 @@ class SyncSchedule(models.Model):
     max_runs_per_day = models.PositiveSmallIntegerField(default=3)
     min_interval_minutes = models.PositiveSmallIntegerField(default=15)
     updated_at = models.DateTimeField(auto_now=True)
+    next_run_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    last_started_at = models.DateTimeField(null=True, blank=True)
+    last_finished_at = models.DateTimeField(null=True, blank=True)
+    last_duration_ms = models.PositiveIntegerField(null=True, blank=True)
+    last_status = models.CharField(max_length=24, blank=True)
+    last_error_class = models.CharField(max_length=40, blank=True)
+
+    def clean(self):
+        from .scheduling import validate_schedule
+
+        validate_schedule(self)
 
     @classmethod
     def current(cls):
@@ -188,6 +207,8 @@ class SyncRun(models.Model):
     change_count = models.PositiveIntegerField(default=0)
     categories = models.JSONField(default=list)
     error_code = models.CharField(max_length=40, blank=True)
+    attempt_count = models.PositiveSmallIntegerField(default=0)
+    terminal_notification_sent_at = models.DateTimeField(null=True, blank=True)
 
 # Imported here so Django registers the models under the webuntis app.
 from .extra_models import (  # noqa: E402,F401

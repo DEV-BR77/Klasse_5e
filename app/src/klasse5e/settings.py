@@ -177,5 +177,8 @@ WEBUNTIS_SCHOOL = os.environ.get("WEBUNTIS_SCHOOL", "thgwob")
 ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY = os.environ.get(
     "ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY", ""
 )
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
+VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:kontakt@klassid.de")
 WEBDAV_ROOT = Path(os.environ.get("WEBDAV_ROOT", MEDIA_ROOT / "webdav"))
 DATA_UPLOAD_MAX_MEMORY_SIZE = max(DATA_UPLOAD_MAX_MEMORY_SIZE, 100 * 1024 * 1024)
