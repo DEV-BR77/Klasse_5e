@@ -8,6 +8,7 @@ from klasse5e.core.models import (
     ClassMembership,
     Person,
     RoleAssignment,
+    School,
     SchoolClass,
     SchoolYear,
     UserAccount,
@@ -19,7 +20,10 @@ def room(db):
     year = SchoolYear.objects.create(
         label="2026/27", starts_on=date(2026, 8, 1), ends_on=date(2027, 7, 31)
     )
-    school_class = SchoolClass.objects.create(name="Test 5e", school_year=year)
+    school = School.objects.create(name="Testschule", slug="chat-testschule")
+    school_class = SchoolClass.objects.create(
+        school=school, name="Test 5e", code="5e", school_year=year
+    )
     return ChatRoom.objects.create(school_class=school_class, school_year=year, title="Klassenraum")
 
 

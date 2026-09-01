@@ -3,6 +3,8 @@ from django.contrib.auth.admin import UserAdmin
 
 from .models import (
     AuditEvent,
+    BrandingAsset,
+    ClassDomain,
     ClassMembership,
     ConsentDecision,
     ConsentTextVersion,
@@ -10,8 +12,11 @@ from .models import (
     GuardianChildRelationship,
     Household,
     Invitation,
+    LogoRequest,
     Person,
     PushSubscription,
+    PortalConfigurationKey,
+    PortalConfigurationValue,
     RoleAssignment,
     School,
     SchoolClass,
@@ -33,6 +38,8 @@ class AccountAdmin(UserAdmin):
 
 for model in [
     Person,
+    BrandingAsset,
+    ClassDomain,
     Household,
     School,
     SchoolYear,
@@ -47,5 +54,8 @@ for model in [
     ConsentDecision,
     AuditEvent,
     PushSubscription,
+    LogoRequest,
+    PortalConfigurationKey,
+    PortalConfigurationValue,
 ]:
     admin.site.register(model)

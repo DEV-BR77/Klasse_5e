@@ -114,7 +114,7 @@ def test_relationship_must_be_verified_current_and_explicit(guardian):
 def test_membership_and_class_role_isolation(guardian, school_class, year):
     assert has_active_membership(guardian, school_class)
     other = type(school_class).objects.create(
-        school=school_class.school, name="Other", school_year=year
+        school=school_class.school, name="Other", code="other", school_year=year
     )
     assert not has_active_membership(guardian, other)
     assert active_roles(guardian, school_class) == {Role.GUARDIAN}

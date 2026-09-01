@@ -78,9 +78,31 @@ class SchoolYear(models.Model):
 
 
 class School(models.Model):
+    source_id = models.CharField(max_length=80, null=True, blank=True, unique=True)
+    source_name = models.CharField(max_length=120, blank=True)
+    source_imported_at = models.DateTimeField(null=True, blank=True)
     name = models.CharField(max_length=160)
+    search_name = models.CharField(max_length=200, blank=True, db_index=True)
     short_name = models.CharField(max_length=64, blank=True)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(null=True, blank=True, unique=True)
+    address = models.CharField(max_length=200, blank=True)
+    address2 = models.CharField(max_length=200, blank=True)
+    postal_code = models.CharField(max_length=10, blank=True, db_index=True)
+    city = models.CharField(max_length=120, blank=True, db_index=True)
+    federal_state = models.CharField(max_length=80, blank=True, db_index=True)
+    website = models.URLField(blank=True)
+    email = models.EmailField(blank=True)
+    school_type = models.CharField(max_length=120, blank=True, db_index=True)
+    legal_status = models.CharField(max_length=120, blank=True, db_index=True)
+    provider = models.CharField(max_length=200, blank=True, db_index=True)
+    fax = models.CharField(max_length=80, blank=True)
+    phone = models.CharField(max_length=80, blank=True)
+    director = models.CharField(max_length=160, blank=True)
+    source_raw = models.JSONField(default=dict, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    location_valid = models.BooleanField(default=False)
+    possible_duplicate_group = models.CharField(max_length=64, blank=True, db_index=True)
     logo = models.ImageField(upload_to="branding/schools/", blank=True)
     enabled_features = models.JSONField(default=list, blank=True)
     visible_menu_items = models.JSONField(default=list, blank=True)
@@ -97,16 +119,153 @@ class SchoolClass(models.Model):
         School, on_delete=models.PROTECT, related_name="classes"
     )
     name = models.CharField(max_length=64)
+    code = models.CharField(max_length=64, blank=True)
     school_year = models.ForeignKey(SchoolYear, on_delete=models.PROTECT)
     display_name = models.CharField(max_length=100, blank=True)
     logo = models.ImageField(upload_to="branding/classes/", blank=True)
     enabled_features = models.JSONField(default=list, blank=True)
     visible_menu_items = models.JSONField(default=list, blank=True)
+    grade_level = models.CharField(max_length=32, blank=True)
+    status = models.CharField(max_length=24, default="active")
+    valid_from = models.DateField(null=True, blank=True)
+    valid_until = models.DateField(null=True, blank=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["school", "name", "school_year"], name="unique_school_class_year"
+                fields=["school", "code", "school_year"], name="unique_school_class_year"
+            )
+        ]
+
+
+class ClassDomain(models.Model):
+    school_class = models.OneToOneField(
+        SchoolClass, on_delete=models.CASCADE, related_name="domain"
+    )
+    hostname = models.CharField(max_length=253, unique=True)
+    is_reserved_exception = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        from .school_domains import validate_class_hostname
+
+        validate_class_hostname(self.hostname, reserved_exception=self.is_reserved_exception)
+
+
+class BrandingAsset(models.Model):
+    class Kind(models.TextChoices):
+        LOGO = "logo", "Logo"
+        HERO = "hero", "Titelbild"
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Aktiv"
+        REMOVED = "removed", "Entfernt"
+
+    school = models.ForeignKey(
+        School, null=True, blank=True, on_delete=models.CASCADE, related_name="branding_assets"
+    )
+    school_class = models.ForeignKey(
+        SchoolClass,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="branding_assets",
+    )
+    kind = models.CharField(max_length=12, choices=Kind)
+    image = models.ImageField(upload_to="branding/opaque/")
+    preview = models.ImageField(upload_to="branding/opaque/", blank=True)
+    alt_text = models.CharField(max_length=180)
+    rights_notice = models.CharField(max_length=240, blank=True)
+    publication_rights_confirmed = models.BooleanField(default=False)
+    status = models.CharField(max_length=12, choices=Status, default=Status.ACTIVE)
+    created_by = models.ForeignKey(UserAccount, null=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(school__isnull=False, school_class__isnull=True) | models.Q(school__isnull=True, school_class__isnull=False)),
+                name="branding_exactly_one_scope",
+            ),
+            models.UniqueConstraint(
+                fields=["school", "kind"],
+                condition=models.Q(status="active", school__isnull=False),
+                name="one_active_school_branding_kind",
+            ),
+            models.UniqueConstraint(
+                fields=["school_class", "kind"],
+                condition=models.Q(status="active", school_class__isnull=False),
+                name="one_active_class_branding_kind",
+            ),
+        ]
+
+
+class PortalConfigurationKey(models.Model):
+    class ValueType(models.TextChoices):
+        BOOLEAN = "boolean", "Ja/Nein"
+        STRING = "string", "Text"
+
+    key = models.SlugField(unique=True)
+    version = models.PositiveSmallIntegerField(default=1)
+    value_type = models.CharField(max_length=12, choices=ValueType)
+    default_value = models.JSONField()
+    school_override_allowed = models.BooleanField(default=False)
+    class_override_allowed = models.BooleanField(default=False)
+    active = models.BooleanField(default=True)
+
+
+class PortalConfigurationValue(models.Model):
+    key = models.ForeignKey(PortalConfigurationKey, on_delete=models.CASCADE)
+    school = models.ForeignKey(School, null=True, blank=True, on_delete=models.CASCADE)
+    school_class = models.ForeignKey(SchoolClass, null=True, blank=True, on_delete=models.CASCADE)
+    value = models.JSONField()
+    updated_by = models.ForeignKey(UserAccount, null=True, on_delete=models.SET_NULL)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(school__isnull=True, school_class__isnull=True) | models.Q(school__isnull=False, school_class__isnull=True) | models.Q(school__isnull=True, school_class__isnull=False)),
+                name="configuration_at_most_one_scope",
+            ),
+            models.UniqueConstraint(fields=["key", "school", "school_class"], name="unique_configuration_scope"),
+        ]
+
+
+class LogoRequest(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Entwurf"
+        SUBMITTED = "submitted", "Eingereicht"
+        REVIEW = "review", "In Prüfung"
+        QUESTION = "question", "Rückfrage"
+        OFFER = "offer", "Angebot"
+        COMMISSIONED = "commissioned", "Beauftragt"
+        DELIVERED = "delivered", "Geliefert"
+        REJECTED = "rejected", "Abgelehnt"
+        CANCELLED = "cancelled", "Storniert"
+
+    school = models.ForeignKey(School, null=True, blank=True, on_delete=models.CASCADE)
+    school_class = models.ForeignKey(SchoolClass, null=True, blank=True, on_delete=models.CASCADE)
+    requested_by = models.ForeignKey(UserAccount, on_delete=models.PROTECT)
+    desired_text = models.CharField(max_length=160)
+    colors = models.CharField(max_length=300, blank=True)
+    motifs = models.CharField(max_length=500, blank=True)
+    style = models.CharField(max_length=300, blank=True)
+    reference_notes = models.CharField(max_length=1000, blank=True)
+    transparent_background = models.BooleanField(default=True)
+    intended_uses = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=20, choices=Status, default=Status.DRAFT)
+    admin_notes = models.CharField(max_length=2000, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(school__isnull=False, school_class__isnull=True) | models.Q(school__isnull=True, school_class__isnull=False)),
+                name="logo_request_exactly_one_scope",
             )
         ]
 
@@ -150,6 +309,7 @@ class ClassMembership(models.Model):
 
 class Role(models.TextChoices):
     PRIMARY_ADMIN = "primary_admin", "Hauptadministrator"
+    SCHOOL_ADMIN = "school_admin", "Schuladministrator"
     CLASS_ADMIN = "class_admin", "Klassenadministrator"
     DEPUTY_ADMIN = "deputy_admin", "Stellvertretender Administrator"
     TEACHER = "teacher", "Klassenlehrer"
@@ -163,6 +323,7 @@ class Role(models.TextChoices):
 class RoleAssignment(models.Model):
     user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
     school_class = models.ForeignKey(SchoolClass, null=True, blank=True, on_delete=models.CASCADE)
+    school = models.ForeignKey(School, null=True, blank=True, on_delete=models.CASCADE)
     role = models.CharField(max_length=32, choices=Role)
     active = models.BooleanField(default=True)
     assigned_by = models.ForeignKey(

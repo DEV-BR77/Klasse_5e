@@ -334,11 +334,13 @@ Einwilligung erhält Least Privilege und persönliche Auditierbarkeit.
 Missbrauchsschutz ohne Tracker oder Benutzeraufzählung. Aktivierungs- und
 Onboarding-Statusübergänge werden transaktionssicher und auditierbar.
 
-# ADR-025: classid.de als kanonische Portal- und Versanddomain
+# ADR-025: klassid.de als kanonische Portal- und Versanddomain
 
-**Entscheidung:** `https://classid.de` wird nach kontrollierter DNS-, TLS- und
-Proxy-Migration die kanonische Portaladresse. Der bisherige Host bleibt
-vorübergehend als HTTPS-Weiterleitung bestehen. Ausgehende Systemmail nutzt
+**Entscheidung:** `https://klassid.de` wird nach kontrollierter DNS-, TLS- und
+Proxy-Migration die allgemeine Einstiegsadresse. Jede Klasse besitzt einen
+expliziten, global eindeutigen Hostnamen; die bestehende Klasse verwendet
+`https://5e.klassid.de`. Der bisherige Host bleibt vorübergehend als
+HTTPS-Weiterleitung dorthin bestehen. Ausgehende Systemmail nutzt
 ausschließlich freigegebene Absender der verifizierten Domain über Resend;
 Reply-To ist fest konfiguriert und nicht frei durch Benutzer wählbar.
 

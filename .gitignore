@@ -48,6 +48,7 @@ backups/
 
 # Local school-portal reference data and personal design drafts
 references/webuntis/private/
+schools.csv
 docs/design/*-ePortfolio.html
 app/static/itslearning/*-blogger-header.png
 5e logo_V1.png

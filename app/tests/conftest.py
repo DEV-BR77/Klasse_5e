@@ -31,7 +31,9 @@ def school(db):
 
 @pytest.fixture
 def school_class(year, school):
-    return SchoolClass.objects.create(school=school, name="Synthetische 5e", school_year=year)
+    return SchoolClass.objects.create(
+        school=school, name="Synthetische 5e", code="5e", school_year=year
+    )
 
 
 @pytest.fixture

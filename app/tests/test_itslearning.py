@@ -12,6 +12,7 @@ from klasse5e.core.models import (
     MembershipStatus,
     Person,
     RelationshipStatus,
+    School,
     SchoolClass,
     SchoolYear,
     StudentProfile,
@@ -34,7 +35,10 @@ def family(db):
         ends_on=date.today() + timedelta(days=300),
         is_active=True,
     )
-    school_class = SchoolClass.objects.create(name="5e", school_year=year)
+    school = School.objects.create(name="Testschule", slug="its-testschule")
+    school_class = SchoolClass.objects.create(
+        school=school, name="5e", code="5e", school_year=year
+    )
     ClassMembership.objects.create(
         school_class=school_class,
         person=guardian,

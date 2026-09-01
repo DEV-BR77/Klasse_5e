@@ -20,6 +20,7 @@ from klasse5e.core.models import (
     Person,
     Role,
     RoleAssignment,
+    School,
     SchoolClass,
     SchoolYear,
     StudentProfile,
@@ -77,7 +78,10 @@ def domain(db):
     year = SchoolYear.objects.create(
         label="Test", starts_on=today - timedelta(days=1), ends_on=today + timedelta(days=100)
     )
-    school_class = SchoolClass.objects.create(name="Synthetic", school_year=year)
+    school = School.objects.create(name="Testschule", slug="biometric-testschule")
+    school_class = SchoolClass.objects.create(
+        school=school, name="Synthetic", code="synthetic", school_year=year
+    )
     admin = UserAccount.objects.create_user(email="ada@example.test", password="x")
     admin_person = Person.objects.create(user=admin, first_name="Ada", last_name="Admin")
     ClassMembership.objects.create(school_class=school_class, person=admin_person, valid_from=today)
