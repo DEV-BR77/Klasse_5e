@@ -21,7 +21,7 @@ def _import_csv(path_value, model):
             raise CommandError(f"{path.name} must contain code,label headers.")
         for row in reader:
             code = (row.get("code") or "").strip()
-            label = (row.get("label") or "").strip()
+            label = (row.get("label") or "").strip().rstrip(",").strip()
             if not code or not label:
                 continue
             model.objects.update_or_create(code=code, defaults={"label": label})

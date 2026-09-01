@@ -1,1 +1,73 @@
-{% extends "base.html" %}{% block content %}<section><h1>Kalender</h1><nav aria-label="Tag wechseln"><a href="?tag={{ previous_day|date:'Y-m-d' }}">Vorheriger Tag</a> · <strong>{{ selected_day|date:"d.m.Y" }}</strong> · <a href="?tag={{ next_day|date:'Y-m-d' }}">Nächster Tag</a></nav><div class="card-grid"><article class="content-card"><h2>Unterricht</h2><ul>{% for item in lessons %}<li><strong>{{ item.starts_at|date:"H:i" }}&ndash;{{ item.ends_at|date:"H:i" }}</strong> {{ item.subject }}{% if item.teacher_label %} bei {{ item.teacher_label }}{% endif %}{% if item.room %}, Raum {{ item.room }}{% endif %}</li>{% empty %}<li>Noch keine Unterrichtsstunden fuer diesen Tag.</li>{% endfor %}</ul>{% if not lessons %}<a href="/mehr/webuntis/">WebUntis jetzt aktualisieren</a>{% endif %}</article><article class="content-card"><h2>Termine</h2><ul>{% for item in day_entries %}<li>{{ item }}</li>{% endfor %}{% for item in itslearning_entries %}<li><strong>itslearning:</strong> {{ item.starts_at|date:"H:i" }} {{ item.title }}</li>{% empty %}{% if not day_entries %}<li>Noch keine Termine für diesen Tag.</li>{% endif %}{% endfor %}</ul></article></div></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <header class="page-heading calendar-heading">
+    <div>
+      <p class="eyebrow">Alles an einem Ort</p>
+      <h1>Kalender</h1>
+      <p class="muted">Unterricht, Termine und Hausaufgaben gemeinsam im Monats&uuml;berblick.</p>
+    </div>
+    <a class="button button-secondary" href="/mehr/webuntis/">WebUntis aktualisieren</a>
+  </header>
+
+  <nav class="month-navigation card" aria-label="Monat wechseln">
+    <a class="button button-quiet" href="?tag={{ previous_month|date:'Y-m-d' }}" aria-label="Vorheriger Monat">&larr; Zur&uuml;ck</a>
+    <h2>{{ month_start|date:"F Y" }}</h2>
+    <a class="button button-quiet" href="?tag={{ next_month|date:'Y-m-d' }}" aria-label="N&auml;chster Monat">Weiter &rarr;</a>
+  </nav>
+
+  <ul class="calendar-legend" aria-label="Farblegende">
+    <li><span class="calendar-dot calendar-dot-appointment"></span> Termine</li>
+    <li><span class="calendar-dot calendar-dot-homework"></span> Hausaufgaben</li>
+    <li><span class="calendar-dot calendar-dot-lesson"></span> Unterricht</li>
+    <li><span class="calendar-dot calendar-dot-learning"></span> Lernplattform</li>
+  </ul>
+
+  <div class="calendar-shell card">
+    <div class="calendar-weekdays" aria-hidden="true">
+      <span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span>
+    </div>
+    <div class="calendar-month-grid" role="grid" aria-label="{{ month_start|date:'F Y' }}">
+      {% for day in calendar_days %}
+        <article class="calendar-day{% if not day.in_month %} calendar-day-outside{% endif %}{% if day.selected %} calendar-day-selected{% endif %}{% if day.today %} calendar-day-today{% endif %}" role="gridcell">
+          <a class="calendar-date" href="?tag={{ day.date|date:'Y-m-d' }}"{% if day.selected %} aria-current="date"{% endif %}>
+            <span class="calendar-mobile-weekday">{{ day.date|date:"D" }}</span>
+            {{ day.date|date:"j" }}
+          </a>
+          <ul class="calendar-day-items">
+            {% for item in day.items|slice:":3" %}
+              <li class="calendar-chip calendar-chip-{{ item.kind }}" title="{{ item.kind_label }}: {{ item.title }}">
+                <span class="calendar-dot calendar-dot-{{ item.kind }}"></span>
+                <span class="calendar-chip-text">{% if item.time %}{{ item.time }} {% endif %}{{ item.title }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+
+  <section class="card calendar-agenda" aria-labelledby="agenda-heading">
+    <div class="card-header">
+      <div>
+        <p class="eyebrow">Ausgew&auml;hlter Tag</p>
+        <h2 id="agenda-heading">{{ selected_day|date:"l, d. F Y" }}</h2>
+      </div>
+    </div>
+    <ul class="list-clean">
+      {% for item in agenda %}
+        <li class="agenda-item agenda-item-{{ item.kind }}">
+          <span class="calendar-dot calendar-dot-{{ item.kind }}"></span>
+          <div>
+            <p class="agenda-label">{{ item.kind_label }}{% if item.time %} &middot; {{ item.time }} Uhr{% endif %}</p>
+            <h3>{% if item.url %}<a href="{{ item.url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</h3>
+            {% if item.meta %}<p class="muted">{{ item.meta }}</p>{% endif %}
+          </div>
+        </li>
+      {% empty %}
+        <li class="calendar-empty">F&uuml;r diesen Tag sind noch keine Eintr&auml;ge vorhanden.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</section>
+{% endblock %}

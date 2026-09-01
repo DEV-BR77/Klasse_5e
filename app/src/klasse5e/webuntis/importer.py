@@ -5,6 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .extra_models import WebUntisSubjectMapping, WebUntisTeacherMapping
+from .homework_payload import homework_items
 from .models import WebUntisHomework, WebUntisLesson
 
 
@@ -156,7 +157,7 @@ def sync_homework(connection, adapter, *, today=None):
     subject_map = dict(WebUntisSubjectMapping.objects.values_list("code", "label"))
     seen = set()
     changes = 0
-    for item in _homework_items(payload):
+    for item in homework_items(payload):
         if not isinstance(item, dict):
             continue
         subject_value = item.get("subject") or item.get("subjectName") or ""
@@ -174,7 +175,9 @@ def sync_homework(connection, adapter, *, today=None):
             or ""
         ).strip()
         due_on = _date_value(item.get("dueDate") or item.get("due") or item.get("date"))
-        assigned_on = _date_value(item.get("assignedDate") or item.get("startDate"))
+        assigned_on = _date_value(
+            item.get("assignedDate") or item.get("startDate") or item.get("date")
+        )
         fingerprint = _fingerprint(
             "homework", item, (subject_code, assigned_on, due_on, text)
         )

@@ -25,6 +25,7 @@ from klasse5e.media.policies import may_access_gallery
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
 from klasse5e.webuntis.models import WebUntisConnection, WebUntisLesson
 
+from .calendar_presenter import build_calendar_context
 from .models import (
     ClassMembership,
     ConsentDecision,
@@ -165,37 +166,17 @@ def _unread_count(user, school_class):
 def calendar(request):
     school_class = _class_or_404(request.user)
     day = _day_from_request(request)
-    week_start = day - timedelta(days=day.weekday())
     context = _shared(request, "Kalender", "calendar")
-    portal_connections = _itslearning_connections(request.user)
-    webuntis_connections = _webuntis_connections(request.user)
-    personal_lessons = WebUntisLesson.objects.filter(
-        connection__in=webuntis_connections, starts_at__date=day
-    ).order_by("starts_at")
-    manual_lessons = TimetableEntry.objects.filter(
-        school_class=school_class, weekday=day.isoweekday()
-    )
     context.update(
-        {
-            "selected_day": day,
-            "previous_day": day - timedelta(days=1),
-            "next_day": day + timedelta(days=1),
-            "lessons": personal_lessons if personal_lessons.exists() else manual_lessons,
-            "day_entries": CalendarEntry.objects.filter(
-                school_class=school_class, starts_at__date=day
-            ).order_by("starts_at"),
-            "week_days": [week_start + timedelta(days=index) for index in range(5)],
-            "week_entries": CalendarEntry.objects.filter(
-                school_class=school_class,
-                starts_at__date__gte=week_start,
-                starts_at__date__lt=week_start + timedelta(days=7),
-            ),
-            "itslearning_entries": ItslearningCalendarItem.objects.filter(
-                connection__in=portal_connections, starts_at__date=day
-            ).order_by("starts_at"),
-        }
+        build_calendar_context(
+            school_class=school_class,
+            selected_day=day,
+            webuntis_connections=_webuntis_connections(request.user),
+            itslearning_connections=_itslearning_connections(request.user),
+        )
     )
     return render(request, "ui/calendar_v2.html", context)
+
 
 
 @login_required
