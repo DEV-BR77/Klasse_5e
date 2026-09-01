@@ -5,12 +5,33 @@ from .models import ClassMembership, GuardianChildRelationship, Role, RoleAssign
 
 PRIVILEGED_ROLES = {
     Role.PRIMARY_ADMIN,
+    Role.SCHOOL_ADMIN,
+    Role.CLASS_ADMIN,
     Role.DEPUTY_ADMIN,
     Role.TEACHER,
     Role.EDITOR,
     Role.MODERATOR,
     Role.ORGANIZER,
 }
+
+
+def active_class_for_user(user):
+    if not user.is_authenticated or not hasattr(user, "person"):
+        return None
+    today = timezone.localdate()
+    membership = (
+        ClassMembership.objects.filter(
+            person=user.person,
+            status="active",
+            valid_from__lte=today,
+            school_class__school_year__starts_on__lte=today,
+            school_class__school_year__ends_on__gte=today,
+        )
+        .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=today))
+        .select_related("school_class__school")
+        .first()
+    )
+    return membership.school_class if membership else None
 
 
 def active_roles(user, school_class=None):

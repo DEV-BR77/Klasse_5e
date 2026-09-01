@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(os.environ.get("APP_ROOT", Path.cwd())).resolve()
+APP_VERSION = "0.2.0-beta.1"
+APP_RELEASE_CHANNEL = "beta"
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY", "unsafe-test-only-4f8d2a6c9e1b7d3f5a8c2e6b9d1f4a7c0e3b6d9f"
 )
@@ -55,6 +57,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "klasse5e.core.middleware.ActiveAccessMiddleware",
+    "klasse5e.core.module_flags.ModuleGateMiddleware",
     "klasse5e.core.middleware.OnboardingRequiredMiddleware",
     "klasse5e.core.middleware.LoginRateLimitMiddleware",
     "klasse5e.core.middleware.PrivilegedMfaMiddleware",
@@ -73,6 +76,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "klasse5e.core.module_flags.module_context",
             ]
         },
     }

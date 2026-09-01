@@ -234,6 +234,39 @@ class PortalConfigurationValue(models.Model):
         ]
 
 
+class PortalModule(models.Model):
+    class Stability(models.TextChoices):
+        STABLE = "stable", "Stabil"
+        BETA = "beta", "Beta"
+        EXPERIMENTAL = "experimental", "Experimentell"
+
+    key = models.SlugField(unique=True)
+    label = models.CharField(max_length=100)
+    stability = models.CharField(max_length=16, choices=Stability)
+    default_enabled = models.BooleanField(default=False)
+    dependencies = models.JSONField(default=list, blank=True)
+    last_successful_test_at = models.DateTimeField(null=True, blank=True)
+
+
+class PortalModuleOverride(models.Model):
+    module = models.ForeignKey(PortalModule, on_delete=models.CASCADE)
+    school = models.ForeignKey(School, null=True, blank=True, on_delete=models.CASCADE)
+    school_class = models.ForeignKey(SchoolClass, null=True, blank=True, on_delete=models.CASCADE)
+    enabled = models.BooleanField()
+    reason = models.CharField(max_length=300, blank=True)
+    updated_by = models.ForeignKey(UserAccount, null=True, on_delete=models.SET_NULL)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(school__isnull=True, school_class__isnull=True) | models.Q(school__isnull=False, school_class__isnull=True) | models.Q(school__isnull=True, school_class__isnull=False)),
+                name="module_override_at_most_one_scope",
+            ),
+            models.UniqueConstraint(fields=["module", "school", "school_class"], name="unique_module_override_scope"),
+        ]
+
+
 class LogoRequest(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "Entwurf"

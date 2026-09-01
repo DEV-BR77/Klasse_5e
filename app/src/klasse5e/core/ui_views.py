@@ -1,6 +1,7 @@
 import secrets
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
@@ -30,6 +31,7 @@ from .models import (
     ClassMembership,
     ConsentDecision,
     GuardianChildRelationship,
+    PortalModule,
     PushSubscription,
     Role,
 )
@@ -123,6 +125,8 @@ def dashboard(request):
     )
     context.update(
         {
+            "app_version": settings.APP_VERSION,
+            "release_channel": settings.APP_RELEASE_CHANNEL,
             "selected_day": day,
             "lessons": personal_lessons if personal_lessons.exists() else manual_lessons,
             "calendar_entries": CalendarEntry.objects.filter(
@@ -411,6 +415,7 @@ def system_status(request):
             "database_ok": database_ok,
             "spaces": [{"space": space, "used": used_bytes(space)} for space in spaces],
             "connections": ItslearningConnection.objects.select_related("student__person"),
+            "portal_modules": PortalModule.objects.order_by("label"),
         }
     )
     return render(request, "ui/system_status.html", context)

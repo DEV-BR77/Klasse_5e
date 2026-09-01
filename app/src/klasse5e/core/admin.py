@@ -17,6 +17,8 @@ from .models import (
     PushSubscription,
     PortalConfigurationKey,
     PortalConfigurationValue,
+    PortalModule,
+    PortalModuleOverride,
     RoleAssignment,
     School,
     SchoolClass,
@@ -57,5 +59,7 @@ for model in [
     LogoRequest,
     PortalConfigurationKey,
     PortalConfigurationValue,
+    PortalModule,
+    PortalModuleOverride,
 ]:
     admin.site.register(model)
