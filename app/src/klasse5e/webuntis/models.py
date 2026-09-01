@@ -30,6 +30,7 @@ class WebUntisConnection(models.Model):
     school = models.CharField(max_length=80, default="thgwob")
     username_encrypted = models.BinaryField()
     password_encrypted = models.BinaryField()
+    external_student_id = models.PositiveIntegerField(null=True, blank=True)
     status = models.CharField(
         max_length=24, choices=ConnectionStatus, default=ConnectionStatus.NOT_TESTED
     )
@@ -99,7 +100,9 @@ class WebUntisLesson(models.Model):
         WebUntisConnection, on_delete=models.CASCADE, related_name="lessons"
     )
     external_fingerprint = models.CharField(max_length=128)
+    subject_code = models.CharField(max_length=32, blank=True)
     starts_at = models.DateTimeField()
+    teacher_code = models.CharField(max_length=32, blank=True)
     ends_at = models.DateTimeField()
     subject = models.CharField(max_length=100, blank=True)
     room = models.CharField(max_length=60, blank=True)
@@ -149,13 +152,17 @@ class SyncSchedule(models.Model):
     weekdays_only = models.BooleanField(default=True)
     weekends = models.BooleanField(default=False)
     holidays = models.BooleanField(default=False)
-    max_runs_per_day = models.PositiveSmallIntegerField(default=2)
+    max_runs_per_day = models.PositiveSmallIntegerField(default=3)
     min_interval_minutes = models.PositiveSmallIntegerField(default=15)
     updated_at = models.DateTimeField(auto_now=True)
 
     @classmethod
     def current(cls):
-        return cls.objects.order_by("pk").first() or cls.objects.create(times=["06:00"])
+        return cls.objects.order_by("pk").first() or cls.objects.create(
+            enabled=True,
+            times=["06:00", "12:00", "18:00"],
+            max_runs_per_day=3,
+        )
 
 
 class SyncRun(models.Model):
@@ -181,3 +188,10 @@ class SyncRun(models.Model):
     change_count = models.PositiveIntegerField(default=0)
     categories = models.JSONField(default=list)
     error_code = models.CharField(max_length=40, blank=True)
+
+# Imported here so Django registers the models under the webuntis app.
+from .extra_models import (  # noqa: E402,F401
+    WebUntisCalendarSubscription,
+    WebUntisSubjectMapping,
+    WebUntisTeacherMapping,
+)

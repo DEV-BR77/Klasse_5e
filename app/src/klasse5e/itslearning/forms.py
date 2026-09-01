@@ -2,7 +2,6 @@ from urllib.parse import urlparse
 
 from django import forms
 
-
 ALLOWED_HOST = "wob.itslearning.com"
 
 

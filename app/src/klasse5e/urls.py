@@ -67,6 +67,21 @@ urlpatterns = [
     path("mehr/webuntis/entfernen/", webuntis_views.remove_connection, name="webuntis-remove"),
     path("mehr/webuntis/funktionen/", webuntis_views.update_features, name="webuntis-features"),
     path("mehr/webuntis/aktuell-pruefen/", webuntis_views.sync_now, name="webuntis-sync"),
+    path(
+        "mehr/webuntis/<int:connection_id>/kalender.ics",
+        webuntis_views.download_calendar,
+        name="webuntis-calendar-download",
+    ),
+    path(
+        "mehr/webuntis/<int:connection_id>/kalender-abo/",
+        webuntis_views.issue_calendar,
+        name="webuntis-calendar-issue",
+    ),
+    path(
+        "webuntis/kalender/<str:token>/",
+        webuntis_views.calendar_feed,
+        name="webuntis-calendar-feed",
+    ),
     path("itslearning/", itslearning_views.portal, name="itslearning-portal"),
     path("itslearning/zugang/", itslearning_views.save_connection, name="itslearning-save"),
     path("itslearning/<int:student_id>/kurse/", itslearning_views.add_course, name="itslearning-course"),

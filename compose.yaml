@@ -18,6 +18,7 @@ services:
       BIOMETRIC_SEARCH_ENABLED: ${BIOMETRIC_SEARCH_ENABLED:-0}
       BIOMETRIC_PIPELINE_ID: ${BIOMETRIC_PIPELINE_ID:-yunet-sface-2023mar-2021dec}
       WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY: ${WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY:?Provide WebUntis credential encryption key}
+      ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY: ${ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY:?Provide itslearning credential encryption key}
     depends_on:
       klasse-5e-db:
         condition: service_healthy

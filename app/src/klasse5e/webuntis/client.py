@@ -7,6 +7,7 @@ is exposed to Django or users.
 import json
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
@@ -173,10 +174,14 @@ class WebUntisClient:
         path = ALLOWED_REST.get(key)
         if not path:
             raise EndpointUnsupported(key)
+        query = urllib.parse.urlencode(
+            {key: value for key, value in (params or {}).items() if value is not None}
+        )
+        url = f"{self.base}{path}" + (f"?{query}" if query else "")
         if not self._session_id:
             self.login()
         result = self._request(
-            f"{self.base}{path}",
+            url,
             headers={
                 "Cookie": f"JSESSIONID={self._session_id}",
                 **({"Authorization": f"Bearer {self._jwt}"} if self._jwt else {}),

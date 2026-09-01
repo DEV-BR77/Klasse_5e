@@ -1,1 +1,132 @@
-{% extends "base.html" %}{% block content %}<section class="webuntis-v2"><header class="page-head"><p class="eyebrow">Persönlicher Bereich</p><span class="phase-badge">Kontrollierter Pilot Phase 9A</span><h1>WebUntis-Verbindung</h1><p class="lede">Verbindung, Datenfreigabe und manueller Prüflauf sind drei getrennte Schritte.</p></header><div class="pilot-warning"><strong>Warum noch keine Termine erscheinen</strong><p>Diese Ausbaustufe prüft ausschließlich den technischen Zugriff und speichert den Laufstatus. Sie übernimmt noch keine WebUntis-Stunden, Änderungen oder Hausaufgaben in den Kalender.</p></div><div class="status-steps"><article class="status-step"><span class="status-step__number">1</span><h2>Kind und Verbindung</h2><p>Der verschlüsselte Zugang gehört ausschließlich zu einem bestätigten Kind.</p></article><article class="status-step"><span class="status-step__number">2</span><h2>Kategorien freigeben</h2><p>Jede WebUntis-Kategorie wird verständlich und einzeln für das Kind aktiviert.</p></article><article class="status-step"><span class="status-step__number">3</span><h2>Manuell prüfen</h2><p>„Aktuell prüfen“ startet einen kontrollierten technischen Abruf – noch keinen Kalenderimport.</p></article></div>{% if students %}<form method="get" class="card form-grid"><label for="student">Bestätigtes Kind</label><select id="student" name="student" onchange="this.form.submit()">{% for student in students %}<option value="{{ student.pk }}" {% if selected.pk == student.pk %}selected{% endif %}>{{ student.first_name }} {{ student.last_name }}</option>{% endfor %}</select></form>{% else %}<div class="empty-state"><h2>Kein berechtigtes Kind gefunden</h2><p>Eine bestätigte Sorgebeziehung mit Profilfreigabe ist erforderlich.</p></div>{% endif %}{% if selected %}<article class="card"><h2>{{ selected.first_name }} · Status</h2><dl class="meta-list"><div><dt>Verbindung</dt><dd>{{ connection.get_status_display|default:'Noch nicht eingerichtet' }}</dd></div><div><dt>Letzte Verbindungsprüfung</dt><dd>{{ connection.last_checked_at|default:'–' }}</dd></div><div><dt>Freigegebene Kategorien</dt><dd>{{ enabled_feature_count }} von {{ feature_count }}</dd></div><div><dt>Importierte Termine</dt><dd>0 – in Phase 9A nicht vorgesehen</dd></div></dl><p><a class="button button-secondary" href="/onboarding/schritt/8/?mode=settings&amp;subject={{ selected.pk }}">Kategorien für {{ selected.first_name }} ändern</a></p><div class="explain-card"><h3>Abwesenheiten</h3><p>{% if absence_consent == "allowed" %}Zustimmung erteilt. Der aktuelle Adapter kann Abwesenheiten technisch noch nicht lesen oder melden.{% else %}Nicht aktiviert.{% endif %}</p></div>{% if connection %}{% if not enabled_feature_count %}<div class="notice notice-info"><strong>Noch keine Kategorie für {{ selected.first_name }} freigegeben.</strong><p>Die früheren Elternprofil-Entscheidungen aktivieren das Kind nicht.</p><a class="button button-primary" href="/onboarding/schritt/8/?mode=settings&amp;subject={{ selected.pk }}">Kategorien für {{ selected.first_name }} wählen</a></div>{% endif %}<div class="flow-actions"><form method="post" action="{% url 'webuntis-sync' %}">{% csrf_token %}<input type="hidden" name="connection_id" value="{{ connection.pk }}"><input type="hidden" name="idempotency_key" value="{{ request.session.session_key|default:'pilot' }}-{{ connection.pk }}"><button class="button button-primary" type="submit">Technisch aktuell prüfen</button></form><form method="post" action="{% url 'webuntis-test' %}">{% csrf_token %}<input type="hidden" name="connection_id" value="{{ connection.pk }}"><button class="button button-secondary" type="submit">Verbindung testen</button></form></div>{% if latest_run %}<div class="explain-card"><h3>Letzter Prüflauf</h3><p>{{ latest_run.get_status_display }} · {{ latest_run.started_at }} · {{ latest_run.categories|length }} Kategorien · {{ latest_run.change_count }} gespeicherte Änderungen</p></div>{% endif %}<details><summary>Verbindung verwalten</summary><form method="post" action="{% url 'webuntis-remove' %}">{% csrf_token %}<input type="hidden" name="connection_id" value="{{ connection.pk }}"><button class="button button-danger" type="submit">Verschlüsselten Zugang entfernen</button></form></details>{% else %}<form method="post" class="form-stack">{% csrf_token %}{{ form.as_p }}<button class="button button-primary" type="submit">Zugang verschlüsselt einrichten</button></form>{% endif %}</article>{% endif %}</section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="webuntis-v2">
+  <header class="page-head">
+    <p class="eyebrow">Pers&ouml;nlicher Bereich</p>
+    <h1>WebUntis f&uuml;r dein Kind</h1>
+    <p class="lede">Stundenplan, &Auml;nderungen und Hausaufgaben werden nur mit dem eigenen Elternzugang des jeweiligen Kindes abgerufen.</p>
+  </header>
+
+  {% if students %}
+    <form method="get" class="card form-grid">
+      <label for="student">Best&auml;tigtes Kind</label>
+      <select id="student" name="student" onchange="this.form.submit()">
+        {% for student in students %}
+          <option value="{{ student.pk }}" {% if selected.pk == student.pk %}selected{% endif %}>{{ student.first_name }} {{ student.last_name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  {% else %}
+    <div class="empty-state">
+      <h2>Kein berechtigtes Kind gefunden</h2>
+      <p>Eine best&auml;tigte Sorgebeziehung mit Profilfreigabe ist erforderlich.</p>
+    </div>
+  {% endif %}
+
+  {% if selected %}
+    <article class="card">
+      <h2>{{ selected.first_name }} &middot; Verbindung</h2>
+      <dl class="meta-list">
+        <div><dt>Status</dt><dd>{{ connection.get_status_display|default:"Noch nicht eingerichtet" }}</dd></div>
+        <div><dt>Letzte Aktualisierung</dt><dd>{{ connection.last_successful_sync_at|default:"Noch nicht synchronisiert" }}</dd></div>
+        <div><dt>Unterrichtsstunden</dt><dd>{{ lesson_count }}</dd></div>
+        <div><dt>Hausaufgaben</dt><dd>{{ homework_count }}</dd></div>
+      </dl>
+
+      {% if connection %}
+        {% if not connection.external_student_id %}
+          <div class="notice notice-info">
+            <strong>Die technische Sch&uuml;ler-ID wird noch einmalig lokal zugeordnet.</strong>
+            <p>Der verschl&uuml;sselte Elternzugang ist vorhanden; bis zur Zuordnung werden keine Kinddaten geraten.</p>
+          </div>
+        {% endif %}
+
+        <p><a class="button button-secondary" href="/onboarding/schritt/8/?mode=settings&amp;subject={{ selected.pk }}">Abgerufene Kategorien w&auml;hlen</a></p>
+        <div class="flow-actions">
+          <form method="post" action="{% url 'webuntis-sync' %}">
+            {% csrf_token %}
+            <input type="hidden" name="connection_id" value="{{ connection.pk }}">
+            <button class="button button-primary" type="submit">Jetzt aktualisieren</button>
+          </form>
+          <form method="post" action="{% url 'webuntis-test' %}">
+            {% csrf_token %}
+            <input type="hidden" name="connection_id" value="{{ connection.pk }}">
+            <button class="button button-secondary" type="submit">Verbindung testen</button>
+          </form>
+        </div>
+
+        {% if latest_run %}
+          <div class="explain-card">
+            <h3>Letzter Lauf</h3>
+            <p>{{ latest_run.get_status_display }} &middot; {{ latest_run.started_at }} &middot; {{ latest_run.change_count }} &Auml;nderungen{% if latest_run.error_code %} &middot; {{ latest_run.error_code }}{% endif %}</p>
+          </div>
+        {% endif %}
+      {% else %}
+        <form method="post" class="form-stack">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button class="button button-primary" type="submit">Zugang verschl&uuml;sselt einrichten</button>
+        </form>
+      {% endif %}
+    </article>
+
+    {% if connection %}
+      <div class="card-grid">
+        <article class="content-card">
+          <h2>N&auml;chster Unterricht</h2>
+          <ul>
+            {% for lesson in next_lessons %}
+              <li><strong>{{ lesson.starts_at|date:"D, d.m. H:i" }}&ndash;{{ lesson.ends_at|date:"H:i" }}</strong><br>{{ lesson.subject|default:lesson.subject_code }}{% if lesson.teacher_label %} bei {{ lesson.teacher_label }}{% endif %}{% if lesson.room %}, Raum {{ lesson.room }}{% endif %}</li>
+            {% empty %}
+              <li>Noch keine Stunden importiert.</li>
+            {% endfor %}
+          </ul>
+        </article>
+        <article class="content-card">
+          <h2>Hausaufgaben</h2>
+          <ul>
+            {% for item in open_homework %}
+              <li><strong>{{ item.due_on|date:"d.m.Y" }} &middot; {{ item.subject }}</strong><br>{{ item.text|truncatechars:180 }}</li>
+            {% empty %}
+              <li>Keine offenen Hausaufgaben importiert.</li>
+            {% endfor %}
+          </ul>
+        </article>
+      </div>
+
+      <article class="card">
+        <h2>Im eigenen Kalender verwenden</h2>
+        <div class="card-grid">
+          <div>
+            <h3>iCal-Datei herunterladen</h3>
+            <p>Einmaliger Stand zum Importieren. Sp&auml;tere &Auml;nderungen werden in dieser Datei nicht automatisch nachgezogen.</p>
+            <a class="button button-secondary" href="{% url 'webuntis-calendar-download' connection.pk %}">iCal-Datei herunterladen</a>
+          </div>
+          <div>
+            <h3>Kalender abonnieren</h3>
+            <p>Die geheime Adresse wird im Kalenderprogramm abonniert. Nach jeder Portal-Aktualisierung liefert sie automatisch den neuen Stand.</p>
+            <form method="post" action="{% url 'webuntis-calendar-issue' connection.pk %}">
+              {% csrf_token %}
+              <button class="button button-primary" type="submit">Neue Abo-Adresse erstellen</button>
+            </form>
+            {% if feed_url %}
+              <label for="feed-url">Pers&ouml;nliche Abo-Adresse</label>
+              <input id="feed-url" type="url" readonly value="{{ feed_url }}">
+              <p class="help-text">Wie ein Passwort behandeln. Eine neue Adresse macht die vorherige ung&uuml;ltig.</p>
+            {% endif %}
+          </div>
+        </div>
+      </article>
+
+      <details class="card">
+        <summary>Verbindung entfernen</summary>
+        <form method="post" action="{% url 'webuntis-remove' %}">
+          {% csrf_token %}
+          <input type="hidden" name="connection_id" value="{{ connection.pk }}">
+          <button class="button button-danger" type="submit">Verschl&uuml;sselten Zugang entfernen</button>
+        </form>
+      </details>
+    {% endif %}
+  {% endif %}
+</section>
+{% endblock %}

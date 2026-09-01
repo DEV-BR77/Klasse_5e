@@ -8,7 +8,7 @@ COPY app /srv/app
 RUN python -m pip install /packages/web-push-kit /srv/app \
     && chmod 0555 /srv/app/docker/entrypoint.sh \
     && mkdir -p /srv/app/staticfiles /data/media /tmp/app \
-    && DJANGO_DEBUG=1 python manage.py collectstatic --noinput --verbosity 0 \
+    && DJANGO_DEBUG=0 python manage.py collectstatic --noinput --verbosity 0 \
     && chown -R 10001:10001 /srv/app/staticfiles /data/media /tmp/app
 USER 10001:10001
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=6 CMD python -c "import urllib.request; request=urllib.request.Request('http://127.0.0.1:8000/health/',headers={'Host':'localhost'}); raise SystemExit(0 if urllib.request.urlopen(request,timeout=2).status==200 else 1)"

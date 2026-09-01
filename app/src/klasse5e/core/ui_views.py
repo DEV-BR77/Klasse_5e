@@ -23,6 +23,7 @@ from klasse5e.itslearning.webdav import used_bytes
 from klasse5e.media.models import Gallery
 from klasse5e.media.policies import may_access_gallery
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
+from klasse5e.webuntis.models import WebUntisConnection, WebUntisLesson
 
 from .models import (
     ClassMembership,
@@ -94,18 +95,35 @@ def _itslearning_connections(user):
     return ItslearningConnection.objects.filter(owner=user, student_id__in=student_ids, active=True)
 
 
+def _webuntis_connections(user):
+    if not hasattr(user, "person"):
+        return WebUntisConnection.objects.none()
+    student_ids = GuardianChildRelationship.objects.filter(
+        guardian_person=user.person,
+        status="verified",
+        verified_at__isnull=False,
+        may_view_student_profile=True,
+    ).values("student_person")
+    return WebUntisConnection.objects.filter(user=user, student_id__in=student_ids)
+
+
 @login_required
 def dashboard(request):
     school_class = _class_or_404(request.user)
     day = _day_from_request(request)
     context = _shared(request, "Start", "start")
     portal_connections = _itslearning_connections(request.user)
+    webuntis_connections = _webuntis_connections(request.user)
+    personal_lessons = WebUntisLesson.objects.filter(
+        connection__in=webuntis_connections, starts_at__date=day
+    ).order_by("starts_at")
+    manual_lessons = TimetableEntry.objects.filter(
+        school_class=school_class, weekday=day.isoweekday()
+    )
     context.update(
         {
             "selected_day": day,
-            "lessons": TimetableEntry.objects.filter(
-                school_class=school_class, weekday=day.isoweekday()
-            ),
+            "lessons": personal_lessons if personal_lessons.exists() else manual_lessons,
             "calendar_entries": CalendarEntry.objects.filter(
                 school_class=school_class, starts_at__date=day
             ).order_by("starts_at")[:5],
@@ -150,14 +168,19 @@ def calendar(request):
     week_start = day - timedelta(days=day.weekday())
     context = _shared(request, "Kalender", "calendar")
     portal_connections = _itslearning_connections(request.user)
+    webuntis_connections = _webuntis_connections(request.user)
+    personal_lessons = WebUntisLesson.objects.filter(
+        connection__in=webuntis_connections, starts_at__date=day
+    ).order_by("starts_at")
+    manual_lessons = TimetableEntry.objects.filter(
+        school_class=school_class, weekday=day.isoweekday()
+    )
     context.update(
         {
             "selected_day": day,
             "previous_day": day - timedelta(days=1),
             "next_day": day + timedelta(days=1),
-            "lessons": TimetableEntry.objects.filter(
-                school_class=school_class, weekday=day.isoweekday()
-            ),
+            "lessons": personal_lessons if personal_lessons.exists() else manual_lessons,
             "day_entries": CalendarEntry.objects.filter(
                 school_class=school_class, starts_at__date=day
             ).order_by("starts_at"),

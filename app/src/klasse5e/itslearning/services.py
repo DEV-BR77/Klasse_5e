@@ -25,7 +25,7 @@ def _safe_external_url(value):
 def _error_code(exc):
     if isinstance(exc, ValueError):
         return "invalid_feed"
-    if isinstance(exc, (TimeoutError, OSError)):
+    if isinstance(exc, TimeoutError | OSError):
         return "temporary_network_error"
     return "sync_failed"
 

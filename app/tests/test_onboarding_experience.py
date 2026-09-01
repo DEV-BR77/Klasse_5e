@@ -159,5 +159,5 @@ def test_tour_and_webuntis_status_explain_phase_boundary(client, guardian):
     page = client.get(f"/mehr/webuntis/?student={child.id}")
     html = page.content.decode()
     assert page.status_code == 200
-    assert "Warum noch keine Termine erscheinen" in html
-    assert "Kategorien für Mia wählen" in html
+    assert "WebUntis f&uuml;r dein Kind" in html
+    assert "iCal-Datei herunterladen" in html

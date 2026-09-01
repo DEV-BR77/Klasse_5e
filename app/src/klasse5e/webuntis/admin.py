@@ -1,5 +1,10 @@
 from django.contrib import admin
 
+from .extra_models import (
+    WebUntisCalendarSubscription,
+    WebUntisSubjectMapping,
+    WebUntisTeacherMapping,
+)
 from .models import SyncRun, SyncSchedule, WebUntisConnection, WebUntisFeaturePreference
 
 
@@ -44,3 +49,6 @@ class SyncRunAdmin(admin.ModelAdmin):
 
 
 admin.site.register(WebUntisFeaturePreference)
+admin.site.register(WebUntisCalendarSubscription)
+admin.site.register(WebUntisSubjectMapping)
+admin.site.register(WebUntisTeacherMapping)
