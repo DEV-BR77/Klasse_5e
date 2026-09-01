@@ -1,11 +1,15 @@
+import json
 import re
 from datetime import date, timedelta
+from unittest.mock import Mock, patch
 
 import pytest
 from django.core import mail
+from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.test import override_settings
 from django.utils import timezone
+from web_push_kit import DeliveryResult, DeliveryStatus
 
 from klasse5e.core.models import (
     ActivationGrant,
@@ -13,6 +17,7 @@ from klasse5e.core.models import (
     Person,
     PortalModule,
     PortalModuleOverride,
+    PushSubscription,
     RegistrationApplication,
     School,
     SchoolClass,
@@ -84,6 +89,28 @@ def test_public_registration_is_neutral_and_sends_verification(client):
 
 
 @pytest.mark.django_db
+@override_settings(
+    ALLOWED_HOSTS=["attacker.example.test"],
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    WAGTAILADMIN_BASE_URL="https://5e.klassid.de",
+)
+def test_registration_email_uses_canonical_public_url_not_request_host(client):
+    response = client.post(
+        "/registrieren/",
+        {
+            "first_name": "Erika",
+            "last_name": "Muster",
+            "email": "canonical@example.test",
+            "password": "Safe-Test-Password-123!",
+        },
+        HTTP_HOST="attacker.example.test",
+    )
+    assert response.status_code == 202
+    assert "https://5e.klassid.de/registrieren/email/" in mail.outbox[0].body
+    assert "attacker.example.test" not in mail.outbox[0].body
+
+
+@pytest.mark.django_db
 def test_notifications_are_personal_revision_idempotent_and_read_individually(client, guardian, school_class):
     other = type(guardian).objects.create_user(email="other@example.test", password="Safe-Test-Password-123!")
     Person.objects.create(user=other, first_name="Andere", last_name="Person")
@@ -123,3 +150,114 @@ def test_contact_page_never_contains_unshared_fields_or_other_class(client, guar
     assert "guardian@example.test" not in body
     assert "secret-phone" not in body
     assert "Nicht Sichtbar" not in body
+
+
+@pytest.mark.django_db
+def test_push_subscription_requires_endpoint_and_keys(client, guardian):
+    client.force_login(guardian)
+    assert client.post("/push/subscriptions/", data=json.dumps({}), content_type="application/json").status_code == 400
+    response = client.post(
+        "/push/subscriptions/",
+        data=json.dumps({"endpoint": "https://push.example.test/one", "keys": {}}),
+        content_type="application/json",
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_push_subscription_is_per_device_reactivatable_and_not_transferable(client, guardian):
+    payload = {
+        "endpoint": "https://push.example.test/device-one",
+        "keys": {"p256dh": "public-key", "auth": "auth-key"},
+        "device_label": "Mein Smartphone mit einem bewusst viel zu langen Gerätenamen" * 3,
+    }
+    client.force_login(guardian)
+    assert client.post("/push/subscriptions/", data=json.dumps(payload), content_type="application/json").status_code == 201
+    stored = PushSubscription.objects.get(user=guardian)
+    assert len(stored.device_label) == 80
+    assert client.delete("/push/subscriptions/", data=json.dumps({"endpoint": payload["endpoint"]}), content_type="application/json").json() == {"removed": True}
+    stored.refresh_from_db()
+    assert not stored.enabled
+    assert client.post("/push/subscriptions/", data=json.dumps(payload), content_type="application/json").status_code == 201
+    stored.refresh_from_db()
+    assert stored.enabled
+
+    other = type(guardian).objects.create_user(email="push-other@example.test", password="Safe-Test-Password-123!")
+    Person.objects.create(user=other, first_name="Push", last_name="Other")
+    client.force_login(other)
+    assert client.post("/push/subscriptions/", data=json.dumps(payload), content_type="application/json").status_code == 409
+    assert client.delete("/push/subscriptions/", data=json.dumps({"endpoint": payload["endpoint"]}), content_type="application/json").json() == {"removed": False}
+    stored.refresh_from_db()
+    assert stored.user == guardian and stored.enabled
+
+
+@pytest.mark.django_db
+def test_push_self_test_only_targets_selected_owned_device(client, guardian):
+    first, _ = PushSubscription.from_values(
+        guardian, "https://push.example.test/first", "abc", "def", "Smartphone"
+    )
+    second, _ = PushSubscription.from_values(
+        guardian, "https://push.example.test/second", "ghi", "jkl", "Tablet"
+    )
+    sender = Mock()
+    sender.send.return_value = DeliveryResult(DeliveryStatus.DELIVERED)
+    client.force_login(guardian)
+    cache.clear()
+    with patch("klasse5e.webuntis.notifications.configured_sender", return_value=sender):
+        response = client.post("/push/self-test/", {"subscription_id": second.pk})
+    assert response.json()["status"] == "delivered"
+    assert sender.send.call_count == 1
+    assert sender.send.call_args.args[0].endpoint == second.endpoint
+    assert sender.send.call_args.args[0].endpoint != first.endpoint
+
+    other = type(guardian).objects.create_user(
+        email="push-owner-two@example.test", password="Safe-Test-Password-123!"
+    )
+    Person.objects.create(user=other, first_name="Andere", last_name="Person")
+    foreign, _ = PushSubscription.from_values(
+        other, "https://push.example.test/foreign", "mno", "pqr", "Fremdgerät"
+    )
+    with patch("klasse5e.webuntis.notifications.configured_sender", return_value=sender):
+        response = client.post("/push/self-test/", {"subscription_id": foreign.pk})
+    assert response.status_code == 409
+    assert sender.send.call_count == 1
+
+
+@pytest.mark.django_db
+def test_push_self_test_handles_stale_failure_and_rate_limit(client, guardian):
+    stored, _ = PushSubscription.from_values(
+        guardian, "https://push.example.test/stale", "stu", "vwx", "Alter Browser"
+    )
+    sender = Mock()
+    sender.send.return_value = DeliveryResult(DeliveryStatus.STALE)
+    client.force_login(guardian)
+    cache.clear()
+    with patch("klasse5e.webuntis.notifications.configured_sender", return_value=sender):
+        response = client.post("/push/self-test/", {"subscription_id": stored.pk})
+    assert response.json()["status"] == "stale"
+    assert not PushSubscription.objects.filter(pk=stored.pk).exists()
+
+    active, _ = PushSubscription.from_values(
+        guardian, "https://push.example.test/rate", "yz0", "abc", "Aktiv"
+    )
+    sender.send.return_value = DeliveryResult(DeliveryStatus.TEMPORARY_FAILURE)
+    cache.clear()
+    with patch("klasse5e.webuntis.notifications.configured_sender", return_value=sender):
+        for _ in range(3):
+            assert client.post("/push/self-test/", {"subscription_id": active.pk}).status_code == 200
+        limited = client.post("/push/self-test/", {"subscription_id": active.pk})
+    assert limited.status_code == 429
+    assert limited.json()["status"] == "rate_limited"
+
+
+@pytest.mark.django_db
+def test_settings_navigation_shows_admin_link_only_to_authorized_admins(client, guardian, admin_user):
+    client.force_login(guardian)
+    guardian_page = client.get("/einstellungen/profil/").content.decode()
+    assert "Benachrichtigungen &amp; App" in guardian_page
+    assert "Portal verwalten" not in guardian_page
+
+    client.force_login(admin_user)
+    admin_page = client.get("/einstellungen/profil/").content.decode()
+    assert "Benachrichtigungen &amp; App" in admin_page
+    assert "Portal verwalten" in admin_page

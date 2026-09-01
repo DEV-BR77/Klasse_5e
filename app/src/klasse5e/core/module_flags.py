@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import Http404
 
-from .models import AuditEvent, PortalModule, PortalModuleOverride, UserNotification
+from .models import AuditEvent, PortalModule, PortalModuleOverride, Role, UserNotification
 from .policies import active_class_for_user
 
 MODULE_PATHS = {
@@ -67,6 +67,11 @@ def module_context(request):
             else ""
         ),
         "notification_unread_count": unread_count,
+        "can_manage_portal": request.user.is_superuser
+        or request.user.roleassignment_set.filter(
+            active=True,
+            role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.SCHOOL_ADMIN, Role.CLASS_ADMIN],
+        ).exists(),
     }
 
 

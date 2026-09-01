@@ -125,6 +125,39 @@ def test_webuntis_step_targets_verified_child_not_guardian(client, guardian):
 
 
 @pytest.mark.django_db
+def test_webuntis_step_without_verified_child_can_continue_safely(client, guardian):
+    verify(guardian)
+    state = OnboardingState.objects.create(user=guardian, current_step=8)
+    client.force_login(guardian)
+    response = client.post("/onboarding/schritt/8/", {})
+    assert response.status_code == 302
+    assert response.url == "/onboarding/schritt/9/"
+    state.refresh_from_db()
+    assert state.current_step == 9
+    assert not ConsentDecision.objects.filter(
+        deciding_person=guardian.person, consent_type__key__startswith="webuntis_"
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_disabled_biometric_step_records_safe_denial_and_continues(client, guardian):
+    verify(guardian)
+    state = OnboardingState.objects.create(user=guardian, current_step=9)
+    client.force_login(guardian)
+    response = client.post("/onboarding/schritt/9/", {})
+    assert response.status_code == 302
+    assert response.url == "/onboarding/schritt/10/"
+    state.refresh_from_db()
+    assert state.current_step == 10
+    assert ConsentDecision.objects.filter(
+        deciding_person=guardian.person,
+        subject_person=guardian.person,
+        consent_type__key="biometric_face_search",
+        decision="denied",
+    ).exists()
+
+
+@pytest.mark.django_db
 def test_completed_user_can_edit_one_feature_area(client, guardian):
     verify(guardian)
     child, _connection = connect_child(guardian)

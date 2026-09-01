@@ -95,7 +95,7 @@ def onboarding_step(request, step=None):
         if step == 2:
             state.identity_confirmed_at = timezone.now()
         keys = STEP_CONTENT[step][2]
-        if keys and subject is None:
+        if keys and subject is None and step != 8:
             return _render_step(
                 request,
                 state,
@@ -105,8 +105,10 @@ def onboarding_step(request, step=None):
                 editing,
                 "Für diese Einstellung ist noch kein bestätigtes Kind verfügbar.",
             )
-        for key in keys:
+        for key in keys if subject is not None else ():
             value = request.POST.get(key)
+            if key == "biometric_face_search" and not settings.BIOMETRIC_SEARCH_ENABLED:
+                value = ConsentDecision.Decision.DENIED
             if value not in {ConsentDecision.Decision.GRANTED, ConsentDecision.Decision.DENIED}:
                 return _render_step(
                     request,

@@ -32,7 +32,9 @@
       const raw = atob(config.public_key.replace(/-/g, "+").replace(/_/g, "/"));
       const key = Uint8Array.from(raw, (character) => character.charCodeAt(0));
       const subscription = await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: key});
-      const response = await fetch("/push/subscriptions/", {method: "POST", headers: {"Content-Type": "application/json", "X-CSRFToken": csrf()}, body: JSON.stringify(subscription)});
+      const body = subscription.toJSON();
+      body.device_label = document.querySelector("[data-push-device-label]")?.value.trim() || "Browsergerät";
+      const response = await fetch("/push/subscriptions/", {method: "POST", headers: {"Content-Type": "application/json", "X-CSRFToken": csrf()}, body: JSON.stringify(body)});
       if (!response.ok) throw new Error("save_failed");
       pushStatus.textContent = "Push wurde auf diesem Gerät aktiviert. Lade die Seite neu, um den Selbsttest zu starten.";
     } catch (error) {
@@ -46,6 +48,20 @@
     const result = await response.json();
     const labels = {delivered: "An den Push-Dienst übergeben. Ob das Betriebssystem sie angezeigt hat, kann KlassID nicht erkennen.", stale: "Die Geräteverbindung war veraltet und wurde entfernt.", temporary_failure: "Der Push-Dienst ist vorübergehend nicht erreichbar.", permanent_failure: "Der Push-Dienst hat die Nachricht abgelehnt.", rate_limited: "Bitte warte vor einem weiteren Selbsttest."};
     pushStatus.textContent = labels[result.status] || "Der Selbsttest ist derzeit nicht verfügbar.";
+  }));
+  document.querySelectorAll("[data-push-disable]").forEach((button) => button.addEventListener("click", async () => {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const local = await registration.pushManager.getSubscription();
+      if (!local || local.endpoint !== button.dataset.endpoint) throw new Error("not_this_device");
+      const response = await fetch("/push/subscriptions/", {method: "DELETE", headers: {"Content-Type": "application/json", "X-CSRFToken": csrf()}, body: JSON.stringify({endpoint: local.endpoint})});
+      if (!response.ok) throw new Error("remove_failed");
+      await local.unsubscribe();
+      pushStatus.textContent = "Push wurde auf diesem Gerät deaktiviert.";
+      button.closest(".card")?.remove();
+    } catch (error) {
+      pushStatus.textContent = error.message === "not_this_device" ? "Dieses Abonnement gehört zu einem anderen deiner Geräte." : "Push konnte auf diesem Gerät nicht deaktiviert werden.";
+    }
   }));
 
   const chat = document.querySelector("[data-chat-poll]");

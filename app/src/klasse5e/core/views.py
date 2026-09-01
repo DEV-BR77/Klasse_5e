@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.sessions.models import Session
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.mail import send_mail
 from django.db import transaction
@@ -47,7 +48,9 @@ def register(request):
                 password=request.POST.get("password", ""),
             )
             if item and token:
-                link = request.build_absolute_uri(f"/registrieren/email/{token}/")
+                link = (
+                    f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/registrieren/email/{token}/"
+                )
                 send_mail(
                     "E-Mail-Adresse für KlassID bestätigen",
                     f"Öffne diesen einmaligen Link innerhalb von 24 Stunden: {link}",
@@ -214,20 +217,35 @@ def revoke_all_sessions(request):
 @login_required
 @require_http_methods(["POST", "DELETE"])
 def push_subscriptions(request):
-    payload = json.loads(request.body or b"{}")
-    endpoint = payload.get("endpoint", "")
+    try:
+        payload = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "invalid_payload"}, status=400)
+    endpoint = str(payload.get("endpoint", "")).strip()
+    if not endpoint:
+        return JsonResponse({"error": "endpoint_required"}, status=400)
     if request.method == "DELETE":
         import hashlib
 
-        PushSubscription.objects.filter(
+        removed = PushSubscription.objects.filter(
             user=request.user, endpoint_hash=hashlib.sha256(endpoint.encode()).hexdigest()
-        ).delete()
-        return JsonResponse({"removed": True})
+        ).update(enabled=False)
+        return JsonResponse({"removed": bool(removed)})
     keys = payload.get("keys", {})
-    PushSubscription.from_values(
-        request.user, endpoint, keys.get("p256dh", ""), keys.get("auth", "")
-    )
-    return JsonResponse({"subscribed": True}, status=201)
+    p256dh, auth = str(keys.get("p256dh", "")).strip(), str(keys.get("auth", "")).strip()
+    if not p256dh or not auth:
+        return JsonResponse({"error": "keys_required"}, status=400)
+    try:
+        stored, _ = PushSubscription.from_values(
+            request.user,
+            endpoint,
+            p256dh,
+            auth,
+            str(payload.get("device_label", "")).strip(),
+        )
+    except ValidationError:
+        return JsonResponse({"error": "subscription_not_owned"}, status=409)
+    return JsonResponse({"subscribed": True, "subscription_id": stored.pk}, status=201)
 
 
 @login_required

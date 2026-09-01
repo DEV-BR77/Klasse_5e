@@ -11,6 +11,8 @@ from klasse5e.core.models import (
     GuardianChildRelationship,
     MembershipStatus,
     Person,
+    PortalModule,
+    PortalModuleOverride,
     RelationshipStatus,
     School,
     SchoolClass,
@@ -104,6 +106,12 @@ def test_webdav_requires_basic_auth(client, family, settings, tmp_path):
 )
 def test_guardian_can_open_portal(client, family):
     user, _ = family
+    school_class = ClassMembership.objects.get(person=user.person).school_class
+    PortalModuleOverride.objects.create(
+        module=PortalModule.objects.get(key="itslearning"),
+        school_class=school_class,
+        enabled=True,
+    )
     client.force_login(user)
     response = client.get("/itslearning/", secure=True)
     assert response.status_code == 200

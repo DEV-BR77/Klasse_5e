@@ -600,8 +600,11 @@ class PushSubscription(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     @classmethod
-    def from_values(cls, user, endpoint, p256dh, auth):
+    def from_values(cls, user, endpoint, p256dh, auth, device_label=""):
         digest = hashlib.sha256(endpoint.encode()).hexdigest()
+        existing = cls.objects.filter(endpoint_hash=digest).first()
+        if existing is not None and existing.user_id != user.pk:
+            raise ValidationError("Dieses Push-Gerät gehört zu einem anderen Konto.")
         return cls.objects.update_or_create(
             endpoint_hash=digest,
             defaults={
@@ -610,6 +613,7 @@ class PushSubscription(models.Model):
                 "p256dh": p256dh,
                 "auth": auth,
                 "enabled": True,
+                "device_label": device_label[:80],
             },
         )
 
