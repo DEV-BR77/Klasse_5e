@@ -64,3 +64,32 @@ the supplied reference uses a browser-only `/student-homework` view. Homework
 therefore remains an explicitly visible open integration boundary; the system
 keeps successful timetable data and does not claim a successful homework
 import. Absence creation remains outside this read-only adapter.
+
+
+## Update 2026-09-01: reference aliases and unified web calendar
+
+The private timetable export uses written subject names while the WebUntis
+JSON-RPC response exposes numeric element identifiers. The local importer now
+joins both sources by date and exact start/end time and resolves the result
+against the class-specific workbook mapping. It accepts both subject codes and
+written subject labels. Room values are deliberately not used for the join
+because the two sources use incompatible room identifier systems.
+
+The production import created 12 subject aliases and 17 teacher aliases and
+updated 294 existing lesson rows. All 357 stored lessons now have non-numeric
+display labels. The private workbook and generated CSV files remain ignored and
+were mounted read-only into a short-lived import container.
+
+The authenticated web calendar is now one responsive month view. Personal
+lessons, dated homework, class calendar entries, published events and
+itslearning calendar items share one grid and one daily agenda. Appointments,
+homework, lessons and learning-platform entries use distinct colors plus text
+labels, so meaning does not depend on color alone.
+
+The observed parent homework payload is normalized by joining homework.lessonId
+to data.lessons. Synthetic tests cover subject resolution, dates, combined
+text/remark and open/completed state. The real endpoint is still an open
+authentication boundary: the working JSON-RPC session receives HTTP 500 from
+the homework REST route, and no real homework rows are stored. The browser flow
+also requests /api/token/new; the next task must implement or explicitly
+provision this user-token context without adding a production browser scraper.
