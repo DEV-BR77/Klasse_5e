@@ -20,6 +20,9 @@ services:
       BIOMETRIC_PIPELINE_ID: ${BIOMETRIC_PIPELINE_ID:-yunet-sface-2023mar-2021dec}
       WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY: ${WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY:?Provide WebUntis credential encryption key}
       ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY: ${ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY:?Provide itslearning credential encryption key}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:?Provide VAPID public key}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:?Provide VAPID private key}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:kontakt@klassid.de}
     depends_on:
       klasse-5e-db:
         condition: service_healthy
