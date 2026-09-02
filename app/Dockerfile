@@ -5,7 +5,8 @@ RUN groupadd --system --gid 10001 klasse5e && useradd --system --uid 10001 --gid
 WORKDIR /srv/app
 COPY packages/web-push-kit /packages/web-push-kit
 COPY app /srv/app
-RUN python -m pip install /packages/web-push-kit /srv/app \
+RUN sed -i 's/\r$//' /srv/app/docker/entrypoint.sh \
+    && python -m pip install /packages/web-push-kit /srv/app \
     && python -m playwright install --with-deps chromium \
     && chmod 0555 /srv/app/docker/entrypoint.sh \
     && mkdir -p /srv/app/staticfiles /data/media /tmp/app \
