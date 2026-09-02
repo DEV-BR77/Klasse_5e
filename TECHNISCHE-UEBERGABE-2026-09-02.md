@@ -8,9 +8,9 @@ Die vorhandene Veranstaltungs- und Mitbringfunktion ist produktseitig bereits
 implementiert: Kategorien, Mengen, freie Beiträge, verbindliche Reservierungen,
 Rücknahmen, Audit und Schutz gegen Überbuchung gehören zum Modul `events`.
 
-Für eine neue Mobilitäts-/Mitfahrbörse wurde das verpflichtende UX- und
-Datenschutzgate erstellt und als separater Commit gesichert. Eine fachliche
-Implementierung der Mobilitätsfunktion ist noch nicht begonnen.
+Für die Mobilitäts-/Mitfahrbörse wurden das verpflichtende UX- und
+Datenschutzgate sowie die vollständige fachliche Implementierung erstellt.
+Die produktive Instanz läuft mit Version `0.3.0b1`; alle Container sind gesund.
 
 Spoonacular wurde als Datenbasis für Rezept- und Zutatenvorschläge ausgewählt.
 Der API-Token ist lokal DPAPI-verschlüsselt gespeichert. Adapter,
@@ -98,9 +98,32 @@ Meldung, Status/Ablauf, deduplizierte Aufrufe sowie private widerrufbare
 Abholfreigaben. Die responsive Übersicht besitzt Filter und eine lokale
 schematische Routenkarte ohne externe Kartenabfragen.
 
-Vor einem Realpilot bleiben außerdem Rechtsgrundlage, verbindliche
-Löschfristen, versionierte Standort-/Kontaktfreigabetexte und die
-Moderationsverantwortung zu entscheiden.
+Exakte Abholadressen werden mit einem separat verwalteten Fernet-Schlüssel
+verschlüsselt gespeichert. Der Schlüssel liegt als
+`secret://projects/klasse-5e/mobility_data_encryption_key` im lokalen
+HomeOps-Secretspeicher und wird nur zur Containerlaufzeit übergeben.
+
+Vor einem Realpilot bleiben organisatorisch außerdem Rechtsgrundlage,
+verbindliche Löschfristen, versionierte Standort-/Kontaktfreigabetexte und die
+Moderationsverantwortung zu bestätigen. Die technischen Schutzmechanismen und
+der automatisierte Bereinigungsbefehl sind bereits implementiert.
+
+## Verifizierter Auslieferungsstand
+
+- Git: Der vollständige Funktionsstand ist mit Commit `4cc50fa` auf
+  `origin/main` veröffentlicht; dieser Abschlussbericht folgt als eigener
+  Dokumentations-Commit.
+- Anwendung: Image `klasse-5e-app:0.3.0b1`, Containerstatus `healthy`.
+- Vision: Image `klasse-5e-vision:0.1.0`, Containerstatus `healthy`.
+- Datenbank: PostgreSQL-Containerstatus `healthy`.
+- Migrationen: `core.0010`, `events.0002` und `mobility.0001` angewendet.
+- Öffentlicher Health-Endpunkt: `https://5e.eventmonitor.eu/health/` liefert
+  HTTP 200 und `{\"status\": \"ok\"}`.
+- Öffentliche Anmeldeseite liefert HTTP 200.
+- Django-Gesamttest: 136 Tests bestanden.
+- Push-/Browser-Kit: 25 Python- und 8 Node-Tests bestanden.
+- Vision-Service: 33 Tests bestanden.
+- Django-Systemcheck und Migrationscheck ohne Fehler.
 
 ## Aktueller Arbeitsbaum und Hinweis
 
