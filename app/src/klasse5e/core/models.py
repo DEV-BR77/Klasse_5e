@@ -642,6 +642,25 @@ class UserNotification(models.Model):
         indexes = [models.Index(fields=["user", "school_class", "read_at"])]
 
 
+class PilotReport(models.Model):
+    class Kind(models.TextChoices):
+        IDEA = "idea", "Idee"
+        NOTE = "note", "Anmerkung"
+        BUG = "bug", "Fehler"
+
+    reporter = models.ForeignKey(UserAccount, on_delete=models.PROTECT)
+    school_class = models.ForeignKey(SchoolClass, null=True, on_delete=models.SET_NULL)
+    kind = models.CharField(max_length=12, choices=Kind)
+    page_path = models.CharField(max_length=300)
+    description = models.TextField(max_length=3000)
+    screenshot = models.ImageField(upload_to="pilot-reports/", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
 class PushPreference(models.Model):
     """Per-category opt-in. Creating a subscription never enables a category."""
 

@@ -2,72 +2,48 @@
 {% block content %}
 <section>
   <header class="page-heading calendar-heading">
-    <div>
-      <p class="eyebrow">Alles an einem Ort</p>
-      <h1>Kalender</h1>
-      <p class="muted">Unterricht, Termine und Hausaufgaben gemeinsam im Monats&uuml;berblick.</p>
-    </div>
+    <div><p class="eyebrow">Alles an einem Ort</p><h1>Kalender</h1><p class="muted">Unterricht, Termine, Hausaufgaben und Lernplattform gemeinsam planen.</p></div>
     <a class="button button-secondary" href="/mehr/webuntis/">WebUntis aktualisieren</a>
   </header>
 
-  <nav class="month-navigation card" aria-label="Monat wechseln">
-    <a class="button button-quiet" href="?tag={{ previous_month|date:'Y-m-d' }}" aria-label="Vorheriger Monat">&larr; Zur&uuml;ck</a>
-    <h2>{{ month_start|date:"F Y" }}</h2>
-    <a class="button button-quiet" href="?tag={{ next_month|date:'Y-m-d' }}" aria-label="N&auml;chster Monat">Weiter &rarr;</a>
-  </nav>
-
-  <ul class="calendar-legend" aria-label="Farblegende">
-    <li><span class="calendar-dot calendar-dot-appointment"></span> Termine</li>
-    <li><span class="calendar-dot calendar-dot-homework"></span> Hausaufgaben</li>
-    <li><span class="calendar-dot calendar-dot-lesson"></span> Unterricht</li>
-    <li><span class="calendar-dot calendar-dot-learning"></span> Lernplattform</li>
-  </ul>
-
-  <div class="calendar-shell card">
-    <div class="calendar-weekdays" aria-hidden="true">
-      <span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span>
-    </div>
-    <div class="calendar-month-grid" role="grid" aria-label="{{ month_start|date:'F Y' }}">
-      {% for day in calendar_days %}
-        <article class="calendar-day{% if not day.in_month %} calendar-day-outside{% endif %}{% if day.selected %} calendar-day-selected{% endif %}{% if day.today %} calendar-day-today{% endif %}" role="gridcell">
-          <a class="calendar-date" href="?tag={{ day.date|date:'Y-m-d' }}"{% if day.selected %} aria-current="date"{% endif %}>
-            <span class="calendar-mobile-weekday">{{ day.date|date:"D" }}</span>
-            {{ day.date|date:"j" }}
-          </a>
-          <ul class="calendar-day-items">
-            {% for item in day.items|slice:":3" %}
-              <li class="calendar-chip calendar-chip-{{ item.kind }}" title="{{ item.kind_label }}: {{ item.title }}">
-                <span class="calendar-dot calendar-dot-{{ item.kind }}"></span>
-                <span class="calendar-chip-text">{% if item.time %}{{ item.time }} {% endif %}{{ item.title }}</span>
-              </li>
-            {% endfor %}
-          </ul>
-        </article>
-      {% endfor %}
-    </div>
+  <div class="calendar-toolbar card">
+    <nav class="calendar-view-switch" aria-label="Kalenderansicht">
+      <a class="button {% if view == 'month' %}button-primary{% else %}button-quiet{% endif %}" href="?tag={{ selected_day|date:'Y-m-d' }}&amp;ansicht=month&amp;{{ category_query }}"{% if view == "month" %} aria-current="page"{% endif %}>Monat</a>
+      <a class="button {% if view == 'week' %}button-primary{% else %}button-quiet{% endif %}" href="?tag={{ selected_day|date:'Y-m-d' }}&amp;ansicht=week&amp;{{ category_query }}"{% if view == "week" %} aria-current="page"{% endif %}>Woche</a>
+      <a class="button {% if view == 'day' %}button-primary{% else %}button-quiet{% endif %}" href="?tag={{ selected_day|date:'Y-m-d' }}&amp;ansicht=day&amp;{{ category_query }}"{% if view == "day" %} aria-current="page"{% endif %}>Tag</a>
+    </nav>
+    <form class="calendar-filters" method="get">
+      <input type="hidden" name="tag" value="{{ selected_day|date:'Y-m-d' }}"><input type="hidden" name="ansicht" value="{{ view }}"><input type="hidden" name="filter" value="1">
+      <fieldset><legend>Anzeigen</legend>{% for category in calendar_categories %}<label class="calendar-filter calendar-filter-{{ category.key }}"><input type="checkbox" name="kategorie" value="{{ category.key }}"{% if category.active %} checked{% endif %}> <span class="calendar-dot calendar-dot-{{ category.key }}"></span>{{ category.label }}</label>{% endfor %}</fieldset>
+      <button class="button button-secondary" type="submit">Filter anwenden</button>
+    </form>
   </div>
 
-  <section class="card calendar-agenda" aria-labelledby="agenda-heading">
-    <div class="card-header">
-      <div>
-        <p class="eyebrow">Ausgew&auml;hlter Tag</p>
-        <h2 id="agenda-heading">{{ selected_day|date:"l, d. F Y" }}</h2>
+  <nav class="month-navigation card" aria-label="Zeitraum wechseln">
+    <a class="button button-quiet" href="?tag={{ previous_date|date:'Y-m-d' }}&amp;ansicht={{ view }}&amp;{{ category_query }}" aria-label="Vorheriger Zeitraum">&larr; Zur&uuml;ck</a>
+    <h2>{{ period_title }}</h2>
+    <a class="button button-quiet" href="?tag={{ next_date|date:'Y-m-d' }}&amp;ansicht={{ view }}&amp;{{ category_query }}" aria-label="N&auml;chster Zeitraum">Weiter &rarr;</a>
+  </nav>
+
+  {% if view == "month" %}
+    <div class="calendar-shell card"><div class="calendar-weekdays" aria-hidden="true"><span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span></div>
+      <div class="calendar-month-grid" role="grid" aria-label="{{ month_start|date:'F Y' }}">{% for day in calendar_days %}
+        <article class="calendar-day{% if not day.in_month %} calendar-day-outside{% endif %}{% if day.selected %} calendar-day-selected{% endif %}{% if day.today %} calendar-day-today{% endif %}" role="gridcell">
+          <a class="calendar-date" href="?tag={{ day.date|date:'Y-m-d' }}&amp;ansicht=day&amp;{{ category_query }}"{% if day.selected %} aria-current="date"{% endif %}><span class="calendar-mobile-weekday">{{ day.date|date:"D" }}</span>{{ day.date|date:"j" }}</a>
+          <ul class="calendar-day-items">{% for item in day.items|slice:":3" %}<li class="calendar-chip calendar-chip-{{ item.kind }}" title="{{ item.kind_label }}: {{ item.title }}"><span class="calendar-dot calendar-dot-{{ item.kind }}"></span><span class="calendar-chip-text">{% if item.time %}{{ item.time }} {% endif %}{{ item.title }}{% if item.is_double %} · Doppelstunde{% endif %}</span></li>{% endfor %}</ul>
+        </article>{% endfor %}</div>
+    </div>
+  {% else %}
+    <div class="calendar-timeline-shell card{% if view == 'day' %} calendar-timeline-day{% endif %}">
+      <div class="calendar-timeline-head" style="--calendar-columns: {{ timeline_days|length }}"><span class="calendar-time-corner">Uhrzeit</span>{% for day in timeline_days %}<a href="?tag={{ day.date|date:'Y-m-d' }}&amp;ansicht=day&amp;{{ category_query }}"{% if day.date == selected_day %} aria-current="date"{% endif %}><strong>{{ day.date|date:"D" }}</strong><span>{{ day.date|date:"d.m." }}</span></a>{% endfor %}</div>
+      <div class="calendar-all-day" style="--calendar-columns: {{ timeline_days|length }}"><span class="calendar-time-corner">Ganzt&auml;gig</span>{% for day in timeline_days %}<div>{% for item in day.all_day %}<span class="calendar-chip calendar-chip-{{ item.kind }}"><span class="calendar-dot calendar-dot-{{ item.kind }}"></span>{{ item.title }}</span>{% endfor %}</div>{% endfor %}</div>
+      <div class="calendar-timeline" style="--calendar-columns: {{ timeline_days|length }}; --timeline-height: {{ timeline_height }}px">
+        <aside class="calendar-time-axis" aria-label="Schulstunden">{% for period in timeline_periods %}<div class="calendar-time-marker" style="--marker-top: {{ period.top_percent }}%"><strong>{{ period.number }}. Stunde</strong><span>{{ period.start }}–{{ period.end }}</span><small>{{ period.duration }} Min.</small></div>{% empty %}<p class="muted">Kein Zeitraster hinterlegt.</p>{% endfor %}</aside>
+        {% for day in timeline_days %}<section class="calendar-time-day" aria-label="{{ day.date|date:'l, d. F Y' }}">{% for item in day.items %}<article class="calendar-time-item calendar-chip-{{ item.kind }}" style="--item-top: {{ item.top_percent }}%; --item-height: {{ item.height_percent }}%"><p class="agenda-label">{{ item.time }}–{{ item.end_time }}{% if item.duration_minutes %} · {{ item.duration_minutes }} Min.{% endif %}</p><strong>{% if item.url %}<a href="{{ item.url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</strong>{% if item.is_double %}<span class="double-lesson-badge">Doppelstunde</span>{% endif %}{% if item.meta %}<small>{{ item.meta }}</small>{% endif %}</article>{% endfor %}</section>{% endfor %}
       </div>
     </div>
-    <ul class="list-clean">
-      {% for item in agenda %}
-        <li class="agenda-item agenda-item-{{ item.kind }}">
-          <span class="calendar-dot calendar-dot-{{ item.kind }}"></span>
-          <div>
-            <p class="agenda-label">{{ item.kind_label }}{% if item.time %} &middot; {{ item.time }} Uhr{% endif %}</p>
-            <h3>{% if item.url %}<a href="{{ item.url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</h3>
-            {% if item.meta %}<p class="muted">{{ item.meta }}</p>{% endif %}
-          </div>
-        </li>
-      {% empty %}
-        <li class="calendar-empty">F&uuml;r diesen Tag sind noch keine Eintr&auml;ge vorhanden.</li>
-      {% endfor %}
-    </ul>
-  </section>
+  {% endif %}
+
+  <section class="card calendar-agenda" aria-labelledby="agenda-heading"><p class="eyebrow">Ausgew&auml;hlter Tag</p><h2 id="agenda-heading">{{ selected_day|date:"l, d. F Y" }}</h2><ul class="list-clean">{% for item in agenda %}<li class="agenda-item agenda-item-{{ item.kind }}"><span class="calendar-dot calendar-dot-{{ item.kind }}"></span><div><p class="agenda-label">{{ item.kind_label }}{% if item.time %} &middot; {{ item.time }}{% if item.end_time %}–{{ item.end_time }}{% endif %} Uhr{% endif %}</p><h3>{% if item.url %}<a href="{{ item.url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}{% if item.is_double %} <span class="double-lesson-badge">Doppelstunde</span>{% endif %}</h3>{% if item.meta %}<p class="muted">{{ item.meta }}</p>{% endif %}</div></li>{% empty %}<li class="calendar-empty">F&uuml;r diesen Tag sind mit den gew&auml;hlten Filtern keine Eintr&auml;ge vorhanden.</li>{% endfor %}</ul></section>
 </section>
 {% endblock %}

@@ -19,6 +19,7 @@ from .models import (
     Invitation,
     LogoRequest,
     Person,
+    PilotReport,
     PortalConfigurationKey,
     PortalConfigurationValue,
     PortalModule,
@@ -134,5 +135,6 @@ for model in [
     PortalConfigurationValue,
     PortalModule,
     PortalModuleOverride,
+    PilotReport,
 ]:
     admin.site.register(model)

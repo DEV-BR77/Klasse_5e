@@ -1,14 +1,18 @@
 import secrets
 from datetime import timedelta
+from io import BytesIO
+from urllib.parse import urlencode
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.files.base import ContentFile
 from django.db.models import Count, Q
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods, require_POST
 
 from klasse5e.chat.models import ChatReadState, ChatRoom
 from klasse5e.content.models import Post, ProtectedDocument, TeacherProfile
@@ -24,7 +28,7 @@ from klasse5e.itslearning.webdav import used_bytes
 from klasse5e.media.models import Gallery
 from klasse5e.media.policies import may_access_gallery
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
-from klasse5e.webuntis.models import WebUntisConnection, WebUntisLesson
+from klasse5e.webuntis.models import WebUntisConnection, WebUntisHomework, WebUntisLesson
 
 from .calendar_presenter import build_calendar_context
 from .models import (
@@ -32,12 +36,28 @@ from .models import (
     ConsentDecision,
     GuardianChildRelationship,
     Person,
+    PilotReport,
     PortalModule,
     PushSubscription,
+    RegistrationApplication,
     Role,
+    School,
+    SchoolClass,
     UserNotification,
 )
 from .policies import active_roles, family_label, has_active_membership
+from .registration import sanitized_profile_photo
+
+
+def _require_portal_admin(user):
+    if not (
+        user.is_superuser
+        or user.roleassignment_set.filter(
+            active=True,
+            role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.SCHOOL_ADMIN, Role.CLASS_ADMIN],
+        ).exists()
+    ):
+        raise Http404
 
 
 def _membership(user):
@@ -131,6 +151,10 @@ def dashboard(request):
             "release_channel": settings.APP_RELEASE_CHANNEL,
             "selected_day": day,
             "lessons": personal_lessons if personal_lessons.exists() else manual_lessons,
+            "homework": WebUntisHomework.objects.filter(
+                connection__in=webuntis_connections,
+                due_on__gte=day,
+            ).order_by("due_on", "subject")[:5],
             "calendar_entries": CalendarEntry.objects.filter(
                 school_class=school_class, starts_at__date=day
             ).order_by("starts_at")[:5],
@@ -180,6 +204,8 @@ def _unread_count(user, school_class):
 def calendar(request):
     school_class = _class_or_404(request.user)
     day = _day_from_request(request)
+    view = request.GET.get("ansicht", "month")
+    categories = request.GET.getlist("kategorie") if "filter" in request.GET else None
     context = _shared(request, "Kalender", "calendar")
     context.update(
         build_calendar_context(
@@ -187,15 +213,34 @@ def calendar(request):
             selected_day=day,
             webuntis_connections=_webuntis_connections(request.user),
             itslearning_connections=_itslearning_connections(request.user),
+            view=view,
+            active_categories=categories,
         )
+    )
+    active_keys = [item["key"] for item in context["calendar_categories"] if item["active"]]
+    context["category_query"] = urlencode(
+        [("filter", "1"), *(("kategorie", key) for key in active_keys)]
     )
     return render(request, "ui/calendar_v2.html", context)
 
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
 def chat_overview(request):
     school_class = _class_or_404(request.user)
+    if request.method == "POST":
+        _require_portal_admin(request.user)
+        title = request.POST.get("title", "").strip()[:120]
+        if title:
+            ChatRoom.objects.create(
+                school_class=school_class,
+                school_year=school_class.school_year,
+                title=title,
+                is_open=True,
+            )
+            messages.success(request, "Der Chatraum wurde angelegt.")
+        return redirect("ui-chat")
     rooms = ChatRoom.objects.filter(school_class=school_class).order_by("event_id", "title")
     context = _shared(request, "Chat", "chat")
     context["rooms"] = rooms
@@ -203,10 +248,16 @@ def chat_overview(request):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
 def chat_room(request, room_id):
     room = get_object_or_404(ChatRoom, public_id=room_id)
     if not has_active_membership(request.user, room.school_class):
         raise Http404
+    if request.method == "POST":
+        from klasse5e.chat.services import create_message
+
+        create_message(room, request.user, request.POST.get("body", ""), None)
+        return redirect("ui-chat-room", room_id=room.public_id)
     context = _shared(request, room.title, "chat")
     context.update(
         {
@@ -217,6 +268,78 @@ def chat_room(request, room_id):
         }
     )
     return render(request, "ui/chat_room.html", context)
+
+
+@login_required
+def portal_management(request):
+    _require_portal_admin(request.user)
+    context = _shared(request, "Verwaltung", "management")
+    context.update({
+        "review_pending": RegistrationApplication.objects.filter(status="review_pending").count(),
+        "schools": School.objects.filter(is_active=True).count(),
+        "classes": SchoolClass.objects.filter(status="active").count(),
+        "pilot_reports": PilotReport.objects.filter(resolved_at__isnull=True).count(),
+    })
+    return render(request, "ui/portal_management.html", context)
+
+
+@login_required
+def registration_invitation(request):
+    _require_portal_admin(request.user)
+    context = _shared(request, "Anmeldung weitergeben", "management")
+    context["registration_url"] = request.build_absolute_uri("/registrieren/")
+    return render(request, "ui/registration_invitation.html", context)
+
+
+@login_required
+def registration_invitation_qr(request):
+    _require_portal_admin(request.user)
+    import qrcode
+    import qrcode.image.svg
+
+    output = BytesIO()
+    qrcode.make(
+        request.build_absolute_uri("/registrieren/"),
+        image_factory=qrcode.image.svg.SvgPathImage,
+        box_size=12,
+        border=2,
+    ).save(output)
+    response = HttpResponse(output.getvalue(), content_type="image/svg+xml")
+    response["Cache-Control"] = "private, max-age=300"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@login_required
+@require_POST
+def pilot_report(request):
+    school_class = _class_or_404(request.user)
+    kind = request.POST.get("kind", "note")
+    if kind not in PilotReport.Kind.values:
+        kind = PilotReport.Kind.NOTE
+    description = request.POST.get("description", "").strip()
+    if not description:
+        raise Http404
+    page_path = request.POST.get("page_path", "/")[:300]
+    if not page_path.startswith("/") or page_path.startswith("//"):
+        page_path = "/"
+    report = PilotReport.objects.create(
+        reporter=request.user,
+        school_class=school_class,
+        kind=kind,
+        page_path=page_path,
+        description=description[:3000],
+    )
+    screenshot = request.FILES.get("screenshot")
+    if screenshot:
+        encoded = sanitized_profile_photo(screenshot)
+        report.screenshot.save(
+            f"{secrets.token_urlsafe(18)}.webp",
+            ContentFile(encoded),
+            save=True,
+        )
+    messages.success(request, "Danke. Deine Meldung wurde an die Pilotverwaltung übermittelt.")
+    return redirect(page_path)
 
 
 @login_required
@@ -259,8 +382,36 @@ def post_detail(request, post_id):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
 def events(request):
     school_class = _class_or_404(request.user)
+    if request.method == "POST":
+        _require_portal_admin(request.user)
+        try:
+            starts_at = timezone.datetime.fromisoformat(request.POST.get("starts_at", ""))
+            ends_at = timezone.datetime.fromisoformat(request.POST.get("ends_at", ""))
+            if timezone.is_naive(starts_at):
+                starts_at = timezone.make_aware(starts_at)
+                ends_at = timezone.make_aware(ends_at)
+            if ends_at <= starts_at:
+                raise ValueError
+        except (TypeError, ValueError):
+            messages.error(request, "Bitte prüfe Beginn und Ende.")
+            return redirect("ui-events")
+        item = Event.objects.create(
+            school_class=school_class,
+            school_year=school_class.school_year,
+            title=request.POST.get("title", "").strip()[:200],
+            description=request.POST.get("description", "").strip(),
+            starts_at=starts_at,
+            ends_at=ends_at,
+            location=request.POST.get("location", "").strip()[:200],
+            change_deadline=starts_at,
+            status=Event.Status.PUBLISHED,
+        )
+        item.organizers.add(request.user)
+        messages.success(request, "Die Veranstaltung wurde veröffentlicht.")
+        return redirect("ui-event", event_id=item.pk)
     context = _shared(request, "Veranstaltungen", "more")
     context["events"] = Event.objects.filter(
         school_class=school_class, status=Event.Status.PUBLISHED
