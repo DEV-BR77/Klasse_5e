@@ -33,9 +33,12 @@ oder committen.
   Übergabestand kein Git-Remote.
 - Ein frisches VAPID-Schlüsselpaar ist DPAPI-verschlüsselt als
   `secret://projects/klasse-5e/vapid_private_key` und
-  `secret://projects/klasse-5e/vapid_public_key` gespeichert.
-- Das alte Produktionsimage läuft weiterhin. Es wurde noch keine produktive
-  Migration durchgeführt und kein Release-Tag gesetzt.
+  `secret://projects/klasse-5e/vapid_public_key` gespeichert und wird an die
+  produktive App übergeben.
+- Das korrigierte Image `klasse-5e-app:0.2.0b1` läuft produktiv und gesund;
+  die Migrationen wurden angewendet. Ein erster Startversuch war wegen eines
+  CRLF-Shebangs fehlgeschlagen, wurde sofort zurückgerollt und durch
+  Normalisierung im Docker-Build dauerhaft behoben. Kein Release-Tag gesetzt.
 
 ## Noch zu erledigen
 
@@ -55,13 +58,13 @@ oder committen.
    Registrierung plus echte Prüf-/Freigabe-/Aktivierungsmail testen. Prüfen,
    dass der Link `https://5e.klassid.de/...` verwendet. Bestehende Resend-Keys
    anderer Projekte nicht wiederverwenden.
-4. VAPID-Schlüssel in die Compose-Laufzeit aufnehmen, ohne Werte in Dateien zu
-   schreiben. Danach Push auf genau einem eigenen Arbeitsplatzgerät
-   aktivieren, den rate-limitierten Selbsttest ausführen, deaktivieren und die
-   lokale Browser-Subscription abmelden.
-5. Aktuelles `origin/main` erneut integrieren, vollständiges Gate bei
-   beschreibbaren Testverzeichnissen wiederholen, neues Releaseimage aus dem
-   finalen Commit bauen und anhand des Vorher-Backups kontrolliert deployen.
+4. Push auf genau einem eigenen Arbeitsplatzgerät aktivieren, den
+   rate-limitierten Selbsttest ausführen, deaktivieren und die lokale
+   Browser-Subscription abmelden.
+5. Aktuelles `origin/main` erneut integrieren und das vollständige Gate bei
+   beschreibbaren Testverzeichnissen nach den noch offenen Änderungen
+   wiederholen. Nur bei weiteren Codeänderungen ein neues Releaseimage bauen
+   und anhand des Vorher-Backups kontrolliert deployen.
 6. HTTPS-, Health-, Login-, Registrierungs-, Kalender-, Stundenplan-, iCal-
    und Push-Smokes durchführen. Release-, Betriebs-, Datenschutz- und
    Rollbackprotokoll finalisieren.
