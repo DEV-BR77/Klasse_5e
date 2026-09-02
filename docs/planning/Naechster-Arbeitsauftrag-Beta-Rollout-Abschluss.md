@@ -20,6 +20,12 @@ oder committen.
   von `klassid.de` und `5e.klassid.de` zeigen auf `77.22.86.157`; die alten
   Parking-AAAA-Einträge sind inaktiv. Resend-DKIM sowie `rsend`- und
   `send`-CNAME wurden ergänzt.
+- Der zuvor verwendete IONOS-Browsertab stand bei der Übergabe unerwartet auf
+  `/keys/copy`. Der bereits in HomeOps gespeicherte Schlüssel funktioniert und
+  wurde für Backup und DNS-Änderung genutzt. Im nächsten Lauf im
+  Entwicklerportal prüfen, ob versehentlich ein zusätzlicher unbenutzter
+  Schlüssel erzeugt wurde; nur nach eindeutigem Abgleich und neuem Backup
+  gegebenenfalls widerrufen. Keine dort sichtbaren Schlüsselwerte ausgeben.
 - Caddy leitet `klassid.de` und `5e.eventmonitor.eu` dauerhaft auf
   `https://5e.klassid.de` um und hat Zertifikate für Root und Klassenhost
   erfolgreich bezogen. Die Caddy-Änderung liegt im lokalen Repository
