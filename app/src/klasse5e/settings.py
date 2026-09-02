@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(os.environ.get("APP_ROOT", Path.cwd())).resolve()
-APP_VERSION = "0.2.0-beta.1"
+APP_VERSION = "0.3.0-beta.1"
 APP_RELEASE_CHANNEL = "beta"
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY", "unsafe-test-only-4f8d2a6c9e1b7d3f5a8c2e6b9d1f4a7c0e3b6d9f"
@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "klasse5e.core",
     "klasse5e.content",
     "klasse5e.events",
+    "klasse5e.mobility",
     "klasse5e.media",
     "klasse5e.biometrics",
     "klasse5e.chat",
@@ -186,4 +187,15 @@ VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:kontakt@klassid.de")
 WEBDAV_ROOT = Path(os.environ.get("WEBDAV_ROOT", MEDIA_ROOT / "webdav"))
+SPOONACULAR_API_KEY = os.environ.get("SPOONACULAR_API_KEY", "")
+SPOONACULAR_API_BASE_URL = os.environ.get(
+    "SPOONACULAR_API_BASE_URL", "https://api.apilayer.com/spoonacular"
+)
+SPOONACULAR_API_TIMEOUT_SECONDS = 5
+SPOONACULAR_MAX_RESULTS = 12
+MOBILITY_RETENTION_DAYS = 90
+MOBILITY_DATA_ENCRYPTION_KEY = os.environ.get(
+    "MOBILITY_DATA_ENCRYPTION_KEY",
+    "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=" if DEBUG else "",
+)
 DATA_UPLOAD_MAX_MEMORY_SIZE = max(DATA_UPLOAD_MAX_MEMORY_SIZE, 100 * 1024 * 1024)

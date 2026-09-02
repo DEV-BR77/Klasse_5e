@@ -1,13 +1,19 @@
+from decimal import Decimal, InvalidOperation
+
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import transaction
 from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from klasse5e.core.models import AuditEvent
 from klasse5e.core.policies import has_active_membership
 
-from .models import Event, Reservation
+from .models import ContributionCategory, ContributionItem, Event, Reservation
 from .services import cancel_reservation_for_user, create_reservation
+from .spoonacular import SpoonacularUnavailable, recipe_ingredients
 
 
 @login_required
@@ -46,3 +52,58 @@ def cancel_reservation(request, reservation_id):
     except (ValidationError, PermissionDenied):
         raise Http404 from None
     return HttpResponse(status=204)
+
+
+def _organizer_event_or_404(request, event_id):
+    event = get_object_or_404(Event, id=event_id, status=Event.Status.PUBLISHED)
+    if not has_active_membership(request.user, event.school_class):
+        raise Http404
+    if not event.organizers.filter(id=request.user.id).exists():
+        raise Http404
+    return event
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def import_recipe(request, event_id, recipe_id):
+    event = _organizer_event_or_404(request, event_id)
+    source_reference = str(recipe_id)
+    existing = ContributionCategory.objects.filter(
+        event=event, source_provider="spoonacular", source_reference=source_reference
+    ).first()
+    if existing:
+        return redirect(f"/mehr/veranstaltungen/{event.id}/?recipe_status=already-imported")
+    try:
+        title, ingredients = recipe_ingredients(recipe_id)
+    except SpoonacularUnavailable:
+        return redirect(f"/mehr/veranstaltungen/{event.id}/?recipe_status=unavailable")
+    if not ingredients:
+        return redirect(f"/mehr/veranstaltungen/{event.id}/?recipe_status=empty")
+    category = ContributionCategory.objects.create(
+        event=event,
+        name=f"Rezept: {title}"[:100],
+        source_provider="spoonacular",
+        source_reference=source_reference,
+        source_title=title,
+        source_imported_at=timezone.now(),
+    )
+    for ingredient in ingredients[:50]:
+        try:
+            amount = min(Decimal(str(ingredient.amount)), Decimal("999999.99"))
+        except InvalidOperation:
+            amount = Decimal("1")
+        ContributionItem.objects.create(
+            category=category,
+            label=ingredient.name,
+            desired_quantity=max(amount, Decimal("0.01")),
+            unit=ingredient.unit or "Stück",
+        )
+    AuditEvent.objects.create(
+        actor=request.user,
+        action="event.recipe.imported",
+        target_type="contribution_category",
+        target_id=str(category.id),
+        metadata={"event_id": event.id, "provider": "spoonacular", "recipe_id": source_reference},
+    )
+    return redirect(f"/mehr/veranstaltungen/{event.id}/?recipe_status=imported")

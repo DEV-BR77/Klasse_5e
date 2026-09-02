@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: app/Dockerfile
-    image: klasse-5e-app:0.2.0b1
+    image: klasse-5e-app:0.3.0b1
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-klasse5e}:${POSTGRES_PASSWORD:?Provide database secret}@klasse-5e-db:5432/${POSTGRES_DB:-klasse5e}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Provide Django secret}
@@ -23,6 +23,8 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:?Provide VAPID public key}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:?Provide VAPID private key}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:kontakt@klassid.de}
+      SPOONACULAR_API_KEY: ${SPOONACULAR_API_KEY:-}
+      MOBILITY_DATA_ENCRYPTION_KEY: ${MOBILITY_DATA_ENCRYPTION_KEY:?Provide mobility encryption secret}
     depends_on:
       klasse-5e-db:
         condition: service_healthy

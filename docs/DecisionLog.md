@@ -352,3 +352,24 @@ Links und erlaubt einen klaren Rollback.
 Zertifikate gesichert. Bestehende MX-, Mail- und sonstige Dienste bleiben
 unangetastet; SPF wird pro Domain konsolidiert, DKIM ergänzt und DMARC zunächst
 beobachtend betrieben. Resend ist kein Posteingang.
+
+# ADR-026: Lokale Mobilitätsroute und optionale Rezeptdatenbasis
+
+**Entscheidung:** Mobilität bleibt ein Fachmodul des Django-Monolithen. Die
+erste Kartenansicht ist eine lokale schematische Route über ausschließlich
+öffentliche Treffpunkte; es werden keine externen Kartenkacheln, Geocoding-
+Anfragen oder Live-Standorte verwendet. Exakte PKW-Abholadressen existieren nur
+als befristete, widerrufbare Freigabe zwischen angenommenen Beteiligten.
+
+Spoonacular ist eine optionale Datenbasis für Rezept- und Zutatenvorschläge im
+Eventmodul. Nur Organisatoren dürfen suchen und Zutaten bewusst übernehmen.
+Bei Ausfall bleibt die manuelle Mitbringliste vollständig nutzbar.
+
+**Grund:** Die lokale Routendarstellung erfüllt den Koordinationsbedarf, ohne
+Familienstandorte an einen Kartenanbieter zu senden. Die getrennte externe
+Rezeptsuche verbessert die Planung, ohne Eltern-, Kinder- oder Eventdaten an
+den Provider zu übertragen oder ihn zur Laufzeitvoraussetzung zu machen.
+
+**Folge:** Ein Wechsel zu Straßenrouting oder Kartenkacheln erfordert eine neue
+Anbieter-, Datenschutz- und Betriebsentscheidung. API-Secrets werden nur zur
+Prozesslaufzeit aus dem HomeOps-Speicher bereitgestellt.

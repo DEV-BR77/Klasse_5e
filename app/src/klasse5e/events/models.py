@@ -32,6 +32,19 @@ class Event(models.Model):
 class ContributionCategory(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="categories")
     name = models.CharField(max_length=100)
+    source_provider = models.CharField(max_length=32, blank=True)
+    source_reference = models.CharField(max_length=80, blank=True)
+    source_title = models.CharField(max_length=200, blank=True)
+    source_imported_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["event", "source_provider", "source_reference"],
+                condition=~models.Q(source_reference=""),
+                name="unique_event_external_contribution_source",
+            )
+        ]
 
 
 class ContributionItem(models.Model):

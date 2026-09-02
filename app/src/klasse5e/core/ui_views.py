@@ -1,5 +1,6 @@
 import secrets
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from urllib.parse import urlencode
 
@@ -18,6 +19,7 @@ from klasse5e.chat.models import ChatReadState, ChatRoom
 from klasse5e.content.models import Post, ProtectedDocument, TeacherProfile
 from klasse5e.events.models import ContributionCategory, ContributionItem, Event, Reservation
 from klasse5e.events.services import cancel_reservation_for_user, create_reservation
+from klasse5e.events.spoonacular import SpoonacularUnavailable, search_recipes
 from klasse5e.itslearning.models import (
     ItslearningCalendarItem,
     ItslearningConnection,
@@ -224,7 +226,6 @@ def calendar(request):
     return render(request, "ui/calendar_v2.html", context)
 
 
-
 @login_required
 @require_http_methods(["GET", "POST"])
 def chat_overview(request):
@@ -274,12 +275,16 @@ def chat_room(request, room_id):
 def portal_management(request):
     _require_portal_admin(request.user)
     context = _shared(request, "Verwaltung", "management")
-    context.update({
-        "review_pending": RegistrationApplication.objects.filter(status="review_pending").count(),
-        "schools": School.objects.filter(is_active=True).count(),
-        "classes": SchoolClass.objects.filter(status="active").count(),
-        "pilot_reports": PilotReport.objects.filter(resolved_at__isnull=True).count(),
-    })
+    context.update(
+        {
+            "review_pending": RegistrationApplication.objects.filter(
+                status="review_pending"
+            ).count(),
+            "schools": School.objects.filter(is_active=True).count(),
+            "classes": SchoolClass.objects.filter(status="active").count(),
+            "pilot_reports": PilotReport.objects.filter(resolved_at__isnull=True).count(),
+        }
+    )
     return render(request, "ui/portal_management.html", context)
 
 
@@ -427,6 +432,15 @@ def event(request, event_id):
     reservations = Reservation.objects.filter(
         item__category__event=item, user=request.user, status=Reservation.Status.ACTIVE
     )
+    recipe_query = request.GET.get("recipe_q", "").strip()
+    recipe_results = []
+    recipe_error = ""
+    is_organizer = item.organizers.filter(id=request.user.id).exists()
+    if recipe_query and is_organizer:
+        try:
+            recipe_results = search_recipes(recipe_query)
+        except SpoonacularUnavailable:
+            recipe_error = "Die Rezeptdatenbank ist gerade nicht erreichbar."
     context = _shared(request, item.title, "more")
     context.update(
         {
@@ -436,6 +450,11 @@ def event(request, event_id):
             "my_reservations": reservations,
             "idempotency_key": secrets.token_urlsafe(18),
             "status": request.GET.get("status", ""),
+            "is_organizer": is_organizer,
+            "recipe_query": recipe_query,
+            "recipe_results": recipe_results,
+            "recipe_error": recipe_error,
+            "recipe_status": request.GET.get("recipe_status", ""),
         }
     )
     return render(request, "ui/event_detail.html", context)
@@ -468,16 +487,27 @@ def free_contribution(request, event_id):
     label = request.POST.get("label", "").strip()[:160]
     if not label:
         return redirect(f"/mehr/veranstaltungen/{event_id}/?status=invalid")
+    try:
+        quantity = Decimal(request.POST.get("quantity", "1"))
+        if quantity <= 0:
+            raise ValueError
+    except (InvalidOperation, ValueError):
+        return redirect(f"/mehr/veranstaltungen/{event_id}/?status=invalid")
     category, _ = ContributionCategory.objects.get_or_create(
         event=item_event, name="Eigene Beiträge"
     )
     item = ContributionItem.objects.create(
         category=category,
         label=label,
-        desired_quantity=1,
+        desired_quantity=quantity,
         unit=request.POST.get("unit", "Stück")[:40],
         is_free_entry=True,
         moderated=False,
+    )
+    request.POST = request.POST.copy()
+    request.POST["quantity"] = str(quantity)
+    request.POST["idempotency_key"] = request.POST.get("idempotency_key") or secrets.token_urlsafe(
+        18
     )
     return reserve(request, item.id)
 
@@ -559,11 +589,15 @@ def contacts(request):
 @login_required
 def students(request):
     school_class = _class_or_404(request.user)
-    students = Person.objects.filter(
-        studentprofile__isnull=False,
-        classmembership__school_class=school_class,
-        classmembership__status="active",
-    ).distinct().order_by("last_name", "first_name")
+    students = (
+        Person.objects.filter(
+            studentprofile__isnull=False,
+            classmembership__school_class=school_class,
+            classmembership__status="active",
+        )
+        .distinct()
+        .order_by("last_name", "first_name")
+    )
     context = _shared(request, "Schülerübersicht", "contacts")
     context["students"] = students
     return render(request, "ui/students.html", context)

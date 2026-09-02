@@ -11,6 +11,7 @@ from klasse5e.events import views as event_views
 from klasse5e.itslearning import views as itslearning_views
 from klasse5e.itslearning.webdav import webdav
 from klasse5e.media import views as media_views
+from klasse5e.mobility import views as mobility_views
 from klasse5e.schedule import views as schedule_views
 from klasse5e.webuntis import views as webuntis_views
 
@@ -59,6 +60,16 @@ urlpatterns = [
     path("mehr/aktuelles/", ui_views.posts, name="ui-posts"),
     path("mehr/aktuelles/<int:post_id>/", ui_views.post_detail, name="ui-post-detail"),
     path("mehr/veranstaltungen/", ui_views.events, name="ui-events"),
+    path("mehr/mobilitaet/", mobility_views.overview, name="mobility-overview"),
+    path("mehr/mobilitaet/<uuid:public_id>/", mobility_views.detail, name="mobility-detail"),
+    path("mehr/mobilitaet/<uuid:public_id>/treffpunkt/", mobility_views.add_meeting_point, name="mobility-meeting-point"),
+    path("mehr/mobilitaet/<uuid:public_id>/reagieren/", mobility_views.react, name="mobility-react"),
+    path("mehr/mobilitaet/<uuid:public_id>/status/", mobility_views.change_status, name="mobility-status"),
+    path("mehr/mobilitaet/<uuid:public_id>/melden/", mobility_views.report, name="mobility-report"),
+    path("mehr/mobilitaet/<uuid:public_id>/moderieren/", mobility_views.moderate, name="mobility-moderate"),
+    path("mobility/reactions/<int:reaction_id>/decision/", mobility_views.reaction_decision, name="mobility-reaction-decision"),
+    path("mobility/reactions/<int:reaction_id>/pickup/", mobility_views.disclose_pickup, name="mobility-pickup-disclose"),
+    path("mobility/pickups/<int:disclosure_id>/revoke/", mobility_views.revoke_disclosure, name="mobility-pickup-revoke"),
     path("mehr/veranstaltungen/<int:event_id>/", ui_views.event, name="ui-event"),
     path("mehr/mitbringen/<int:item_id>/reservieren/", ui_views.reserve, name="ui-reserve"),
     path(
@@ -135,6 +146,11 @@ urlpatterns = [
         name="moderate-comment",
     ),
     path("events/<int:event_id>/", event_views.event_detail, name="event-detail"),
+    path(
+        "events/<int:event_id>/recipes/<int:recipe_id>/import/",
+        event_views.import_recipe,
+        name="event-recipe-import",
+    ),
     path("items/<int:item_id>/reserve/", event_views.reserve_item, name="reserve-item"),
     path(
         "reservations/<int:reservation_id>/cancel/",

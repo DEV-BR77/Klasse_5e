@@ -95,6 +95,7 @@ Vision-API hat keinen veröffentlichten Host-Port und keinen Internetbedarf.
 | `core` | Dashboard, Navigation, gemeinsame Zugriffspolicies | öffentliche Schnittstellen der obigen Module |
 | `content` | geschützte Dokumente, Lehrerprofile, Beiträge, Kommentare | `classes`, `consents`, `audit` |
 | `events` | Events und transaktionssichere Mitbringlisten | `classes`, `content`, `notifications`, `audit` |
+| `mobility` | Fahrgemeinschaften, Schulweggruppen, öffentliche Treffpunkte und private Abholfreigaben | `classes`, `families`, `chat`, `notifications`, `audit` |
 | `media` | Upload, Metadatenentfernung, Moderation, geschützte Auslieferung | `classes`, `consents`, `events`, `audit` |
 | `vision` | Fachadapter und opaque ID-Zuordnung; keine Erkennung im Monolithen | `media`, `families`, `consents`, `audit` |
 | `chat` | Räume, Nachrichten, Moderation, Aufbewahrung | `classes`, `events`, `notifications`, `audit` |
@@ -363,6 +364,26 @@ Mitgliedschaft und Restmenge und dedupliziert Wiederholungen über einen
 Idempotency-Key. Stale Push-Subscriptions werden durch die Anwendung entfernt;
 temporäre Fehler bleiben wiederholbar. Pushtexte enthalten nur einen neutralen
 Hinweis und eine Login-geschützte interne Ziel-URL.
+
+Rezeptvorschläge sind eine optionale, ausfallsichere Ergänzung des
+`events`-Moduls. Nur Eventorganisatoren senden einen neutralen Suchbegriff oder
+eine Rezept-ID an Spoonacular. Erst die ausdrückliche Übernahme erzeugt lokale,
+reservierbare Mitbringpositionen; Personen-, Klassen- und Eventdaten verlassen
+das Portal nicht.
+
+## Mobilität und sichere Schulweggruppen
+
+Das Modul `mobility` prüft bei jedem Zugriff aktive Klassenmitgliedschaft und
+eine aktuelle verifizierte Sorgeberechtigtenbeziehung. Angebote und Gesuche
+enthalten nur grobe Bereiche. Routen werden lokal und schematisch zwischen
+freiwillig angelegten öffentlichen Treffpunkten und der Schule dargestellt;
+eine externe Kartenabfrage oder Live-Ortung findet nicht statt.
+
+Reaktionen werden durch den Ersteller angenommen oder abgelehnt. Erst nach
+Annahme kann eine exakte Abholadresse zweckgebunden, befristet und ausschließlich
+für die andere beteiligte Person freigegeben werden. Widerruf und Fristablauf
+entfernen den Adresswert. Moderatoren sehen Meldungen und Status, erhalten aber
+keinen pauschalen Zugriff auf private Adressen.
 ## Phase 6: lokale, einwilligungsbasierte Personensuche
 
 Das Monolith-Modul `klasse5e.biometrics` hält ausschließlich die fachliche

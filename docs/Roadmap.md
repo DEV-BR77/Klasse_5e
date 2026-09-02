@@ -18,6 +18,7 @@ werden hier präzisiert, nicht vorgezogen. Komplexität ist relativ zum Projekt:
 | 8 | **abgeschlossen:** manueller Kalender und Stundenplan | L | Wochenansicht, Änderungsvergleich, deduplizierter Push und widerrufbares iCal |
 | 9 | Schulportaladapter | L–XL | erst nach Portal-/API-/Rechtsprüfung; idempotenter austauschbarer Adapter und manueller Fallback |
 | 10 | Produktion und Schuljahreswechsel | XL | Compose/Caddy, Header, Health, Export/Löschung, Backup und praktisch geübter Restore, Übergabe und Sitzungsentzug |
+| 11 | **abgeschlossen:** Mobilität und erweiterte Mitbringlisten | L–XL | Guardian-/Klassenisolation, sichere Treffpunkte und Routen, private widerrufbare Abholung, Rezeptvorschläge mit manuellem Fallback und automatisierte Tests |
 
 ## Freigabepunkte
 

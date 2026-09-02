@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="mobility-page">
+  <p><a href="{% url 'mobility-overview' %}">← Zur Mobilitätsübersicht</a></p>
+  <header class="mobility-detail-head">
+    <div><span class="mobility-kind">{{ listing.get_kind_display }}</span><h1>{{ listing.title }}</h1><p>{{ listing.get_transport_display }} · {{ listing.get_direction_display }} · {{ listing.get_status_display }}</p></div>
+    {% if listing.creator_id == request.user.id %}<form method="post" action="{% url 'mobility-status' listing.public_id %}">{% csrf_token %}<select name="status" aria-label="Status ändern"><option value="active">Aktiv</option><option value="paused">Pausieren</option><option value="withdrawn">Zurückziehen</option></select><button class="button" type="submit">Übernehmen</button></form>{% endif %}
+  </header>
+
+  <div class="mobility-detail-grid">
+    <article class="content-card">
+      <h2>Fahrt oder Gruppe</h2>
+      <dl class="detail-list"><div><dt>Zeit</dt><dd>{{ listing.time_from|time:"H:i" }}–{{ listing.time_until|time:"H:i" }}</dd></div><div><dt>Tage</dt><dd>{{ listing.weekdays|join:", " }}</dd></div><div><dt>Bereich</dt><dd>{{ listing.approximate_area|default:"Nur öffentliche Treffpunkte" }}</dd></div>{% if listing.transport == 'car' %}<div><dt>Plätze</dt><dd>{{ listing.seats }}</dd></div>{% endif %}<div><dt>Gültig bis</dt><dd>{{ listing.valid_until }}</dd></div></dl>
+      {% if listing.notes %}<p>{{ listing.notes }}</p>{% endif %}
+      <p class="safety-copy">Das Portal vermittelt Kontakte. Aufsicht, Versicherung, Fahrerlaubnis und Kindersitze bleiben Verantwortung der beteiligten Erwachsenen.</p>
+    </article>
+
+    <article class="content-card route-card">
+      <h2>Route und Treffpunkte</h2>
+      <svg class="route-map" viewBox="0 0 400 160" role="img" aria-label="Schematische Route über öffentliche Treffpunkte zur Schule">
+        {% if route_points %}<polyline points="{% for point in route_points %}{{ point.x }},{{ point.y }} {% endfor %}" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>{% endif %}
+        {% for point in route_points %}<circle cx="{{ point.x }}" cy="{{ point.y }}" r="10"/><text x="{{ point.x }}" y="{{ point.y|add:30 }}" text-anchor="middle">{{ point.label|truncatechars:18 }}</text>{% endfor %}
+      </svg>
+      <ol class="meeting-list">{% for point in listing.meeting_points.all %}<li><strong>{{ point.name }}</strong>{% if point.meeting_time %} · {{ point.meeting_time|time:"H:i" }}{% endif %}<br><span>{{ point.description }}</span></li>{% empty %}<li>Noch kein öffentlicher Treffpunkt eingetragen.</li>{% endfor %}<li><strong>{{ listing.school_class.school.name }}</strong></li></ol>
+      {% if listing.creator_id == request.user.id %}<details><summary class="button">Treffpunkt hinzufügen</summary><form method="post" action="{% url 'mobility-meeting-point' listing.public_id %}" class="form-stack compact-form">{% csrf_token %}<label>Öffentlicher Treffpunkt<input name="name" maxlength="120" required></label><label>Beschreibung<input name="description" maxlength="240"></label><label>Treffzeit<input type="time" name="meeting_time"></label><div class="coordinate-row"><label>Breitengrad (optional)<input type="number" step="0.000001" name="latitude"></label><label>Längengrad (optional)<input type="number" step="0.000001" name="longitude"></label></div><button class="button button-primary" type="submit">Treffpunkt speichern</button></form></details>{% endif %}
+    </article>
+  </div>
+
+  {% if listing.creator_id != request.user.id %}
+  <article class="content-card action-card"><h2>Kontakt aufnehmen</h2>{% if my_reaction %}<p>Deine Reaktion: <strong>{{ my_reaction.get_status_display }}</strong></p>{% else %}<form method="post" action="{% url 'mobility-react' listing.public_id %}" class="form-stack">{% csrf_token %}<label>Reaktion<select name="kind"><option value="interested">Ich bin interessiert</option><option value="seat_offered">Ich biete einen Platz</option><option value="question">Ich habe eine Rückfrage</option></select></label><label>Nachricht, optional<textarea name="message" maxlength="400" rows="3"></textarea></label><button class="button button-primary" type="submit">Geschützt reagieren</button></form>{% endif %}<details><summary>Melden</summary><form method="post" action="{% url 'mobility-report' listing.public_id %}">{% csrf_token %}<label>Grund<input name="reason" maxlength="300" required></label><button class="button" type="submit">Zur Prüfung melden</button></form></details></article>
+  {% endif %}
+
+  {% if can_moderate %}<aside class="content-card moderation-panel"><h2>Moderation</h2><p>{{ report_count }} offene Meldung{{ report_count|pluralize:"en" }}. Private Abholadressen sind für die Moderation nicht sichtbar.</p><form method="post" action="{% url 'mobility-moderate' listing.public_id %}" class="button-row">{% csrf_token %}<button class="button" name="action" value="pause">Pausieren</button><button class="button" name="action" value="withdraw">Sperren</button><button class="button" name="action" value="restore">Freigeben</button></form></aside>{% endif %}
+
+  {% if listing.creator_id == request.user.id and reactions %}<section><h2>Reaktionen</h2><div class="card-grid">{% for reaction in reactions %}<article class="content-card"><h3>{{ reaction.user.person.first_name }} · {{ reaction.get_kind_display }}</h3><p>{{ reaction.message|default:"Keine Nachricht" }}</p><p>Status: {{ reaction.get_status_display }}</p>{% if reaction.status == 'open' %}<form method="post" action="{% url 'mobility-reaction-decision' reaction.id %}" class="button-row">{% csrf_token %}<button class="button button-primary" name="decision" value="accepted">Annehmen</button><button class="button" name="decision" value="declined">Ablehnen</button></form>{% endif %}{% if reaction.status == 'accepted' and listing.transport == 'car' %}<details><summary class="button">Abholadresse privat teilen</summary><form method="post" action="{% url 'mobility-pickup-disclose' reaction.id %}" class="form-stack compact-form">{% csrf_token %}<p>Nur {{ reaction.user.person.first_name }} sieht diese Adresse. Sie wird nicht auf der Karte oder in der allgemeinen Verwaltung angezeigt und kann widerrufen werden.</p><label>Exakte Abholadresse<input name="exact_address" maxlength="240" required></label><button class="button button-primary" type="submit">Privat freigeben</button></form></details>{% endif %}</article>{% endfor %}</div></section>{% endif %}
+
+  {% if disclosures %}<section><h2>Private Abholfreigaben</h2>{% for disclosure in disclosures %}<article class="content-card private-disclosure"><p><strong>Nur für Beteiligte:</strong> {{ disclosure.address }}</p><p>Gültig bis {{ disclosure.valid_until }}</p>{% if disclosure.shared_by_id == request.user.id %}<form method="post" action="{% url 'mobility-pickup-revoke' disclosure.id %}">{% csrf_token %}<button class="button" type="submit">Freigabe widerrufen</button></form>{% endif %}</article>{% endfor %}</section>{% endif %}
+</section>
+{% endblock %}

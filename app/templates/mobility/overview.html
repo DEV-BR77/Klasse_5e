@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="mobility-page">
+  <header class="page-title-row">
+    <div><p class="eyebrow">Gemeinsam sicher zur Schule</p><h1>Mobilität</h1></div>
+    <details class="create-panel"><summary class="button button-primary">Ich suche oder biete</summary>
+      <form method="post" class="content-card form-stack mobility-form">{% csrf_token %}
+        <h2>Neuen Eintrag veröffentlichen</h2>
+        {{ form.non_field_errors }}
+        {% for field in form %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</label>{% endfor %}
+        <button class="button button-primary" type="submit">Eintrag veröffentlichen</button>
+      </form>
+    </details>
+  </header>
+
+  <aside class="privacy-note"><strong>Standorte bleiben geschützt.</strong> Die Übersicht zeigt nur grobe Bereiche und freiwillig gewählte öffentliche Treffpunkte – niemals Wohnadressen oder Live-Positionen.</aside>
+
+  <form method="get" class="mobility-filters" aria-label="Mobilitätsangebote filtern">
+    <label>Art<select name="kind"><option value="">Suchen und Bieten</option><option value="offer" {% if selected_kind == 'offer' %}selected{% endif %}>Ich biete</option><option value="request" {% if selected_kind == 'request' %}selected{% endif %}>Ich suche</option></select></label>
+    <label>Verkehrsmittel<select name="transport"><option value="">Alle</option><option value="car" {% if selected_transport == 'car' %}selected{% endif %}>Auto</option><option value="bicycle" {% if selected_transport == 'bicycle' %}selected{% endif %}>Fahrrad</option><option value="walk" {% if selected_transport == 'walk' %}selected{% endif %}>Zu Fuß</option></select></label>
+    <button class="button" type="submit">Filtern</button>
+  </form>
+
+  <div class="mobility-layout">
+    <div class="mobility-list" aria-label="Mobilitätseinträge">
+      {% for item in listings %}
+      <article class="mobility-card">
+        <div class="mobility-card-top"><span class="mobility-kind">{{ item.get_kind_display }}</span><span class="status-chip status-{{ item.status }}">{{ item.get_status_display }}</span></div>
+        <h2><a href="{% url 'mobility-detail' item.public_id %}">{{ item.title }}</a></h2>
+        <p class="mobility-meta"><strong>{{ item.get_transport_display }}</strong> · {{ item.get_direction_display }} · {{ item.time_from|time:"H:i" }}–{{ item.time_until|time:"H:i" }}</p>
+        <p>{% if item.approximate_area %}Grober Bereich: {{ item.approximate_area }}{% else %}Öffentlicher Treffpunkt nach Absprache{% endif %}</p>
+        <p class="text-muted">{{ item.weekdays|join:", " }} · {{ item.reaction_count }} Reaktion{{ item.reaction_count|pluralize:"en" }}</p>
+      </article>
+      {% empty %}<p class="empty-state">Noch keine passenden Einträge. Du kannst den ersten sicheren Schulweg anbieten oder suchen.</p>{% endfor %}
+    </div>
+    <aside class="route-preview" aria-label="Sichere Kartenansicht">
+      <h2>Treffpunkte und Routen</h2>
+      <div class="schematic-map"><div class="map-road"></div><span class="map-pin pin-a">A</span><span class="map-pin pin-b">B</span><span class="map-school">Schule</span></div>
+      <p>Die Detailansicht zeigt den Verlauf zwischen öffentlichen Treffpunkten und der Schule. Ohne externe Kartenabfragen.</p>
+    </aside>
+  </div>
+</section>
+{% endblock %}

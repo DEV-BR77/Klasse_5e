@@ -24,6 +24,8 @@ MODULE_PATHS = {
     "/events/": "events",
     "/items/": "events",
     "/reservations/": "events",
+    "/mehr/mobilitaet/": "mobility",
+    "/mobility/": "mobility",
     "/push/": "push",
 }
 
