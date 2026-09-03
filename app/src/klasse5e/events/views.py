@@ -107,3 +107,42 @@ def import_recipe(request, event_id, recipe_id):
         metadata={"event_id": event.id, "provider": "spoonacular", "recipe_id": source_reference},
     )
     return redirect(f"/mehr/veranstaltungen/{event.id}/?recipe_status=imported")
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def import_food_item(request, event_id, source_id):
+    event = _organizer_event_or_404(request, event_id)
+    label = request.POST.get("label", "").strip()[:160]
+    unit = request.POST.get("unit", "Stück").strip()[:40] or "Stück"
+    try:
+        quantity = min(Decimal(request.POST.get("quantity", "1")), Decimal("999999.99"))
+        if quantity <= 0:
+            raise InvalidOperation
+    except (InvalidOperation, ValueError):
+        return redirect(f"/mehr/veranstaltungen/{event.id}/?food_status=invalid")
+    if not label:
+        return redirect(f"/mehr/veranstaltungen/{event.id}/?food_status=invalid")
+    category, _ = ContributionCategory.objects.get_or_create(
+        event=event,
+        source_provider="spoonacular",
+        source_reference="food-items",
+        defaults={"name": "Lebensmittel", "source_title": "Lebensmittelauswahl"},
+    )
+    if category.items.filter(label__iexact=label).exists():
+        return redirect(f"/mehr/veranstaltungen/{event.id}/?food_status=already-added")
+    item = ContributionItem.objects.create(
+        category=category,
+        label=label,
+        desired_quantity=quantity,
+        unit=unit,
+    )
+    AuditEvent.objects.create(
+        actor=request.user,
+        action="event.food_item.imported",
+        target_type="contribution_item",
+        target_id=str(item.id),
+        metadata={"event_id": event.id, "provider": "spoonacular", "source_id": source_id[:80]},
+    )
+    return redirect(f"/mehr/veranstaltungen/{event.id}/?food_status=added")

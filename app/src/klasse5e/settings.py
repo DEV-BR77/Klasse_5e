@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(os.environ.get("APP_ROOT", Path.cwd())).resolve()
-APP_VERSION = "0.3.0-beta.1"
+APP_VERSION = "0.3.0-beta.2"
 APP_RELEASE_CHANNEL = "beta"
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY", "unsafe-test-only-4f8d2a6c9e1b7d3f5a8c2e6b9d1f4a7c0e3b6d9f"

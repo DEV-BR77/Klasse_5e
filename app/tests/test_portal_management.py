@@ -2,6 +2,7 @@ import pytest
 from allauth.mfa.models import Authenticator
 from django.utils import timezone
 
+from klasse5e.chat.models import ChatMessage
 from klasse5e.core.models import OnboardingState, PilotReport, RoleAssignment
 from klasse5e.core.onboarding import current_policy_version
 
@@ -53,7 +54,12 @@ def test_class_admin_can_create_chat_room_and_event(client, guardian, school_cla
     client.force_login(guardian)
     response = client.post("/chat/", {"title": "Elternabend"}, secure=True)
     assert response.status_code == 302
-    assert school_class.chatroom_set.get().title == "Elternabend"
+    room = school_class.chatroom_set.get()
+    assert room.title == "Elternabend"
+    ChatMessage.objects.create(room=room, author=guardian, body="Willkommen")
+    room_page = client.get(f"/chat/{room.public_id}/ansicht/", secure=True)
+    assert b"Willkommen" in room_page.content
+    assert b"ChatMessage object" not in room_page.content
 
     response = client.post(
         "/mehr/veranstaltungen/",

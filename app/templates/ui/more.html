@@ -1,14 +1,21 @@
 {% extends "base.html" %}{% block content %}
-<section><h1>Mehr</h1><nav class="card-grid" aria-label="Weitere Bereiche">
-<a class="content-card" href="/mehr/dokumente/"><h2>Dokumente</h2><p>Geschützte Dateien der Klasse.</p></a>
-<a class="content-card" href="/mehr/aktuelles/"><h2>Aktuelles</h2><p>Beiträge und Hinweise.</p></a>
-<a class="content-card" href="/mehr/veranstaltungen/"><h2>Veranstaltungen</h2><p>Termine und Beiträge.</p></a>
-{% if enabled_modules.mobility %}<a class="content-card" href="/mehr/mobilitaet/"><h2>Mobilität</h2><p>Fahrgemeinschaften und sichere Schulweggruppen.</p></a>{% endif %}
-<a class="content-card" href="/mehr/fotos/"><h2>Fotos</h2><p>Private Klassengalerien.</p></a>
-<a class="content-card" href="/mehr/familie/"><h2>Familie & Profile</h2><p>Bestätigte Beziehungen.</p></a>
-<a class="content-card" href="/mehr/einwilligungen/"><h2>Einwilligungen</h2><p>Freiwillige Zwecke prüfen und widerrufen.</p></a>
-<a class="content-card" href="/mehr/benachrichtigungen/"><h2>Benachrichtigungen</h2><p>Kategorien dieses Kontos.</p></a>
-<a class="content-card" href="/mehr/webuntis/"><h2>WebUntis</h2><p>Optionale manuelle Verbindung.</p></a>
-<a class="content-card" href="/tutorial/"><h2>Tutorial</h2><p>Die Einführung erneut öffnen.</p></a>
-{% if 'primary_admin' in roles or 'deputy_admin' in roles %}<a class="content-card" href="/mehr/systemstatus/"><h2>Systemstatus</h2><p>Datenbank, itslearning und WebDAV prüfen.</p></a>{% endif %}
-</nav></section>{% endblock %}
+<section class="more-page"><header class="page-heading compact-heading"><div><p class="eyebrow">Bereiche &amp; Einstellungen</p><h1>Mehr</h1></div></header>
+<h2 class="group-heading">Klassenleben</h2><nav class="card-grid settings-grid" aria-label="Klassenbereiche">
+<a class="content-card" href="/mehr/veranstaltungen/"><span class="settings-icon">{% include "ui/_icon.html" with name="event" %}</span><div><h3>Veranstaltungen</h3><p>Termine und Mitbringlisten.</p></div></a>
+{% if enabled_modules.mobility %}<a class="content-card" href="/mehr/mobilitaet/"><span class="settings-icon">{% include "ui/_icon.html" with name="people" %}</span><div><h3>Mobilität</h3><p>Fahrgemeinschaften und Schulweggruppen.</p></div></a>{% endif %}
+<a class="content-card" href="/mehr/aktuelles/"><span class="settings-icon">{% include "ui/_icon.html" with name="news" %}</span><div><h3>Aktuelles</h3><p>Beiträge und Hinweise.</p></div></a>
+<a class="content-card" href="/mehr/fotos/"><span class="settings-icon">{% include "ui/_icon.html" with name="photo" %}</span><div><h3>Galerie</h3><p>Private Klassenfotos.</p></div></a>
+<a class="content-card" href="/mehr/dokumente/"><span class="settings-icon">{% include "ui/_icon.html" with name="document" %}</span><div><h3>PDF-Formulare</h3><p>Geschützte Vorlagen und Dokumente.</p></div></a></nav>
+<h2 class="group-heading">Mein Konto</h2><nav class="card-grid settings-grid" aria-label="Persönliche Einstellungen">
+<a class="content-card" href="/einstellungen/profil/"><span class="settings-icon">{% include "ui/_icon.html" with name="people" %}</span><div><h3>Meine Daten</h3><p>Name, Foto und freiwillige Kontaktfreigaben.</p></div></a>
+<a class="content-card" href="/accounts/2fa/"><span class="settings-icon">{% include "ui/_icon.html" with name="consent" %}</span><div><h3>Zwei-Faktor-Anmeldung</h3><p>Passkey oder Authenticator freiwillig verwalten.</p></div></a>
+<a class="content-card" href="/mehr/familie/"><span class="settings-icon">{% include "ui/_icon.html" with name="people" %}</span><div><h3>Familie &amp; Kinder</h3><p>Bestätigte Beziehungen.</p></div></a>
+<a class="content-card" href="/mehr/einwilligungen/"><span class="settings-icon">{% include "ui/_icon.html" with name="consent" %}</span><div><h3>Einwilligungen</h3><p>Freiwillige Zwecke prüfen und widerrufen.</p></div></a>
+<a class="content-card" href="/mehr/benachrichtigungen/"><span class="settings-icon">{% include "ui/_icon.html" with name="bell" %}</span><div><h3>Benachrichtigungen</h3><p>Push und Kategorien verwalten.</p></div></a>
+{% if enabled_modules.webuntis_timetable %}<a class="content-card" href="/mehr/webuntis/"><span class="settings-icon">{% include "ui/_icon.html" with name="calendar" %}</span><div><h3>WebUntis</h3><p>Konten der Kinder, automatische Abholung und Einmalabruf.</p></div></a>{% endif %}
+<a class="content-card" href="/tutorial/"><span class="settings-icon">{% include "ui/_icon.html" with name="home" %}</span><div><h3>Tutorial &amp; App</h3><p>Einführung und Installation.</p></div></a>
+<button class="content-card settings-button" type="button" data-dialog-open="pilot-report"><span class="settings-icon">{% include "ui/_icon.html" with name="chat" %}</span><div><h3>Feedback senden</h3><p>Idee, Anmerkung oder Fehler melden.</p></div></button>
+{% if 'primary_admin' in roles or 'deputy_admin' in roles %}<a class="content-card" href="/mehr/systemstatus/"><span class="settings-icon">{% include "ui/_icon.html" with name="more" %}</span><div><h3>Systemstatus</h3><p>Datenbank und Integrationen prüfen.</p></div></a>{% endif %}
+{% if 'primary_admin' in roles or 'deputy_admin' in roles %}<a class="content-card" href="/verwaltung/"><span class="settings-icon">{% include "ui/_icon.html" with name="consent" %}</span><div><h3>Portal verwalten</h3><p>Freigaben, Klassen und Inhalte administrieren.</p></div></a>{% endif %}
+</nav></section>
+{% endblock %}

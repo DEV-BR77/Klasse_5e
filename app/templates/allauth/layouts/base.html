@@ -4,19 +4,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-    <meta name="theme-color" content="#0756b9">
+    <meta name="theme-color" content="#5558a6">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="stylesheet" href="{% static 'app.css' %}">
-    <title>{% block head_title %}{% trans "Account" %}{% endblock head_title %} · Klasse 5e</title>
+    <title>{% block head_title %}{% trans "Account" %}{% endblock head_title %} · KlassID</title>
     {% block extra_head %}{% endblock extra_head %}
 </head>
 <body class="auth-page">
     <a class="skip-link" href="#main-content">Zum Inhalt springen</a>
     <div class="auth-shell">
         <header class="auth-header">
-            <a class="brand" href="/" aria-label="Klasse 5e – Startseite">
-                <img src="{% static 'icons/icon.svg' %}" alt="" width="48" height="48">
-                <span><strong>Klasse 5e</strong><small>Unser Klassenraum</small></span>
+            <a class="brand" href="/" aria-label="KlassID – Startseite">
+                <img src="{% static 'icons/klassid.svg' %}" alt="" width="48" height="48">
+                <span><strong>KlassID</strong><small>Dein privater Klassenraum</small></span>
             </a>
         </header>
         <main id="main-content" class="auth-main" tabindex="-1">
@@ -31,17 +31,17 @@
                 {% block content %}{% endblock content %}
             </section>
             <aside class="auth-aside" aria-label="Hinweise zur Anmeldung">
-                <p class="eyebrow">Geschützter Bereich</p>
-                <h2>Alles für unsere Klasse an einem Ort.</h2>
-                <p>Termine, Nachrichten und Klasseninformationen sind nur für bestätigte Mitglieder zugänglich.</p>
+                <p class="eyebrow">Gemeinsam organisiert</p>
+                <h2>Der Alltag deiner Klasse. Übersichtlich an einem Ort.</h2>
+                <p>Mitfahrgelegenheiten finden, Mitbringlisten abstimmen, Termine sehen, im Klassenchat schreiben und geschützte Fotos oder Dokumente teilen.</p>
                 <ul class="auth-benefits">
-                    <li>Sicher per HTTPS</li>
-                    <li>Zwei-Faktor-Schutz für Verwaltungskonten</li>
-                    <li>Zugang erst nach E-Mail-Prüfung und Adminfreigabe</li>
+                    <li>Fahr- und Fahrradgruppen einfach koordinieren</li>
+                    <li>Mitbringlisten ohne doppelte Zusagen organisieren</li>
+                    <li>Chat, Kalender, Galerie und PDF-Vorlagen griffbereit</li>
                 </ul>
             </aside>
         </main>
-        <footer class="auth-footer">Klasse 5e · Privater Klassenraum</footer>
+        <footer class="auth-footer">KlassID · Privater Klassenraum</footer>
     </div>
     {% block extra_body %}{% endblock extra_body %}
 </body>

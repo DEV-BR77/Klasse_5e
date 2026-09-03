@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: app/Dockerfile
-    image: klasse-5e-app:0.3.0b1
+    image: klasse-5e-app:0.3.0b2
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-klasse5e}:${POSTGRES_PASSWORD:?Provide database secret}@klasse-5e-db:5432/${POSTGRES_DB:-klasse5e}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Provide Django secret}

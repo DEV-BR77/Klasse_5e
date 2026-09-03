@@ -375,9 +375,11 @@ das Portal nicht.
 
 Das Modul `mobility` prüft bei jedem Zugriff aktive Klassenmitgliedschaft und
 eine aktuelle verifizierte Sorgeberechtigtenbeziehung. Angebote und Gesuche
-enthalten nur grobe Bereiche. Routen werden lokal und schematisch zwischen
-freiwillig angelegten öffentlichen Treffpunkten und der Schule dargestellt;
-eine externe Kartenabfrage oder Live-Ortung findet nicht statt.
+enthalten nur grobe Bereiche. Eine statische lokale Straßenkarte des Wolfsburger
+Schulumfelds dient zur Wahl grober Startbereiche und freiwillig angelegter
+öffentlicher Treffpunkte. Route und Stationen werden im Browser auf dieser
+Datenbasis dargestellt; eine externe Kartenabfrage, Geocodierung oder
+Live-Ortung findet nicht statt.
 
 Reaktionen werden durch den Ersteller angenommen oder abgelehnt. Erst nach
 Annahme kann eine exakte Abholadresse zweckgebunden, befristet und ausschließlich

@@ -19,7 +19,7 @@ from klasse5e.chat.models import ChatReadState, ChatRoom
 from klasse5e.content.models import Post, ProtectedDocument, TeacherProfile
 from klasse5e.events.models import ContributionCategory, ContributionItem, Event, Reservation
 from klasse5e.events.services import cancel_reservation_for_user, create_reservation
-from klasse5e.events.spoonacular import SpoonacularUnavailable, search_recipes
+from klasse5e.events.spoonacular import SpoonacularUnavailable, search_food_items
 from klasse5e.itslearning.models import (
     ItslearningCalendarItem,
     ItslearningConnection,
@@ -141,6 +141,9 @@ def dashboard(request):
     context = _shared(request, "Start", "start")
     portal_connections = _itslearning_connections(request.user)
     webuntis_connections = _webuntis_connections(request.user)
+    webuntis_last_sync = webuntis_connections.order_by("-last_successful_sync_at").values_list(
+        "last_successful_sync_at", flat=True
+    ).first()
     personal_lessons = WebUntisLesson.objects.filter(
         connection__in=webuntis_connections, starts_at__date=day
     ).order_by("starts_at")
@@ -152,6 +155,11 @@ def dashboard(request):
             "app_version": settings.APP_VERSION,
             "release_channel": settings.APP_RELEASE_CHANNEL,
             "selected_day": day,
+            "dashboard_week": [
+                {"date": day + timedelta(days=offset), "selected": offset == 0}
+                for offset in range(7)
+            ],
+            "webuntis_last_sync": webuntis_last_sync,
             "lessons": personal_lessons if personal_lessons.exists() else manual_lessons,
             "homework": WebUntisHomework.objects.filter(
                 connection__in=webuntis_connections,
@@ -206,7 +214,7 @@ def _unread_count(user, school_class):
 def calendar(request):
     school_class = _class_or_404(request.user)
     day = _day_from_request(request)
-    view = request.GET.get("ansicht", "month")
+    view = request.GET.get("ansicht", "week")
     categories = request.GET.getlist("kategorie") if "filter" in request.GET else None
     context = _shared(request, "Kalender", "calendar")
     context.update(
@@ -223,6 +231,10 @@ def calendar(request):
     context["category_query"] = urlencode(
         [("filter", "1"), *(("kategorie", key) for key in active_keys)]
     )
+    context["calendar_week_number"] = day.isocalendar().week
+    context["webuntis_last_sync"] = _webuntis_connections(request.user).order_by(
+        "-last_successful_sync_at"
+    ).values_list("last_successful_sync_at", flat=True).first()
     return render(request, "ui/calendar_v2.html", context)
 
 
@@ -243,8 +255,21 @@ def chat_overview(request):
             messages.success(request, "Der Chatraum wurde angelegt.")
         return redirect("ui-chat")
     rooms = ChatRoom.objects.filter(school_class=school_class).order_by("event_id", "title")
+    room_rows = []
+    for room in rooms:
+        state = ChatReadState.objects.filter(room=room, user=request.user).first()
+        unread = room.messages.exclude(author=request.user)
+        if state:
+            unread = unread.filter(created_at__gt=state.last_read_at)
+        room_rows.append(
+            {
+                "room": room,
+                "unread": unread.count(),
+                "last_message": room.messages.select_related("author__person").order_by("-created_at").first(),
+            }
+        )
     context = _shared(request, "Chat", "chat")
-    context["rooms"] = rooms
+    context["room_rows"] = room_rows
     return render(request, "ui/chat_overview.html", context)
 
 
@@ -259,11 +284,14 @@ def chat_room(request, room_id):
 
         create_message(room, request.user, request.POST.get("body", ""), None)
         return redirect("ui-chat-room", room_id=room.public_id)
+    ChatReadState.objects.update_or_create(
+        room=room, user=request.user, defaults={"last_read_at": timezone.now()}
+    )
     context = _shared(request, room.title, "chat")
     context.update(
         {
             "room": room,
-            "messages": room.messages.select_related("author__person", "reply_to").order_by(
+            "chat_messages": room.messages.select_related("author__person", "reply_to").order_by(
                 "created_at"
             )[:200],
         }
@@ -415,6 +443,21 @@ def events(request):
             status=Event.Status.PUBLISHED,
         )
         item.organizers.add(request.user)
+        requested_items = [
+            label.strip()[:160]
+            for label in request.POST.get("bring_items", "").splitlines()
+            if label.strip()
+        ][:30]
+        if requested_items:
+            category = ContributionCategory.objects.create(event=item, name="Mitbringliste")
+            ContributionItem.objects.bulk_create(
+                [
+                    ContributionItem(
+                        category=category, label=label, desired_quantity=1, unit="Stück"
+                    )
+                    for label in requested_items
+                ]
+            )
         messages.success(request, "Die Veranstaltung wurde veröffentlicht.")
         return redirect("ui-event", event_id=item.pk)
     context = _shared(request, "Veranstaltungen", "more")
@@ -432,15 +475,15 @@ def event(request, event_id):
     reservations = Reservation.objects.filter(
         item__category__event=item, user=request.user, status=Reservation.Status.ACTIVE
     )
-    recipe_query = request.GET.get("recipe_q", "").strip()
-    recipe_results = []
-    recipe_error = ""
+    food_query = request.GET.get("food_q", "").strip()
+    food_results = []
+    food_error = ""
     is_organizer = item.organizers.filter(id=request.user.id).exists()
-    if recipe_query and is_organizer:
+    if food_query and is_organizer:
         try:
-            recipe_results = search_recipes(recipe_query)
+            food_results = search_food_items(food_query)
         except SpoonacularUnavailable:
-            recipe_error = "Die Rezeptdatenbank ist gerade nicht erreichbar."
+            food_error = "Die Lebensmittelsuche ist gerade nicht erreichbar. Du kannst den Eintrag weiterhin frei anlegen."
     context = _shared(request, item.title, "more")
     context.update(
         {
@@ -451,10 +494,10 @@ def event(request, event_id):
             "idempotency_key": secrets.token_urlsafe(18),
             "status": request.GET.get("status", ""),
             "is_organizer": is_organizer,
-            "recipe_query": recipe_query,
-            "recipe_results": recipe_results,
-            "recipe_error": recipe_error,
-            "recipe_status": request.GET.get("recipe_status", ""),
+            "food_query": food_query,
+            "food_results": food_results,
+            "food_error": food_error,
+            "food_status": request.GET.get("food_status", ""),
         }
     )
     return render(request, "ui/event_detail.html", context)

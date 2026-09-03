@@ -37,6 +37,8 @@ class MobilityListing(models.Model):
     direction = models.CharField(max_length=16, choices=Direction)
     title = models.CharField(max_length=160)
     approximate_area = models.CharField(max_length=120, blank=True)
+    start_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    start_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     weekdays = models.JSONField(default=list)
     time_from = models.TimeField()
     time_until = models.TimeField()
@@ -47,6 +49,9 @@ class MobilityListing(models.Model):
         null=True,
         blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(50)],
+    )
+    max_detour_minutes = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(60)]
     )
     valid_until = models.DateField()
     notes = models.CharField(max_length=600, blank=True)

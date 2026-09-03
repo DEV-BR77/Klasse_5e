@@ -1,43 +1,22 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load static %}
 {% block content %}
 <section class="mobility-page">
-  <header class="page-title-row">
-    <div><p class="eyebrow">Gemeinsam sicher zur Schule</p><h1>Mobilität</h1></div>
-    <details class="create-panel"><summary class="button button-primary">Ich suche oder biete</summary>
-      <form method="post" class="content-card form-stack mobility-form">{% csrf_token %}
-        <h2>Neuen Eintrag veröffentlichen</h2>
-        {{ form.non_field_errors }}
-        {% for field in form %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}</label>{% endfor %}
-        <button class="button button-primary" type="submit">Eintrag veröffentlichen</button>
-      </form>
-    </details>
-  </header>
+  <header class="page-heading compact-heading"><div><p class="eyebrow">Sicher gemeinsam ankommen</p><h1>Mobilität</h1><p class="muted">Fahrgemeinschaften und Schulweggruppen auf einen Blick.</p></div><button class="button button-primary" type="button" data-dialog-open="mobility-create-dialog">Fahrt suchen oder anbieten</button></header>
 
-  <aside class="privacy-note"><strong>Standorte bleiben geschützt.</strong> Die Übersicht zeigt nur grobe Bereiche und freiwillig gewählte öffentliche Treffpunkte – niemals Wohnadressen oder Live-Positionen.</aside>
-
-  <form method="get" class="mobility-filters" aria-label="Mobilitätsangebote filtern">
-    <label>Art<select name="kind"><option value="">Suchen und Bieten</option><option value="offer" {% if selected_kind == 'offer' %}selected{% endif %}>Ich biete</option><option value="request" {% if selected_kind == 'request' %}selected{% endif %}>Ich suche</option></select></label>
-    <label>Verkehrsmittel<select name="transport"><option value="">Alle</option><option value="car" {% if selected_transport == 'car' %}selected{% endif %}>Auto</option><option value="bicycle" {% if selected_transport == 'bicycle' %}selected{% endif %}>Fahrrad</option><option value="walk" {% if selected_transport == 'walk' %}selected{% endif %}>Zu Fuß</option></select></label>
-    <button class="button" type="submit">Filtern</button>
+  <form method="get" class="segmented-filters" aria-label="Mobilität filtern" data-auto-submit>
+    <label><span>Art</span><select name="kind"><option value="">Suchen &amp; Bieten</option><option value="offer" {% if selected_kind == 'offer' %}selected{% endif %}>Ich biete</option><option value="request" {% if selected_kind == 'request' %}selected{% endif %}>Ich suche</option></select></label>
+    <label><span>Unterwegs mit</span><select name="transport"><option value="">Alle</option><option value="car" {% if selected_transport == 'car' %}selected{% endif %}>Auto</option><option value="bicycle" {% if selected_transport == 'bicycle' %}selected{% endif %}>Fahrrad</option><option value="walk" {% if selected_transport == 'walk' %}selected{% endif %}>Zu Fuß</option></select></label>
   </form>
 
-  <div class="mobility-layout">
-    <div class="mobility-list" aria-label="Mobilitätseinträge">
-      {% for item in listings %}
-      <article class="mobility-card">
-        <div class="mobility-card-top"><span class="mobility-kind">{{ item.get_kind_display }}</span><span class="status-chip status-{{ item.status }}">{{ item.get_status_display }}</span></div>
-        <h2><a href="{% url 'mobility-detail' item.public_id %}">{{ item.title }}</a></h2>
-        <p class="mobility-meta"><strong>{{ item.get_transport_display }}</strong> · {{ item.get_direction_display }} · {{ item.time_from|time:"H:i" }}–{{ item.time_until|time:"H:i" }}</p>
-        <p>{% if item.approximate_area %}Grober Bereich: {{ item.approximate_area }}{% else %}Öffentlicher Treffpunkt nach Absprache{% endif %}</p>
-        <p class="text-muted">{{ item.weekdays|join:", " }} · {{ item.reaction_count }} Reaktion{{ item.reaction_count|pluralize:"en" }}</p>
-      </article>
-      {% empty %}<p class="empty-state">Noch keine passenden Einträge. Du kannst den ersten sicheren Schulweg anbieten oder suchen.</p>{% endfor %}
-    </div>
-    <aside class="route-preview" aria-label="Sichere Kartenansicht">
-      <h2>Treffpunkte und Routen</h2>
-      <div class="schematic-map"><div class="map-road"></div><span class="map-pin pin-a">A</span><span class="map-pin pin-b">B</span><span class="map-school">Schule</span></div>
-      <p>Die Detailansicht zeigt den Verlauf zwischen öffentlichen Treffpunkten und der Schule. Ohne externe Kartenabfragen.</p>
-    </aside>
-  </div>
+  {{ map_bounds|json_script:"mobility-map-bounds" }}{{ map_listing_points|json_script:"mobility-overview-points" }}
+  <section class="map-panel">
+    <header><div><h2>Wege rund um die Schule</h2><p>Startbereiche sind bewusst ungefähr dargestellt.</p></div><span class="privacy-pill">Lokal &amp; ohne Tracking</span></header>
+    <div class="local-map" data-local-map data-map-src="{% static 'maps/wolfsburg-roads.json' %}" data-bounds-id="mobility-map-bounds" data-points-id="mobility-overview-points" role="img" aria-label="Lokale Straßenkarte von Wolfsburg mit Startbereichen und Schule"><canvas></canvas><div class="map-loading">Karte wird geladen …</div></div>
+    <footer><span><i class="legend-dot legend-start"></i> Startbereich</span><span><i class="legend-dot legend-school"></i> Schule</span><small>© OpenStreetMap-Mitwirkende, ODbL</small></footer>
+  </section>
+
+  <div class="mobility-list" aria-label="Mobilitätseinträge">{% for item in listings %}<a class="mobility-card" href="{% url 'mobility-detail' item.public_id %}"><div class="mobility-card-top"><span class="transport-icon transport-{{ item.transport }}">{% if item.transport == 'car' %}🚗{% elif item.transport == 'bicycle' %}🚲{% else %}🚶{% endif %}</span><span class="mobility-kind">{{ item.get_kind_display }}</span><span class="status-chip status-{{ item.status }}">{{ item.get_status_display }}</span></div><h2>{{ item.title }}</h2><p class="mobility-meta"><strong>{{ item.get_direction_display }}</strong> · {{ item.time_from|time:"H:i" }}–{{ item.time_until|time:"H:i" }}</p><p>{% if item.approximate_area %}Startbereich {{ item.approximate_area }}{% else %}Treffpunkt wird gemeinsam festgelegt{% endif %}</p><footer><span>{{ item.weekdays|join:", " }}</span>{% if item.max_detour_minutes %}<span>bis {{ item.max_detour_minutes }} Min. Umweg</span>{% endif %}<span>{{ item.reaction_count }} Anfragen</span></footer></a>{% empty %}<p class="empty-state">Noch keine passenden Einträge. Starte die erste sichere Schulweggruppe.</p>{% endfor %}</div>
+
+  <dialog id="mobility-create-dialog" class="app-dialog app-dialog-wide"><form method="post" class="form-stack mobility-form">{% csrf_token %}<header class="dialog-head"><div><p class="eyebrow">Neuer Schulweg</p><h2>Fahrt suchen oder anbieten</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header>{{ form.non_field_errors }}<div class="field-pair"><label>Art{{ form.kind }}</label><label>Verkehrsmittel{{ form.transport }}</label><label>Fahrtrichtung{{ form.direction }}</label><label>Kurzer Titel{{ form.title }}</label></div><label>Grober Startbereich{{ form.approximate_area }}</label><section class="map-picker"><h3>Start auf der Karte markieren</h3><p>Tippe ungefähr auf den Startbereich. Die genaue Wohnadresse wird nicht veröffentlicht.</p>{{ form.start_latitude }}{{ form.start_longitude }}<div class="local-map" data-local-map data-map-src="{% static 'maps/wolfsburg-roads.json' %}" data-bounds-id="mobility-map-bounds" data-points-id="mobility-overview-points" data-select-lat="id_start_latitude" data-select-lon="id_start_longitude" role="application" aria-label="Startbereich auf lokaler Straßenkarte auswählen"><canvas></canvas><div class="map-loading">Karte wird geladen …</div></div><output class="map-selection-status">Noch kein Startpunkt markiert.</output></section><fieldset class="weekday-picker"><legend>Wochentage</legend>{{ form.weekdays }}</fieldset><div class="field-pair"><label>Frühestens{{ form.time_from }}</label><label>Spätestens{{ form.time_until }}</label><label>Freie Plätze{{ form.seats }}</label><label>Maximaler Umweg in Minuten{{ form.max_detour_minutes }}</label><label>Gültig bis{{ form.valid_until }}</label></div><label>Hinweise{{ form.notes }}</label><label class="compact-consent">{{ form.safety_confirmed }}<span>Ich kläre Aufsicht, Versicherung, Fahrerlaubnis und Kindersitze direkt mit den Beteiligten.</span></label>{% for field in form %}{% for error in field.errors %}<p class="field-error">{{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}<button class="button button-primary" type="submit">Eintrag veröffentlichen</button></form></dialog>
 </section>
 {% endblock %}

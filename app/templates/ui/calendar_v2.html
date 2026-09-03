@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 <section>
-  <header class="page-heading calendar-heading">
-    <div><p class="eyebrow">Alles an einem Ort</p><h1>Kalender</h1><p class="muted">Unterricht, Termine, Hausaufgaben und Lernplattform gemeinsam planen.</p></div>
-    <a class="button button-secondary" href="/mehr/webuntis/">WebUntis aktualisieren</a>
+  <header class="page-heading calendar-heading compact-heading">
+    <div><p class="eyebrow">Kalenderwoche {{ calendar_week_number }}</p><h1>Kalender</h1></div>
+    <div class="calendar-sync"><span>{% if webuntis_last_sync %}Aktualisiert {{ webuntis_last_sync|date:"H:i" }} Uhr{% else %}Noch nicht synchronisiert{% endif %}</span><a class="icon-button" href="/mehr/webuntis/" aria-label="Schuldaten aktualisieren">↻</a></div>
   </header>
 
   <div class="calendar-toolbar card">
@@ -12,16 +12,16 @@
       <a class="button {% if view == 'week' %}button-primary{% else %}button-quiet{% endif %}" href="?tag={{ selected_day|date:'Y-m-d' }}&amp;ansicht=week&amp;{{ category_query }}"{% if view == "week" %} aria-current="page"{% endif %}>Woche</a>
       <a class="button {% if view == 'day' %}button-primary{% else %}button-quiet{% endif %}" href="?tag={{ selected_day|date:'Y-m-d' }}&amp;ansicht=day&amp;{{ category_query }}"{% if view == "day" %} aria-current="page"{% endif %}>Tag</a>
     </nav>
-    <form class="calendar-filters" method="get">
+    <form class="calendar-filters" method="get" data-auto-submit>
       <input type="hidden" name="tag" value="{{ selected_day|date:'Y-m-d' }}"><input type="hidden" name="ansicht" value="{{ view }}"><input type="hidden" name="filter" value="1">
-      <fieldset><legend>Anzeigen</legend>{% for category in calendar_categories %}<label class="calendar-filter calendar-filter-{{ category.key }}"><input type="checkbox" name="kategorie" value="{{ category.key }}"{% if category.active %} checked{% endif %}> <span class="calendar-dot calendar-dot-{{ category.key }}"></span>{{ category.label }}</label>{% endfor %}</fieldset>
-      <button class="button button-secondary" type="submit">Filter anwenden</button>
+      <fieldset><legend class="sr-only">Anzeigen</legend>{% for category in calendar_categories %}<label class="calendar-filter calendar-filter-{{ category.key }}"><input type="checkbox" name="kategorie" value="{{ category.key }}"{% if category.active %} checked{% endif %}> <span class="calendar-dot calendar-dot-{{ category.key }}"></span>{{ category.label }}</label>{% endfor %}</fieldset>
+      <button class="sr-only" type="submit">Filter anwenden</button>
     </form>
   </div>
 
   <nav class="month-navigation card" aria-label="Zeitraum wechseln">
     <a class="button button-quiet" href="?tag={{ previous_date|date:'Y-m-d' }}&amp;ansicht={{ view }}&amp;{{ category_query }}" aria-label="Vorheriger Zeitraum">&larr; Zur&uuml;ck</a>
-    <h2>{{ period_title }}</h2>
+    <h2>{{ period_title }}{% if view == 'week' %} · KW {{ calendar_week_number }}{% endif %}</h2>
     <a class="button button-quiet" href="?tag={{ next_date|date:'Y-m-d' }}&amp;ansicht={{ view }}&amp;{{ category_query }}" aria-label="N&auml;chster Zeitraum">Weiter &rarr;</a>
   </nav>
 

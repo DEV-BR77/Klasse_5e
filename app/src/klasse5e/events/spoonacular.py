@@ -29,6 +29,27 @@ class Ingredient:
     unit: str
 
 
+@dataclass(frozen=True)
+class FoodSuggestion:
+    source_id: str
+    name: str
+    provider: str = "spoonacular"
+
+
+LOCAL_FOOD_GROUPS = {
+    "obst": ("Äpfel", "Bananen", "Weintrauben", "Mandarinen", "Beeren", "Obstsalat"),
+    "frucht": ("Äpfel", "Bananen", "Weintrauben", "Mandarinen", "Beeren", "Obstsalat"),
+    "getränk": ("Wasser", "Orangensaft", "Apfelsaft", "Multivitaminsaft", "Tee", "Kakao"),
+    "saft": ("Orangensaft", "Apfelsaft", "Multivitaminsaft", "Traubensaft"),
+    "wurst": ("Geflügelaufschnitt", "Salami", "Kochschinken", "Vegetarischer Aufschnitt"),
+    "käse": ("Gouda", "Frischkäse", "Butterkäse", "Camembert", "Veganer Aufstrich"),
+    "brot": ("Vollkornbrot", "Mischbrot", "Toastbrot", "Knäckebrot"),
+    "brötchen": ("Weizenbrötchen", "Mehrkornbrötchen", "Laugenbrötchen", "Glutenfreie Brötchen"),
+    "gebäck": ("Croissants", "Laugengebäck", "Muffins", "Kekse"),
+    "frühstück": ("Brötchen", "Butter", "Marmelade", "Honig", "Käse", "Aufschnitt", "Obst", "Saft"),
+}
+
+
 def _request(path: str, params: dict[str, str] | None = None) -> dict:
     key = settings.SPOONACULAR_API_KEY
     if not key:
@@ -61,6 +82,46 @@ def search_recipes(query: str) -> list[RecipeSuggestion]:
         for item in payload.get("results", [])
         if item.get("id")
     ]
+
+
+def search_food_items(query: str) -> list[FoodSuggestion]:
+    """Return practical bring-list items; common German groups work without the provider."""
+    normalized = query.strip().lower()[:100]
+    if not normalized:
+        return []
+    local = []
+    for key, labels in LOCAL_FOOD_GROUPS.items():
+        if key in normalized or normalized in key:
+            local.extend(labels)
+    suggestions = [
+        FoodSuggestion(source_id=f"local-{index}", name=name, provider="local")
+        for index, name in enumerate(dict.fromkeys(local))
+    ]
+    if len(suggestions) >= settings.SPOONACULAR_MAX_RESULTS:
+        return suggestions[: settings.SPOONACULAR_MAX_RESULTS]
+    try:
+        payload = _request(
+            "food/ingredients/autocomplete",
+            {
+                "query": normalized,
+                "number": str(settings.SPOONACULAR_MAX_RESULTS),
+                "metaInformation": "false",
+            },
+        )
+    except SpoonacularUnavailable:
+        if suggestions:
+            return suggestions
+        raise
+    existing = {item.name.casefold() for item in suggestions}
+    for item in payload if isinstance(payload, list) else payload.get("results", []):
+        name = str(item.get("name") or "").strip()[:160]
+        if not name or name.casefold() in existing:
+            continue
+        suggestions.append(
+            FoodSuggestion(source_id=str(item.get("id") or name), name=name)
+        )
+        existing.add(name.casefold())
+    return suggestions[: settings.SPOONACULAR_MAX_RESULTS]
 
 
 def recipe_ingredients(recipe_id: int) -> tuple[str, list[Ingredient]]:

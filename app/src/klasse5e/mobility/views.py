@@ -24,6 +24,9 @@ from .models import (
 from .policies import is_verified_guardian
 from .services import create_reaction, decide_reaction, revoke_pickup, share_pickup
 
+MAP_BOUNDS = {"south": 52.329, "west": 10.623, "north": 52.509, "east": 10.913}
+DEFAULT_SCHOOL_POINT = {"latitude": 52.419130, "longitude": 10.768277}
+
 
 def _class_and_guardian_or_404(user):
     school_class = active_class_for_user(user)
@@ -51,6 +54,41 @@ def _route_points(listing):
         {"x": 40 + index * (320 / (count - 1)), "y": 95 if index % 2 else 65, "label": label}
         for index, label in enumerate(labels)
     ]
+
+
+def _map_school(school):
+    return {
+        "latitude": float(school.latitude or DEFAULT_SCHOOL_POINT["latitude"]),
+        "longitude": float(school.longitude or DEFAULT_SCHOOL_POINT["longitude"]),
+        "label": school.short_name or school.name,
+        "kind": "school",
+    }
+
+
+def _map_points(listing):
+    points = []
+    if listing.start_latitude is not None and listing.start_longitude is not None:
+        points.append(
+            {
+                "latitude": float(listing.start_latitude),
+                "longitude": float(listing.start_longitude),
+                "label": listing.approximate_area or "Startbereich",
+                "kind": "start",
+            }
+        )
+    points.extend(
+        {
+            "latitude": float(point.latitude),
+            "longitude": float(point.longitude),
+            "label": point.name,
+            "kind": "meeting",
+        }
+        for point in listing.meeting_points.filter(
+            active=True, latitude__isnull=False, longitude__isnull=False
+        )
+    )
+    points.append(_map_school(listing.school_class.school))
+    return points
 
 
 def _can_moderate(user, school_class):
@@ -106,6 +144,20 @@ def overview(request):
             "form": form,
             "selected_kind": kind,
             "selected_transport": transport,
+            "school_class": school_class,
+            "map_bounds": MAP_BOUNDS,
+            "map_school": _map_school(school_class.school),
+            "map_listing_points": [
+                {
+                    "latitude": float(item.start_latitude),
+                    "longitude": float(item.start_longitude),
+                    "label": item.approximate_area or item.title,
+                    "kind": item.transport,
+                }
+                for item in listings
+                if item.start_latitude is not None and item.start_longitude is not None
+            ]
+            + [_map_school(school_class.school)],
         },
     )
 
@@ -133,10 +185,13 @@ def detail(request, public_id):
             "page_title": listing.title,
             "active_section": "mobility",
             "listing": listing,
+            "school_class": listing.school_class,
             "my_reaction": my_reaction,
             "reactions": reactions,
             "disclosures": disclosures,
             "route_points": _route_points(listing),
+            "map_bounds": MAP_BOUNDS,
+            "map_points": _map_points(listing),
             "idempotency_key": secrets.token_urlsafe(18),
             "can_moderate": _can_moderate(request.user, listing.school_class),
             "report_count": listing.reports.filter(resolved_at__isnull=True).count(),

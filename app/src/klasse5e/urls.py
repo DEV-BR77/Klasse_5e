@@ -151,6 +151,11 @@ urlpatterns = [
         event_views.import_recipe,
         name="event-recipe-import",
     ),
+    path(
+        "events/<int:event_id>/food/<str:source_id>/import/",
+        event_views.import_food_item,
+        name="event-food-import",
+    ),
     path("items/<int:item_id>/reserve/", event_views.reserve_item, name="reserve-item"),
     path(
         "reservations/<int:reservation_id>/cancel/",

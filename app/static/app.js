@@ -2,9 +2,83 @@
   const live = document.querySelector("#live-status");
   const announce = (text) => { if (live) live.textContent = text; };
   const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || "";
+  document.querySelectorAll("[data-auto-submit]").forEach((form) => form.addEventListener("change", () => form.requestSubmit()));
+  document.querySelectorAll("[data-list-filter]").forEach((input) => input.addEventListener("input", () => {
+    const list = document.getElementById(input.dataset.listFilter);
+    const query = input.value.trim().toLocaleLowerCase("de");
+    list?.querySelectorAll("[data-filter-text]").forEach((item) => { item.hidden = !item.dataset.filterText.includes(query); });
+  }));
   document.querySelectorAll("[data-confirm]").forEach((form) => form.addEventListener("submit", (event) => { if (!window.confirm(form.dataset.confirm)) event.preventDefault(); }));
   document.querySelectorAll("[data-dialog-open]").forEach((button) => button.addEventListener("click", () => document.getElementById(button.dataset.dialogOpen)?.showModal()));
   document.querySelectorAll("[data-dialog-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog")?.close()));
+  document.querySelectorAll("dialog").forEach((dialog) => dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); }));
+
+  const readJsonScript = (id, fallback) => {
+    try { return JSON.parse(document.getElementById(id)?.textContent || JSON.stringify(fallback)); } catch (_) { return fallback; }
+  };
+  document.querySelectorAll("[data-local-map]").forEach(async (map) => {
+    const canvas = map.querySelector("canvas");
+    const loading = map.querySelector(".map-loading");
+    if (!canvas) return;
+    const bounds = readJsonScript(map.dataset.boundsId, {south:52.329, west:10.623, north:52.509, east:10.913});
+    const points = readJsonScript(map.dataset.pointsId, []);
+    let roads = [];
+    try {
+      const response = await fetch(map.dataset.mapSrc, {cache:"force-cache"});
+      if (response.ok) roads = (await response.json()).roads || [];
+    } catch (_) { /* the picker remains usable with its local fallback grid */ }
+    loading?.remove();
+    const selected = [];
+    const context = canvas.getContext("2d");
+    const project = (longitude, latitude, width, height) => ({
+      x: (longitude - bounds.west) / (bounds.east - bounds.west) * width,
+      y: (bounds.north - latitude) / (bounds.north - bounds.south) * height,
+    });
+    const draw = () => {
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const width = Math.max(320, map.clientWidth);
+      const height = Math.max(280, map.clientHeight);
+      canvas.width = width * ratio; canvas.height = height * ratio;
+      canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      context.fillStyle = "#eef2ee"; context.fillRect(0, 0, width, height);
+      context.strokeStyle = "#dce4df"; context.lineWidth = 1;
+      for (let x=0; x<width; x+=48) { context.beginPath(); context.moveTo(x,0); context.lineTo(x,height); context.stroke(); }
+      for (let y=0; y<height; y+=48) { context.beginPath(); context.moveTo(0,y); context.lineTo(width,y); context.stroke(); }
+      roads.forEach((road) => {
+        context.beginPath();
+        road.points.forEach(([longitude, latitude], index) => { const p=project(longitude,latitude,width,height); index ? context.lineTo(p.x,p.y) : context.moveTo(p.x,p.y); });
+        const major = ["motorway","trunk","primary","secondary"].includes(road.kind);
+        context.strokeStyle = major ? "#c8d0d5" : road.kind === "cycleway" ? "#9fd7b1" : "#dde2e5";
+        context.lineWidth = major ? 2.4 : 1.15; context.stroke();
+      });
+      const route = [...points, ...selected].filter((point) => Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude)));
+      if (map.dataset.connectPoints === "true" && route.length > 1) {
+        context.beginPath(); route.forEach((point,index) => { const p=project(Number(point.longitude),Number(point.latitude),width,height); index ? context.lineTo(p.x,p.y) : context.moveTo(p.x,p.y); });
+        context.strokeStyle="#6a54d9"; context.lineWidth=5; context.lineCap="round"; context.lineJoin="round"; context.stroke();
+      }
+      route.forEach((point,index) => {
+        const p=project(Number(point.longitude),Number(point.latitude),width,height);
+        const school=point.kind === "school"; context.beginPath(); context.arc(p.x,p.y,school?10:8,0,Math.PI*2); context.fillStyle=school?"#ec6f5f":"#6256c7"; context.fill(); context.lineWidth=3; context.strokeStyle="#fff"; context.stroke();
+        if (school || route.length <= 8) { context.font="600 12px system-ui"; context.fillStyle="#263142"; context.fillText(point.label || (school?"Schule":String(index+1)),p.x+12,p.y-10); }
+      });
+    };
+    const observer = new ResizeObserver(draw); observer.observe(map); draw();
+    if (map.dataset.selectLat && map.dataset.selectLon) {
+      map.classList.add("is-picker");
+      map.addEventListener("click", (event) => {
+        const rectangle = canvas.getBoundingClientRect();
+        const longitude = bounds.west + ((event.clientX - rectangle.left) / rectangle.width) * (bounds.east - bounds.west);
+        const latitude = bounds.north - ((event.clientY - rectangle.top) / rectangle.height) * (bounds.north - bounds.south);
+        document.getElementById(map.dataset.selectLat).value = latitude.toFixed(6);
+        document.getElementById(map.dataset.selectLon).value = longitude.toFixed(6);
+        selected.splice(0, selected.length, {latitude, longitude, label:"Ausgewählt", kind:"start"});
+        const output = map.parentElement?.querySelector(".map-selection-status");
+        if (output) output.textContent = "Position markiert. Du kannst sie durch erneutes Tippen verschieben.";
+        draw();
+      });
+    }
+  });
 
   let installPrompt;
   const installButton = document.querySelector("[data-install-button]");

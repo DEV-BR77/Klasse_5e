@@ -295,7 +295,7 @@ def manifest(request):
             "theme_color": "#174b7a",
             "icons": [
                 {
-                    "src": "/static/icons/icon.svg",
+                    "src": "/static/icons/klassid.svg",
                     "sizes": "any",
                     "type": "image/svg+xml",
                     "purpose": "any maskable",
@@ -306,7 +306,7 @@ def manifest(request):
 
 
 def service_worker(request):
-    script = """const CACHE='klassid-shell-v2';self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['/offline/','/static/app.css']))));self.addEventListener('fetch',e=>{if(e.request.mode==='navigate')e.respondWith(fetch(e.request).catch(()=>caches.match('/offline/')))});self.addEventListener('push',e=>{let d={title:'KlassID',body:'Neue geschützte Information',url:'/'};try{d={...d,...e.data.json()}}catch(_){}e.waitUntil(self.registration.showNotification(d.title,{body:d.body,tag:d.tag||d.message_id,data:{url:d.url},icon:d.icon||'/static/icons/icon.svg'}))});self.addEventListener('notificationclick',e=>{e.notification.close();e.waitUntil(clients.openWindow(e.notification.data?.url||'/'))});"""
+    script = """const CACHE='klassid-shell-v3';self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['/offline/','/static/app.css?v=3']))));self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));self.addEventListener('fetch',e=>{if(e.request.mode==='navigate')e.respondWith(fetch(e.request).catch(()=>caches.match('/offline/')))});self.addEventListener('push',e=>{let d={title:'KlassID',body:'Neue geschützte Information',url:'/'};try{d={...d,...e.data.json()}}catch(_){}e.waitUntil(self.registration.showNotification(d.title,{body:d.body,tag:d.tag||d.message_id,data:{url:d.url},icon:d.icon||'/static/icons/klassid.svg'}))});self.addEventListener('notificationclick',e=>{e.notification.close();e.waitUntil(clients.openWindow(e.notification.data?.url||'/'))});"""
     return HttpResponse(script, content_type="application/javascript")
 
 

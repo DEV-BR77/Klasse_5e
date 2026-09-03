@@ -1,1 +1,44 @@
-{% extends "base.html" %}{% block content %}<section><header class="page-title-row"><h1>Home</h1><time datetime="{{ selected_day|date:'Y-m-d' }}">{{ selected_day|date:"l, d. F Y" }}</time></header><div class="card-grid"><article class="content-card {% if notification_counts.homework %}is-new{% endif %}"><h2>Hausaufgaben {% if notification_counts.homework %}<span class="new-label">● {{ notification_counts.homework }} neu</span>{% endif %}</h2>{% if enabled_modules.webuntis_homework %}<ul>{% for item in homework %}<li><strong>{{ item.subject|default:"Aufgabe" }}</strong>{% if item.due_on %} · bis {{ item.due_on|date:"d.m.Y" }}{% endif %}<br>{{ item.text|truncatechars:180 }}</li>{% empty %}<li>Keine offenen Hausaufgaben aus der letzten Synchronisation.</li>{% endfor %}</ul><a class="button" href="/mehr/webuntis/">Synchronisation &amp; Einstellungen</a>{% else %}<p>Für diese Klasse derzeit deaktiviert.</p>{% endif %}</article><article class="content-card"><h2>Unterricht</h2><ul>{% for lesson in lessons %}<li><strong>{{ lesson.starts_at|date:"H:i" }}–{{ lesson.ends_at|date:"H:i" }}</strong> {{ lesson.subject }}{% if lesson.teacher_label %} bei {{ lesson.teacher_label }}{% endif %}{% if lesson.room %}, Raum {{ lesson.room }}{% endif %}</li>{% empty %}<li>Noch keine Unterrichtsstunden für diesen Tag.</li>{% endfor %}</ul></article><article class="content-card {% if notification_counts.calendar %}is-new{% endif %}"><h2>Termine {% if notification_counts.calendar %}<span class="new-label">● {{ notification_counts.calendar }} neu</span>{% endif %}</h2><ul>{% for item in calendar_entries %}<li>{{ item }}</li>{% empty %}<li>Noch keine Termine für diesen Tag.</li>{% endfor %}</ul><a class="button" href="/kalender/">Kalender öffnen</a></article>{% if enabled_modules.chat %}<article class="content-card {% if chat_unread %}is-new{% endif %}"><h2>Chat {% if chat_unread %}<span class="new-label">● {{ chat_unread }} neu</span>{% endif %}</h2><p>Aktivität aus deiner Klasse.</p><a class="button" href="/chat/">Chat öffnen</a></article>{% endif %}<article class="content-card {% if notification_counts.news %}is-new{% endif %}"><h2>News und Informationen {% if notification_counts.news %}<span class="new-label">● {{ notification_counts.news }} neu</span>{% endif %}</h2><ul>{% for item in posts %}<li><a href="/mehr/aktuelles/{{ item.id }}/">{{ item.title }}</a></li>{% empty %}<li>Noch keine veröffentlichten Beiträge.</li>{% endfor %}</ul></article></div></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="dashboard-page">
+  <header class="welcome-panel">
+    <div><p class="eyebrow">Guten Tag, {{ request.user.person.first_name|default:request.user.email }}</p><h1>Was steht heute an?</h1><p>{{ family_name }} · {{ membership.school_class.display_name|default:membership.school_class.name }}</p></div>
+    <button class="icon-button refresh-button" type="button" onclick="window.location.reload()" aria-label="Startseite aktualisieren">↻</button>
+  </header>
+
+  <nav class="quick-access" aria-label="Schnellzugriff">
+    {% if enabled_modules.webuntis_homework %}<a href="#homework"><span class="quick-icon quick-lilac">{% include "ui/_icon.html" with name="document" %}</span><strong>Hausaufgaben</strong>{% if notification_counts.homework %}<small>{{ notification_counts.homework }} neu</small>{% endif %}</a>{% endif %}
+    <a href="/kalender/"><span class="quick-icon quick-blue">{% include "ui/_icon.html" with name="calendar" %}</span><strong>Kalender</strong></a>
+    {% if enabled_modules.chat %}<a href="/chat/"><span class="quick-icon quick-green">{% include "ui/_icon.html" with name="chat" %}</span><strong>Chat</strong>{% if chat_unread %}<small>{{ chat_unread }} neu</small>{% endif %}</a>{% endif %}
+    {% if enabled_modules.mobility %}<a href="/mehr/mobilitaet/"><span class="quick-icon quick-orange">{% include "ui/_icon.html" with name="people" %}</span><strong>Mobilität</strong></a>{% endif %}
+  </nav>
+
+  <section class="today-strip" aria-labelledby="today-heading">
+    <div class="section-heading"><div><p class="eyebrow">Diese Woche</p><h2 id="today-heading">Dein Überblick</h2></div><a href="/kalender/">Alle Termine</a></div>
+    <div class="mini-week">{% for item in dashboard_week %}<a href="/kalender/?tag={{ item.date|date:'Y-m-d' }}&amp;ansicht=day" {% if item.selected %}aria-current="date"{% endif %}><span>{{ item.date|date:"D" }}</span><strong>{{ item.date|date:"d" }}</strong></a>{% endfor %}</div>
+  </section>
+
+  <div class="dashboard-modern-grid">
+    <article class="feature-card schedule-card">
+      <header class="card-header"><div><p class="eyebrow">Heute</p><h2>Stundenplan</h2></div><span class="soft-badge">{{ lessons|length }} Einträge</span></header>
+      <ol class="timeline-list">{% for lesson in lessons %}<li><time>{{ lesson.starts_at|date:"H:i" }}</time><div><strong>{{ lesson.subject|default:"Unterricht" }}</strong><small>{% if lesson.room %}Raum {{ lesson.room }}{% endif %}{% if lesson.teacher_label %} · {{ lesson.teacher_label }}{% endif %}</small></div></li>{% empty %}<li class="empty-compact">Heute ist kein Unterricht eingetragen.</li>{% endfor %}</ol>
+    </article>
+
+    <article id="homework" class="feature-card">
+      <header class="card-header"><div><p class="eyebrow">Demnächst</p><h2>Hausaufgaben</h2></div>{% if notification_counts.homework %}<span class="new-label">{{ notification_counts.homework }} neu</span>{% endif %}</header>
+      <ul class="task-list">{% for item in homework %}<li><span class="task-icon">{% include "ui/_icon.html" with name="document" %}</span><div><strong>{{ item.subject|default:"Aufgabe" }}</strong><p>{{ item.text|truncatechars:120 }}</p>{% if item.due_on %}<small>Bis {{ item.due_on|date:"d.m.Y" }}</small>{% endif %}</div></li>{% empty %}<li class="empty-compact">Keine offenen Hausaufgaben.</li>{% endfor %}</ul>
+    </article>
+
+    <article class="feature-card">
+      <header class="card-header"><div><p class="eyebrow">Klasse</p><h2>Aktuelles</h2></div>{% if notification_counts.news %}<span class="new-label">{{ notification_counts.news }} neu</span>{% endif %}</header>
+      <ul class="news-list">{% for item in posts %}<li><a href="/mehr/aktuelles/{{ item.id }}/"><span>{% include "ui/_icon.html" with name="news" %}</span><strong>{{ item.title }}</strong><small>Mehr lesen →</small></a></li>{% empty %}<li class="empty-compact">Keine neuen Beiträge.</li>{% endfor %}</ul>
+    </article>
+
+    <article class="feature-card events-card">
+      <header class="card-header"><div><p class="eyebrow">Vormerken</p><h2>Nächste Veranstaltungen</h2></div><a href="/mehr/veranstaltungen/">Alle</a></header>
+      <ul class="event-preview-list">{% for item in events %}<li><time><strong>{{ item.starts_at|date:"d" }}</strong><span>{{ item.starts_at|date:"M" }}</span></time><div><a href="/mehr/veranstaltungen/{{ item.id }}/"><strong>{{ item.title }}</strong></a><small>{{ item.starts_at|date:"H:i" }} Uhr · {{ item.location }}</small></div></li>{% empty %}<li class="empty-compact">Keine Veranstaltung geplant.</li>{% endfor %}</ul>
+    </article>
+  </div>
+  <p class="sync-note">{% if webuntis_last_sync %}Schuldaten zuletzt aktualisiert: {{ webuntis_last_sync|date:"d.m.Y, H:i" }} Uhr{% else %}Noch keine Schuldaten synchronisiert.{% endif %}</p>
+</section>
+{% endblock %}

@@ -373,3 +373,23 @@ den Provider zu übertragen oder ihn zur Laufzeitvoraussetzung zu machen.
 **Folge:** Ein Wechsel zu Straßenrouting oder Kartenkacheln erfordert eine neue
 Anbieter-, Datenschutz- und Betriebsentscheidung. API-Secrets werden nur zur
 Prozesslaufzeit aus dem HomeOps-Speicher bereitgestellt.
+
+# ADR-027: Offline-Straßenkarte und lebensmittelbezogene Vorschläge
+
+**Entscheidung:** Die schematische Mobilitätsdarstellung wird durch eine lokal
+ausgelieferte Straßenkarte für den Raum Wolfsburg ersetzt. Ihre statische
+Datenbasis wird reproduzierbar aus OpenStreetMap-Straßengeometrien erzeugt; die
+Browseranwendung kontaktiert keinen Kartendienst. Startbereiche und öffentliche
+Treffpunkte werden direkt auf dieser Karte gewählt. Eine echte Navigation oder
+Live-Ortung findet weiterhin nicht statt.
+
+Spoonacular ergänzt die Mitbringliste ausschließlich mit einzelnen
+Zutatenvorschlägen. Eine lokale deutsche Grundauswahl bleibt immer verfügbar.
+
+**Grund:** Eltern benötigen räumliche Orientierung und kurze, alltagstaugliche
+Lebensmittelvorschläge, ohne dass Familienstandorte oder Eventkontext an externe
+Anbieter übertragen werden.
+
+**Folge:** Die OSM-/ODbL-Attribution bleibt sichtbar und die Kartendatei wird
+bei Bedarf mit `tools/Build-LocalMobilityMap.py` aktualisiert. Straßenrouting
+oder externe Kacheln benötigen weiterhin eine neue Entscheidung.

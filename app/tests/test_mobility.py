@@ -74,16 +74,32 @@ def test_only_verified_guardian_can_open_and_create(client, guardian, school_cla
             "direction": "to_school",
             "title": "Fahrradgruppe Nord",
             "approximate_area": "Nord",
+            "start_latitude": "52.430000",
+            "start_longitude": "10.750000",
             "weekdays": ["mo", "tu", "we"],
             "time_from": "07:30",
             "time_until": "07:50",
             "seats": "0",
+            "max_detour_minutes": "",
             "valid_until": str(timezone.localdate() + timedelta(days=30)),
             "safety_confirmed": "on",
         },
     )
     assert response.status_code == 302
-    assert MobilityListing.objects.get().creator == guardian
+    listing = MobilityListing.objects.get()
+    assert listing.creator == guardian
+    assert float(listing.start_latitude) == 52.43
+
+
+@pytest.mark.django_db
+def test_map_picker_replaces_manual_coordinate_fields(client, guardian, school_class):
+    verify_guardian(guardian, school_class)
+    client.force_login(guardian)
+    response = client.get("/mehr/mobilitaet/")
+    html = response.content.decode()
+    assert "data-local-map" in html
+    assert "Start auf der Karte markieren" in html
+    assert "Breitengrad (optional)" not in html
 
 
 @pytest.mark.django_db

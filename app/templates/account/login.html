@@ -6,7 +6,7 @@
 {% block content %}
     <p class="eyebrow">Willkommen zurück</p>
     <h1 id="auth-heading">Anmeldung</h1>
-    <p class="auth-intro">Melde dich mit deinem bestätigten Klasse-5e-Konto an.</p>
+    <p class="auth-intro">Melde dich mit deinem bestätigten KlassID-Konto an.</p>
 
     {% url 'account_login' as login_url %}
     {% element form form=form method="post" action=login_url tags="entrance,login" %}
@@ -26,7 +26,7 @@
             Mit einem Passkey anmelden
         {% endelement %}
     {% endif %}
-    <p class="auth-intro">Noch kein Konto? <a href="{% url 'register' %}">Registrierung zur Prüfung einreichen</a>.</p>
+    <p class="auth-intro auth-signup">Noch kein Konto? <a href="{% url 'register' %}">Jetzt registrieren</a>.</p>
 {% endblock content %}
 
 {% block extra_body %}

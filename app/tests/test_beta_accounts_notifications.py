@@ -253,11 +253,11 @@ def test_push_self_test_handles_stale_failure_and_rate_limit(client, guardian):
 @pytest.mark.django_db
 def test_settings_navigation_shows_admin_link_only_to_authorized_admins(client, guardian, admin_user):
     client.force_login(guardian)
-    guardian_page = client.get("/einstellungen/profil/").content.decode()
-    assert "Benachrichtigungen &amp; App" in guardian_page
+    guardian_page = client.get("/mehr/").content.decode()
+    assert "Benachrichtigungen" in guardian_page
     assert "Portal verwalten" not in guardian_page
 
     client.force_login(admin_user)
-    admin_page = client.get("/einstellungen/profil/").content.decode()
-    assert "Benachrichtigungen &amp; App" in admin_page
+    admin_page = client.get("/mehr/").content.decode()
+    assert "Benachrichtigungen" in admin_page
     assert "Portal verwalten" in admin_page
