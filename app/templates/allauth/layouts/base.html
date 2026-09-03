@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#5558a6">
     <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="stylesheet" href="{% static 'app.css' %}">
+    <link rel="stylesheet" href="{% static 'app.css' %}?v=4">
     <title>{% block head_title %}{% trans "Account" %}{% endblock head_title %} · KlassID</title>
     {% block extra_head %}{% endblock extra_head %}
 </head>
@@ -41,7 +41,7 @@
                 </ul>
             </aside>
         </main>
-        <footer class="auth-footer">KlassID · Privater Klassenraum · <a href="{% url 'privacy-information' %}">Datenschutz</a> · <a href="{% url 'imprint' %}">Impressum</a> · <a href="{% url 'terms' %}">Nutzungshinweise</a></footer>
+        {% include "includes/site_footer.html" %}
     </div>
     {% block extra_body %}{% endblock extra_body %}
 </body>

@@ -1,1 +1,27 @@
-{% extends "base.html" %}{% block content %}<article class="content-card prose legal-page"><p class="eyebrow">Pflichtangaben</p><h1>Impressum</h1><h2>Verantwortlich für dieses private Klassenportal</h2><p>Bjoern Radke<br>Elternvertretung der Klasse 5e<br>Wolfsburg, Deutschland</p><p>E-Mail: <a href="mailto:kontakt@klassid.de">kontakt@klassid.de</a></p><h2>Einordnung</h2><p>KlassID ist ein privat und nichtkommerziell betriebenes Organisationsportal für einen geschlossenen Klassenverband. Es ist kein offizielles Angebot der Schule, des Schulträgers oder eingebundener Datenanbieter.</p><h2>Redaktionelle Verantwortung</h2><p>Bjoern Radke, Anschrift wie oben. Hinweise zu rechtswidrigen oder fehlerhaften Inhalten bitte unverzüglich an die genannte Kontaktadresse senden.</p><p class="notice">Vor einer öffentlichen oder geschäftsmäßigen Nutzung ist die vollständige ladungsfähige Straßenanschrift rechtlich zu prüfen und hier zu ergänzen.</p></article>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<article class="content-card prose legal-page">
+  <p class="eyebrow">Anbieterkennzeichnung</p>
+  <h1>Impressum</h1>
+
+  <h2>Verantwortlich für dieses Portal</h2>
+  <address>
+    Björn Radke<br>
+    Weißdornweg 4<br>
+    38440 Wolfsburg<br>
+    Deutschland
+  </address>
+
+  <h2>Kontakt</h2>
+  <p>E-Mail: <a href="mailto:kontakt@klassid.de">kontakt@klassid.de</a></p>
+
+  <h2>Hinweis zum Angebot</h2>
+  <p>KlassID ist ein privat und nichtkommerziell betriebenes Organisationsportal für einen geschlossenen Klassenverband. Es ist kein offizielles Angebot einer Schule, eines Schulträgers oder eines eingebundenen Datenanbieters.</p>
+
+  <h2>Hinweise zu Inhalten</h2>
+  <p>Hinweise zu rechtswidrigen oder fehlerhaften Inhalten können an die oben genannte Kontaktadresse gesendet werden.</p>
+
+  <h2>Rechtliche Hinweise</h2>
+  <p>KlassID verwendet freie und quelloffene Software. Eine Übersicht der eingesetzten Hauptkomponenten und ihrer Lizenzbedingungen findest du unter <a href="{% url 'open-source-licenses' %}">Open-Source-Lizenzen</a>.</p>
+</article>
+{% endblock %}

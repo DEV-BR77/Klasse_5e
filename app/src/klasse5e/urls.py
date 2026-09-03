@@ -167,6 +167,11 @@ urlpatterns = [
         name="event-recipe-import",
     ),
     path("impressum/", TemplateView.as_view(template_name="legal/imprint.html"), name="imprint"),
+    path(
+        "open-source-lizenzen/",
+        TemplateView.as_view(template_name="legal/open_source_licenses.html"),
+        name="open-source-licenses",
+    ),
     path("nutzung/", TemplateView.as_view(template_name="legal/terms.html"), name="terms"),
     path("mehr/reservierungen/<int:reservation_id>/erledigt/", ui_views.fulfill_reservation, name="ui-fulfill-reservation"),
     path(

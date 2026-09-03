@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="content-card prose legal-page license-page">
+  <p class="eyebrow">Rechtliche Hinweise</p>
+  <h1>Open-Source-Lizenzen</h1>
+  <p class="lede">KlassID baut auf freier und quelloffener Software auf. Die folgende kompakte Übersicht nennt die unmittelbar eingesetzten Hauptkomponenten. Die Rechte an diesen Komponenten verbleiben bei den jeweiligen Urheberinnen, Urhebern und Projekten.</p>
+  <p>Maßgeblich sind die vollständigen Lizenztexte und Urheberhinweise der verlinkten Originalprojekte sowie die Hinweise, die mit den installierten Komponenten ausgeliefert werden.</p>
+
+  <h2>Webportal und Anmeldung</h2>
+  <div class="license-list">
+    <p><a href="https://www.djangoproject.com/" rel="noopener">Django</a><span>Webanwendung</span><strong>BSD-3-Clause</strong></p>
+    <p><a href="https://wagtail.org/" rel="noopener">Wagtail</a><span>Inhaltsverwaltung</span><strong>BSD-3-Clause</strong></p>
+    <p><a href="https://allauth.org/" rel="noopener">django-allauth</a><span>Anmeldung und Mehrfaktor-Authentisierung</span><strong>MIT</strong></p>
+    <p><a href="https://github.com/jsocol/django-ratelimit" rel="noopener">django-ratelimit</a><span>Schutz vor zu vielen Anfragen</span><strong>Apache-2.0</strong></p>
+    <p><a href="https://whitenoise.readthedocs.io/" rel="noopener">WhiteNoise</a><span>Auslieferung statischer Dateien</span><strong>MIT</strong></p>
+    <p><a href="https://gunicorn.org/" rel="noopener">Gunicorn</a><span>Webserver-Schnittstelle</span><strong>MIT</strong></p>
+    <p><a href="https://www.psycopg.org/psycopg3/" rel="noopener">Psycopg</a><span>PostgreSQL-Anbindung</span><strong>LGPL-3.0-only</strong></p>
+    <p><a href="https://cryptography.io/" rel="noopener">cryptography</a><span>Kryptografische Funktionen</span><strong>Apache-2.0 oder BSD-3-Clause</strong></p>
+  </div>
+
+  <h2>Dokumente, Bilder und Benachrichtigungen</h2>
+  <div class="license-list">
+    <p><a href="https://python-pillow.github.io/" rel="noopener">Pillow</a><span>Bildverarbeitung</span><strong>MIT-CMU</strong></p>
+    <p><a href="https://github.com/jsvine/pdfplumber" rel="noopener">pdfplumber</a><span>PDF-Auswertung</span><strong>MIT</strong></p>
+    <p><a href="https://www.reportlab.com/" rel="noopener">ReportLab</a><span>PDF-Erzeugung</span><strong>BSD</strong></p>
+    <p><a href="https://github.com/lincolnloop/python-qrcode" rel="noopener">python-qrcode</a><span>QR-Codes</span><strong>BSD-3-Clause</strong></p>
+    <p><a href="https://github.com/web-push-libs/pywebpush" rel="noopener">pywebpush</a><span>Web-Push-Benachrichtigungen</span><strong>MPL-2.0</strong></p>
+    <p><a href="https://playwright.dev/python/" rel="noopener">Playwright</a><span>Automatisierte Browser-Verarbeitung</span><strong>Apache-2.0</strong></p>
+  </div>
+
+  <h2>Lokale Bilderkennung</h2>
+  <p>Dieser Bereich ist standardmäßig deaktiviert. Wenn er technisch freigegeben wird, verwendet der lokale Dienst insbesondere:</p>
+  <div class="license-list">
+    <p><a href="https://fastapi.tiangolo.com/" rel="noopener">FastAPI</a><span>Lokale Dienstschnittstelle</span><strong>MIT</strong></p>
+    <p><a href="https://numpy.org/" rel="noopener">NumPy</a><span>Numerische Verarbeitung</span><strong>BSD-3-Clause</strong></p>
+    <p><a href="https://onnxruntime.ai/" rel="noopener">ONNX Runtime</a><span>Lokale Modellausführung</span><strong>MIT</strong></p>
+    <p><a href="https://github.com/opencv/opencv-python" rel="noopener">OpenCV Python</a><span>Bildanalyse</span><strong>Apache-2.0</strong></p>
+    <p><a href="https://www.sqlalchemy.org/" rel="noopener">SQLAlchemy</a><span>Datenbankzugriff des lokalen Dienstes</span><strong>MIT</strong></p>
+    <p><a href="https://alembic.sqlalchemy.org/" rel="noopener">Alembic</a><span>Datenbankmigrationen</span><strong>MIT</strong></p>
+    <p><a href="https://www.uvicorn.org/" rel="noopener">Uvicorn</a><span>Lokaler Anwendungsserver</span><strong>BSD-3-Clause</strong></p>
+    <p><a href="https://github.com/pydantic/pydantic-settings" rel="noopener">pydantic-settings</a><span>Konfiguration</span><strong>MIT</strong></p>
+    <p><a href="https://github.com/Kludex/python-multipart" rel="noopener">python-multipart</a><span>Dateiübertragung zur lokalen Schnittstelle</span><strong>Apache-2.0</strong></p>
+  </div>
+
+  <p class="license-note">Diese Übersicht ist ein Transparenzhinweis und verändert die Lizenzbedingungen der genannten Projekte nicht.</p>
+</article>
+{% endblock %}
