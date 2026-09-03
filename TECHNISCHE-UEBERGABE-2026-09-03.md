@@ -46,6 +46,18 @@ noch in Git aufgenommen.
 
 ## Auslieferung
 
-Zielversion ist `0.3.0-beta.2`, Containerimage `klasse-5e-app:0.3.0b2`.
-Testergebnisse, Commit, Deploymentstatus und öffentliche Prüfung werden nach
-dem abschließenden Qualitätsgate ergänzt.
+Ausgeliefert ist `0.3.0-beta.2` als Containerimage
+`klasse-5e-app:0.3.0b2`. Die Funktionsänderungen sind mit `6563ffb` und der
+APIlayer-Endpunktkorrektur mit `b990218` auf `origin/main` veröffentlicht.
+
+- 138 Django-Gesamttests bestanden; anschließend 6 fokussierte
+  Spoonacular-Tests nach der Endpunktkorrektur.
+- Ruff, JavaScript-Syntax, Django-Systemcheck und Migrationscheck bestanden.
+- Container für Anwendung, Vision und PostgreSQL sind `healthy`.
+- `mobility.0002_map_origins_and_detour_minutes` ist produktiv angewendet.
+- Der echte APIlayer-Aufruf liefert Produktvorschläge; der Schlüssel wurde nur
+  als vorhanden/nicht vorhanden geprüft und nicht ausgegeben.
+- `https://5e.eventmonitor.eu/health/` und die Anmeldeseite unter
+  `https://5e.klassid.de/accounts/login/` liefern HTTP 200.
+- Die produktive Anmeldeseite wurde im Browser mit generischem KlassID-Logo und
+  der neuen Nutzenkommunikation visuell geprüft.
