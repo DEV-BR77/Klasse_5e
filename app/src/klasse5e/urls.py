@@ -10,6 +10,7 @@ from klasse5e.core import onboarding_experience_views, onboarding_views, ui_view
 from klasse5e.events import views as event_views
 from klasse5e.itslearning import views as itslearning_views
 from klasse5e.itslearning.webdav import webdav
+from klasse5e.meals import views as meal_views
 from klasse5e.media import views as media_views
 from klasse5e.mobility import views as mobility_views
 from klasse5e.schedule import views as schedule_views
@@ -17,6 +18,7 @@ from klasse5e.webuntis import views as webuntis_views
 
 urlpatterns = [
     path("registrieren/", views.register, name="register"),
+    path("familie/start/<str:token>/", views.family_register, name="family-register"),
     path("registrieren/email/<str:token>/", views.verify_registration_email, name="registration-email-verify"),
     path("aktivieren/<str:token>/", views.activate_registration, name="registration-activate"),
     path(
@@ -42,6 +44,9 @@ urlpatterns = [
     ),
     path("", ui_views.dashboard, name="dashboard"),
     path("einstellungen/profil/", views.personal_profile, name="personal-profile"),
+    path("einstellungen/design/", ui_views.theme_settings, name="theme-settings"),
+    path("einstellungen/konto-loeschen/", views.delete_account, name="delete-account"),
+    path("praesentation/", ui_views.presentation, name="presentation"),
     path("profile/<int:person_id>/foto/", views.profile_photo, name="profile-photo"),
     path("benachrichtigungen/", views.notification_list, name="notification-list"),
     path("benachrichtigungen/<int:notification_id>/lesen/", views.notification_read, name="notification-read"),
@@ -51,8 +56,11 @@ urlpatterns = [
     path("schueler/", ui_views.students, name="ui-students"),
     path("chat/", ui_views.chat_overview, name="ui-chat"),
     path("chat/<uuid:room_id>/ansicht/", ui_views.chat_room, name="ui-chat-room"),
+    path("chat/nachricht/<uuid:message_id>/anhang/", ui_views.chat_attachment, name="ui-chat-attachment"),
     path("verwaltung/", ui_views.portal_management, name="portal-management"),
     path("verwaltung/anmeldung/", ui_views.registration_invitation, name="registration-invitation"),
+    path("verwaltung/themes/", ui_views.theme_management, name="theme-management"),
+    path("verwaltung/menue/", ui_views.menu_management, name="menu-management"),
     path("verwaltung/anmeldung/qr.svg", ui_views.registration_invitation_qr, name="registration-invitation-qr"),
     path("pilot/melden/", ui_views.pilot_report, name="pilot-report"),
     path("mehr/", ui_views.more, name="ui-more"),
@@ -60,6 +68,9 @@ urlpatterns = [
     path("mehr/aktuelles/", ui_views.posts, name="ui-posts"),
     path("mehr/aktuelles/<int:post_id>/", ui_views.post_detail, name="ui-post-detail"),
     path("mehr/veranstaltungen/", ui_views.events, name="ui-events"),
+    path("mehr/veranstaltungen/umfrage/neu/", ui_views.create_event_poll, name="ui-create-event-poll"),
+    path("mehr/veranstaltungen/umfrage/<int:poll_id>/", ui_views.event_poll, name="ui-event-poll"),
+    path("mehr/veranstaltungen/umfrage/<int:poll_id>/festlegen/", ui_views.finalize_event_poll, name="ui-finalize-event-poll"),
     path("mehr/mobilitaet/", mobility_views.overview, name="mobility-overview"),
     path("mehr/mobilitaet/<uuid:public_id>/", mobility_views.detail, name="mobility-detail"),
     path("mehr/mobilitaet/<uuid:public_id>/treffpunkt/", mobility_views.add_meeting_point, name="mobility-meeting-point"),
@@ -84,14 +95,18 @@ urlpatterns = [
     ),
     path("mehr/lehrkraefte/", ui_views.teachers, name="ui-teachers"),
     path("mehr/fotos/", ui_views.galleries, name="ui-galleries"),
+    path("mehr/speiseplan/", meal_views.meal_plans, name="meal-plans"),
     path("mehr/familie/", ui_views.family, name="ui-family"),
     path("mehr/einwilligungen/", ui_views.consents, name="ui-consents"),
     path("mehr/benachrichtigungen/", ui_views.notifications, name="ui-notifications"),
+    path("mehr/benachrichtigungen/einstellung/", ui_views.notification_preference, name="ui-notification-preference"),
     path("mehr/webuntis/", webuntis_views.connection, name="webuntis-connection"),
+    path("mehr/webuntis/synchronisierung/", webuntis_views.toggle_sync, name="webuntis-toggle-sync"),
     path("mehr/webuntis/testen/", webuntis_views.test_connection, name="webuntis-test"),
     path("mehr/webuntis/entfernen/", webuntis_views.remove_connection, name="webuntis-remove"),
     path("mehr/webuntis/funktionen/", webuntis_views.update_features, name="webuntis-features"),
     path("mehr/webuntis/aktuell-pruefen/", webuntis_views.sync_now, name="webuntis-sync"),
+    path("kalender/verbinden/", webuntis_views.calendar_settings, name="webuntis-calendar-settings"),
     path(
         "mehr/webuntis/<int:connection_id>/kalender.ics",
         webuntis_views.download_calendar,
@@ -151,6 +166,9 @@ urlpatterns = [
         event_views.import_recipe,
         name="event-recipe-import",
     ),
+    path("impressum/", TemplateView.as_view(template_name="legal/imprint.html"), name="imprint"),
+    path("nutzung/", TemplateView.as_view(template_name="legal/terms.html"), name="terms"),
+    path("mehr/reservierungen/<int:reservation_id>/erledigt/", ui_views.fulfill_reservation, name="ui-fulfill-reservation"),
     path(
         "events/<int:event_id>/food/<str:source_id>/import/",
         event_views.import_food_item,
@@ -164,6 +182,12 @@ urlpatterns = [
     ),
     path("galleries/<int:gallery_id>/", media_views.gallery_detail, name="gallery-detail"),
     path("galleries/<int:gallery_id>/upload/", media_views.upload_photos, name="gallery-upload"),
+    path("photos/<uuid:photo_id>/kind-zuweisen/", media_views.assign_child, name="photo-assign-child"),
+    path(
+        "photos/<uuid:photo_id>/kind/<int:person_id>/entfernen/",
+        media_views.remove_child_assignment,
+        name="photo-remove-child",
+    ),
     path("photos/<uuid:photo_id>/moderate/", media_views.moderate_photo, name="photo-moderate"),
     path("photos/<uuid:photo_id>/report/", media_views.report_photo, name="photo-report"),
     path("photos/<uuid:photo_id>/withdraw/", media_views.withdraw_photo, name="photo-withdraw"),

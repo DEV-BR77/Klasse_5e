@@ -43,6 +43,7 @@ app/.test-media/
 uploads/
 logs/
 backups/
+output/
 *.log
 *.sqlite3
 

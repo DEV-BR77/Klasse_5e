@@ -37,7 +37,7 @@ def run_due_schedules(*, now=None):
         if not schedule or schedule.source != "webuntis":
             continue
         started = timezone.now()
-        for connection in WebUntisConnection.objects.all().iterator():
+        for connection in WebUntisConnection.objects.filter(sync_enabled=True).iterator():
             try:
                 key = f"due:{schedule.pk}:{connection.pk}:{schedule.last_started_at.isoformat()}"
                 results.append(run_connection(connection, trigger=SyncRun.Trigger.AUTOMATIC, idempotency_key=key))

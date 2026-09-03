@@ -4,7 +4,7 @@ import secrets
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.sessions.models import Session
@@ -19,8 +19,22 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .models import AuditEvent, Invitation, PushSubscription, UserNotification
+from .models import (
+    AccountDeletionRequest,
+    AuditEvent,
+    ClassMembership,
+    FamilyAccessCode,
+    FamilyRegistrationRequest,
+    GuardianChildRelationship,
+    Invitation,
+    Person,
+    PushSubscription,
+    Role,
+    RoleAssignment,
+    UserNotification,
+)
 from .policies import active_class_for_user
+from .privacy_services import erase_account_data
 from .registration import activate, create_application, sanitized_profile_photo, verify_email
 
 
@@ -67,6 +81,78 @@ def register(request):
     return render(request, "core/register.html")
 
 
+@csrf_protect
+@require_http_methods(["GET", "POST"])
+def family_register(request, token):
+    invitation = FamilyAccessCode.resolve(token)
+    if invitation is None:
+        return render(request, "core/family_invitation_invalid.html", status=410)
+    if request.method == "POST":
+        if _rate_limit(request, f"family-register:{invitation.id}", limit=8):
+            return render(request, "core/family_invitation_invalid.html", status=429)
+        children = []
+        for index in (1, 2):
+            first = request.POST.get(f"child_{index}_first_name", "").strip()[:100]
+            last = request.POST.get(f"child_{index}_last_name", "").strip()[:100]
+            if first and last:
+                children.append({"first_name": first, "last_name": last})
+        adults = []
+        second_email = request.POST.get("adult_2_email", "").strip().casefold()
+        second_first = request.POST.get("adult_2_first_name", "").strip()[:100]
+        second_last = request.POST.get("adult_2_last_name", "").strip()[:100]
+        if second_email and second_first and second_last:
+            adults.append(
+                {"email": second_email, "first_name": second_first, "last_name": second_last}
+            )
+        try:
+            if request.POST.get("privacy_ack") != "yes":
+                raise ValidationError("Bitte bestätige die Datenschutzinformationen.")
+            if not children:
+                raise ValidationError("Bitte gib mindestens ein Kind an.")
+            with transaction.atomic():
+                locked = FamilyAccessCode.resolve(token, for_update=True)
+                if locked is None:
+                    raise ValidationError("Diese Einladung wurde bereits verwendet.")
+                item, email_token = create_application(
+                    email=request.POST.get("email", ""),
+                    first_name=request.POST.get("first_name", ""),
+                    last_name=request.POST.get("last_name", ""),
+                    password=request.POST.get("password", ""),
+                )
+                if not item or not email_token:
+                    raise ValidationError("Die Anmeldung konnte nicht angelegt werden.")
+                family = FamilyRegistrationRequest.objects.create(
+                    access_code=locked,
+                    household_label=request.POST.get("household_label", "").strip()[:120]
+                    or f"Familie {item.last_name}",
+                    additional_adults=adults,
+                    children=children,
+                )
+                item.school = locked.school_class.school
+                item.school_class = locked.school_class
+                item.family_request = family
+                item.save(update_fields=["school", "school_class", "family_request", "updated_at"])
+                locked.submitted_at = timezone.now()
+                locked.save(update_fields=["submitted_at"])
+            link = f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/registrieren/email/{email_token}/"
+            send_mail(
+                "E-Mail-Adresse für KlassID bestätigen",
+                f"Öffne diesen einmaligen Link innerhalb von 24 Stunden: {link}",
+                settings.DEFAULT_FROM_EMAIL,
+                [item.email],
+                fail_silently=False,
+            )
+            return render(request, "core/family_registration_received.html", status=202)
+        except ValidationError as exc:
+            return render(
+                request,
+                "core/family_register.html",
+                {"invitation": invitation, "error": str(exc)},
+                status=400,
+            )
+    return render(request, "core/family_register.html", {"invitation": invitation})
+
+
 def verify_registration_email(request, token):
     item = verify_email(token)
     return render(request, "core/registration_verified.html", {"valid": bool(item)})
@@ -90,7 +176,15 @@ def personal_profile(request):
         person.street = request.POST.get("street", "").strip()[:180]
         person.postal_code = request.POST.get("postal_code", "").strip()[:10]
         person.city = request.POST.get("city", "").strip()[:120]
+        try:
+            person.home_latitude = request.POST.get("home_latitude") or None
+            person.home_longitude = request.POST.get("home_longitude") or None
+        except (TypeError, ValueError):
+            person.home_latitude = person.home_longitude = None
         person.phone = request.POST.get("phone", "").strip()[:50]
+        person.chat_display_name = request.POST.get("chat_display_name", "").strip()[:80]
+        mode = request.POST.get("contribution_name_mode", "family")
+        person.contribution_name_mode = mode if mode in {"family", "child", "personal"} else "family"
         person.email_visibility = "members" if request.POST.get("share_email") == "yes" else "hidden"
         person.phone_visibility = "members" if request.POST.get("share_phone") == "yes" else "hidden"
         photo = request.FILES.get("profile_photo")
@@ -110,6 +204,33 @@ def personal_profile(request):
         messages.success(request, "Dein Profil wurde gespeichert.")
         return redirect("personal-profile")
     return render(request, "ui/personal_profile.html", {"page_title": "Persönliches Profil", "person": person})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def delete_account(request):
+    if request.method == "POST":
+        password = request.POST.get("password", "")
+        confirmation = request.POST.get("confirmation", "").strip().casefold()
+        if not request.user.check_password(password) or confirmation != "konto löschen":
+            return render(
+                request,
+                "ui/delete_account.html",
+                {
+                    "page_title": "Konto und Daten löschen",
+                    "error": "Passwort oder Bestätigungstext ist nicht korrekt.",
+                },
+                status=400,
+            )
+        deletion, _ = AccountDeletionRequest.objects.get_or_create(
+            user=request.user, defaults={"execute_after": timezone.now()}
+        )
+        erase_account_data(deletion)
+        logout(request)
+        return render(request, "ui/account_deleted.html", status=200)
+    return render(
+        request, "ui/delete_account.html", {"page_title": "Konto und Daten löschen"}
+    )
 
 
 @login_required
@@ -190,6 +311,51 @@ def accept_invitation(request, token):
         user.is_active = True
     user.email_verified_at = invitation.used_at
     user.save()
+    if invitation.school_class_id:
+        person, _ = Person.objects.get_or_create(
+            user=user,
+            defaults={
+                "first_name": invitation.first_name or "Familienmitglied",
+                "last_name": invitation.last_name,
+            },
+        )
+        ClassMembership.objects.get_or_create(
+            school_class=invitation.school_class,
+            person=person,
+            defaults={"valid_from": timezone.localdate(), "status": "active"},
+        )
+        RoleAssignment.objects.get_or_create(
+            user=user,
+            school=invitation.school_class.school,
+            school_class=invitation.school_class,
+            role=Role.GUARDIAN,
+            defaults={"assigned_by": invitation.invited_by},
+        )
+        if invitation.household_id:
+            invitation.household.members.add(person)
+            children = Person.objects.filter(
+                households=invitation.household,
+                studentprofile__isnull=False,
+                classmembership__school_class=invitation.school_class,
+            )
+            for child in children:
+                GuardianChildRelationship.objects.get_or_create(
+                    guardian_person=person,
+                    student_person=child,
+                    defaults={
+                        "relationship_type": "guardian",
+                        "is_legal_guardian": True,
+                        "may_view_student_profile": True,
+                        "may_manage_profile": True,
+                        "may_manage_general_consents": True,
+                        "may_manage_photo_consents": True,
+                        "may_manage_biometric_consents": True,
+                        "valid_from": timezone.localdate(),
+                        "status": "verified",
+                        "verified_by": invitation.invited_by,
+                        "verified_at": timezone.now(),
+                    },
+                )
     AuditEvent.objects.create(
         actor=user, action="invitation.accepted", target_type="user", target_id=str(user.pk)
     )

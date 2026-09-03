@@ -3,6 +3,7 @@ import hashlib
 from allauth.mfa.models import Authenticator
 from django.contrib.auth import logout
 from django.core.cache import cache
+from django.core.management import call_command
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -16,6 +17,11 @@ class ActiveAccessMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if cache.add("privacy-retention-reconcile", True, 3600):
+            try:
+                call_command("process_privacy_retention", verbosity=0)
+            except (OperationalError, ProgrammingError):
+                cache.delete("privacy-retention-reconcile")
         if request.user.is_authenticated and (not request.user.is_active or request.user.locked_at):
             logout(request)
         return self.get_response(request)
@@ -68,6 +74,8 @@ class OnboardingRequiredMiddleware:
         "/admin/",
         "/cms/",
         "/datenschutz/",
+        "/impressum/",
+        "/nutzung/",
         "/health/",
         "/invitation/",
         "/registrieren/",

@@ -1,12 +1,14 @@
 {% load static %}
 <!doctype html>
-<html lang="de">
+<html lang="de"{% if current_theme %} data-theme="{{ current_theme.key }}" data-theme-mode="{% if current_theme.is_dark %}dark{% else %}light{% endif %}" style="{{ current_theme.css_variables }}"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#5558a6">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="{% static 'app.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'enhancements.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'mentions.css' %}?v=1">
   <link rel="stylesheet" href="{% static 'onboarding.css' %}">
   <link rel="stylesheet" href="{% static 'onboarding-v2.css' %}">
   <link rel="stylesheet" href="{% static 'itslearning.css' %}">
@@ -38,7 +40,7 @@
     {% if enabled_modules.calendar %}<a href="/kalender/" {% if active_section == "calendar" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="calendar" %}<span>Kalender</span></a>{% endif %}
     {% if enabled_modules.chat %}<a href="/chat/" {% if active_section == "chat" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="chat" %}<span>Chat</span></a>{% endif %}
     {% if enabled_modules.mobility %}<a href="/mehr/mobilitaet/" {% if active_section == "mobility" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="people" %}<span>Mobilität</span></a>{% endif %}
-    <a href="/mehr/" {% if active_section == "more" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="more" %}<span>Mehr</span></a>
+    <a href="/mehr/" {% if active_section == "more" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="more" %}<span>Menü</span></a>
   </nav>
   {% endif %}
 
@@ -46,6 +48,7 @@
     {% if messages %}<div class="toast-stack" aria-live="polite">{% for message in messages %}<p class="status-banner">{{ message }}</p>{% endfor %}</div>{% endif %}
     {% block content %}{% endblock %}
   </main>
+  <footer class="legal-footer"><a href="{% url 'privacy-information' %}">Datenschutz</a><a href="{% url 'imprint' %}">Impressum</a><a href="{% url 'terms' %}">Nutzungshinweise</a></footer>
 </div>
 
 {% if request.user.is_authenticated %}

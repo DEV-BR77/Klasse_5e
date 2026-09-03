@@ -53,7 +53,7 @@ def module_enabled(key, school_class=None):
 
 def module_context(request):
     if not request.user.is_authenticated:
-        return {"enabled_modules": {}, "personal_display_name": ""}
+        return {"enabled_modules": {}, "personal_display_name": "", "current_theme": None}
     school_class = active_class_for_user(request.user) if request.user.is_authenticated else None
     keys = PortalModule.objects.values_list("key", flat=True)
     unread_count = 0
@@ -69,6 +69,7 @@ def module_context(request):
             else ""
         ),
         "notification_unread_count": unread_count,
+        "current_theme": request.user.selected_theme if request.user.selected_theme_id and request.user.selected_theme.is_active else None,
         "can_manage_portal": request.user.is_superuser
         or request.user.roleassignment_set.filter(
             active=True,

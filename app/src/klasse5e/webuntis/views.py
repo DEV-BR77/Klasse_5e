@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
@@ -42,7 +40,7 @@ def connection(request):
             username=form.cleaned_data["username"],
             password=form.cleaned_data["password"],
         )
-        messages.success(request, "WebUntis-Zugang eingerichtet.")
+        messages.success(request, "Schuldaten-Zugang eingerichtet.")
         return redirect("webuntis-connection")
     supported_keys = {
         "timetable",
@@ -83,24 +81,47 @@ def connection(request):
                 if absence_type and selected
                 else "not_allowed"
             ),
-            "lesson_count": current.lessons.count() if current else 0,
-            "homework_count": current.homework.count() if current else 0,
-            "next_lessons": (
-                current.lessons.filter(starts_at__gte=timezone.now())
-                .order_by("starts_at")[:10]
-                if current
-                else ()
-            ),
-            "open_homework": (
-                current.homework.filter(
-                    due_on__gte=timezone.localdate() - timedelta(days=1)
-                ).order_by("due_on")[:10]
-                if current
-                else ()
-            ),
             "feed_url": feed_url,
         },
     )
+
+
+@login_required
+def calendar_settings(request):
+    connections = list(
+        WebUntisConnection.objects.filter(user=request.user)
+        .select_related("student")
+        .order_by("student__first_name")
+    )
+    rows = [
+        {"connection": item, "feed_url": request.session.get(f"webuntis_feed_{item.pk}")}
+        for item in connections
+        if can_manage_connection(request.user, item.student)
+    ]
+    return render(
+        request,
+        "webuntis/calendar_settings.html",
+        {"page_title": "Kalender verbinden", "active_section": "calendar", "rows": rows},
+    )
+
+
+@login_required
+@require_POST
+def toggle_sync(request):
+    item = get_object_or_404(
+        WebUntisConnection, user=request.user, pk=request.POST.get("connection_id")
+    )
+    if not can_manage_connection(request.user, item.student):
+        raise Http404
+    item.sync_enabled = request.POST.get("enabled") == "on"
+    item.save(update_fields=["sync_enabled", "updated_at"])
+    messages.success(
+        request,
+        "Automatische Synchronisierung aktiviert."
+        if item.sync_enabled
+        else "Automatische Synchronisierung pausiert.",
+    )
+    return redirect("webuntis-connection")
 
 
 @login_required
@@ -120,14 +141,14 @@ def test_connection(request):
         )
         result = adapter.test_connection()
         item.mark_checked("ok", f"{len(result['methods'])} public methods detected")
-        messages.success(request, "WebUntis-Verbindung erfolgreich geprueft.")
+        messages.success(request, "Schuldaten-Verbindung erfolgreich geprüft.")
     except Exception as exc:
         code = classify_error(exc)
         item.mark_checked(
             "mfa_required" if code == "mfa_or_sso_required" else "error",
             "Pruefung fehlgeschlagen.",
         )
-        messages.error(request, "WebUntis konnte nicht geprueft werden.")
+        messages.error(request, "Die Schuldaten-Verbindung konnte nicht geprüft werden.")
     return redirect("webuntis-connection")
 
 
@@ -139,7 +160,7 @@ def remove_connection(request):
     )
     if can_manage_connection(request.user, item.student):
         remove_connection_service(item, request.user)
-        messages.success(request, "WebUntis-Verbindung entfernt.")
+        messages.success(request, "Schuldaten-Verbindung entfernt.")
     return redirect("webuntis-connection")
 
 
@@ -182,10 +203,10 @@ def sync_now(request):
             idempotency_key=request.POST.get("idempotency_key") or None,
         )
         if run.status == SyncRun.Status.NO_CHANGE:
-            messages.success(request, "WebUntis ist aktuell; keine Aenderungen.")
+            messages.success(request, "Die Schuldaten sind aktuell; keine Änderungen.")
         elif run.status == SyncRun.Status.SUCCESS:
             messages.success(
-                request, f"{run.change_count} WebUntis-Aenderungen uebernommen."
+                request, f"{run.change_count} Änderungen an den Schuldaten übernommen."
             )
         elif run.status == SyncRun.Status.THROTTLED:
             messages.warning(request, "Bitte spaeter erneut versuchen.")
@@ -209,7 +230,7 @@ def download_calendar(request, connection_id):
     response = HttpResponse(
         build_calendar(item), content_type="text/calendar; charset=utf-8"
     )
-    response["Content-Disposition"] = 'attachment; filename="webuntis.ics"'
+    response["Content-Disposition"] = 'attachment; filename="klassid-kalender.ics"'
     response["Cache-Control"] = "private, no-store"
     return response
 
@@ -229,7 +250,11 @@ def issue_calendar(request, connection_id):
     path = reverse("webuntis-calendar-feed", kwargs={"token": token})
     request.session[f"webuntis_feed_{item.pk}"] = request.build_absolute_uri(path)
     messages.success(request, "Neue persoenliche Kalenderadresse erstellt.")
-    return redirect("webuntis-connection")
+    return redirect(
+        "webuntis-calendar-settings"
+        if request.POST.get("return_to") == "calendar"
+        else "webuntis-connection"
+    )
 
 
 def calendar_feed(request, token):

@@ -1,11 +1,13 @@
-from datetime import date, time
+from datetime import date, datetime, time
 
 import pytest
+from django.utils import timezone
 
 from klasse5e.core.calendar_presenter import build_calendar_context
+from klasse5e.core.models import Person
 from klasse5e.itslearning.models import ItslearningConnection
 from klasse5e.schedule.models import LessonPeriod, TimeGrid, TimetableEntry
-from klasse5e.webuntis.models import WebUntisConnection
+from klasse5e.webuntis.models import WebUntisConnection, WebUntisLesson
 
 
 @pytest.mark.django_db
@@ -63,3 +65,36 @@ def test_calendar_filters_and_view_switch_are_rendered(client, guardian, school_
     assert "Monat" in html and "Woche" in html and "Tag" in html
     assert "Filter anwenden" in html
     assert "Mathematik" not in html
+
+
+@pytest.mark.django_db
+def test_day_view_builds_hourly_fallback_without_school_time_grid(
+    guardian, school_class
+):
+    student = Person.objects.create(first_name="Mila", last_name="Beispiel")
+    connection = WebUntisConnection.objects.create(
+        user=guardian,
+        student=student,
+        username_encrypted=b"x",
+        password_encrypted=b"x",
+    )
+    zone = timezone.get_current_timezone()
+    WebUntisLesson.objects.create(
+        connection=connection,
+        external_fingerprint="fallback-grid",
+        subject="Deutsch",
+        starts_at=timezone.make_aware(datetime(2026, 9, 4, 12, 20), zone),
+        ends_at=timezone.make_aware(datetime(2026, 9, 4, 13, 5), zone),
+    )
+
+    context = build_calendar_context(
+        school_class=school_class,
+        selected_day=date(2026, 9, 4),
+        webuntis_connections=WebUntisConnection.objects.filter(pk=connection.pk),
+        itslearning_connections=ItslearningConnection.objects.none(),
+        view="day",
+    )
+
+    assert context["timeline_uses_school_grid"] is False
+    assert len(context["timeline_periods"]) >= 2
+    assert all(period["label"].endswith("Uhr") for period in context["timeline_periods"])

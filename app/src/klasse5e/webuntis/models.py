@@ -37,6 +37,7 @@ class WebUntisConnection(models.Model):
     status_detail = models.CharField(max_length=160, blank=True)
     last_checked_at = models.DateTimeField(null=True, blank=True)
     last_successful_sync_at = models.DateTimeField(null=True, blank=True)
+    sync_enabled = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

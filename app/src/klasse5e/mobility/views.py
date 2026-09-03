@@ -74,6 +74,7 @@ def _map_points(listing):
                 "longitude": float(listing.start_longitude),
                 "label": listing.approximate_area or "Startbereich",
                 "kind": "start",
+                "radiusMeters": 700,
             }
         )
     points.extend(
@@ -116,7 +117,7 @@ def overview(request):
         query = query.filter(transport=transport)
     listings = query.annotate(reaction_count=Count("reactions")).prefetch_related("meeting_points")
     if request.method == "POST":
-        form = MobilityListingForm(request.POST)
+        form = MobilityListingForm(request.POST, person=request.user.person)
         if form.is_valid():
             listing = form.save(commit=False)
             listing.school_class = school_class
@@ -132,6 +133,7 @@ def overview(request):
             return redirect("mobility-detail", public_id=listing.public_id)
     else:
         form = MobilityListingForm(
+            person=request.user.person,
             initial={"valid_until": timezone.localdate() + timedelta(days=30)}
         )
     return render(
@@ -147,12 +149,14 @@ def overview(request):
             "school_class": school_class,
             "map_bounds": MAP_BOUNDS,
             "map_school": _map_school(school_class.school),
+            "has_home_area": request.user.person.home_latitude is not None and request.user.person.home_longitude is not None,
             "map_listing_points": [
                 {
                     "latitude": float(item.start_latitude),
                     "longitude": float(item.start_longitude),
                     "label": item.approximate_area or item.title,
                     "kind": item.transport,
+                    "radiusMeters": 700,
                 }
                 for item in listings
                 if item.start_latitude is not None and item.start_longitude is not None

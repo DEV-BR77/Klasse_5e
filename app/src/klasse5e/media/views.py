@@ -3,15 +3,22 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from klasse5e.core.models import AuditEvent, Person, Role
+from klasse5e.core.models import AuditEvent, GuardianChildRelationship, Person, Role
 from klasse5e.core.policies import active_roles
 
 from .models import Gallery, Photo, PhotoReport, PhotoSubjectDeclaration
-from .policies import may_access_gallery, may_download_photo, may_upload, may_view_photo
+from .policies import (
+    may_access_gallery,
+    may_download_photo,
+    may_manage_gallery,
+    may_preview_photo,
+    may_upload,
+    may_view_photo,
+)
 from .services import create_photo, decide_photo, delete_photo_files
 
 
@@ -28,13 +35,57 @@ def gallery_detail(request, gallery_id):
     )
     if not may_access_gallery(request.user, gallery):
         raise Http404
-    photos = [
-        {"id": str(photo.id), "description": photo.description}
-        for photo in gallery.photos.all()
-        if may_view_photo(request.user, photo)
-    ]
+    children = list(
+        Person.objects.filter(
+            student_relationships__guardian_person=request.user.person,
+            student_relationships__status="verified",
+            student_relationships__may_manage_photo_consents=True,
+            classmembership__school_class=gallery.school_class,
+            classmembership__status="active",
+        ).distinct()
+    ) if hasattr(request.user, "person") else []
+    label_filter = request.GET.get("label", "").strip()[:60]
+    photos = []
+    for photo in gallery.photos.prefetch_related("subject_declarations__person"):
+        if label_filter and label_filter not in photo.ai_labels:
+            continue
+        if not (may_view_photo(request.user, photo) or may_preview_photo(request.user, photo)):
+            continue
+        assigned_ids = {
+            item.person_id
+            for item in photo.subject_declarations.all()
+            if item.kind == PhotoSubjectDeclaration.Kind.KNOWN
+            and item.status != PhotoSubjectDeclaration.Status.REJECTED
+        }
+        photos.append(
+            {
+                "object": photo,
+                "assigned_people": [
+                    item.person
+                    for item in photo.subject_declarations.all()
+                    if item.person_id and item.status != PhotoSubjectDeclaration.Status.REJECTED
+                ],
+                "available_children": [child for child in children if child.id not in assigned_ids],
+                "own_assignment_ids": assigned_ids & {child.id for child in children},
+                "can_preview": may_preview_photo(request.user, photo),
+            }
+        )
     return _private(
-        render(request, "media/gallery_detail.html", {"gallery": gallery, "photos": photos})
+        render(
+            request,
+            "media/gallery_detail.html",
+            {
+                "gallery": gallery,
+                "photos": photos,
+                "children": children,
+                "can_upload": gallery.upload_allowed,
+                "can_manage": may_manage_gallery(request.user, gallery),
+                "label_filter": label_filter,
+                "available_labels": sorted(
+                    {label for photo in gallery.photos.all() for label in photo.ai_labels}
+                ),
+            },
+        )
     )
 
 
@@ -72,6 +123,10 @@ def upload_photos(request, gallery_id):
                 upload=upload,
                 description=request.POST.get("description", ""),
             )
+            photo.analysis_status = (
+                "queued" if photo.biometric_analysis_allowed else "not_requested"
+            )
+            photo.save(update_fields=["analysis_status"])
             if kind == "known":
                 for person in allowed_people:
                     PhotoSubjectDeclaration.objects.create(
@@ -86,7 +141,72 @@ def upload_photos(request, gallery_id):
         for photo_id in created:
             delete_photo_files(Photo.objects.get(id=photo_id))
         return JsonResponse({"error": exc.message}, status=400)
+    if request.POST.get("return_to") == "gallery":
+        return redirect("gallery-detail", gallery_id=gallery.id)
     return JsonResponse({"photos": created}, status=201)
+
+
+def _manageable_child(user, gallery, person_id):
+    if not hasattr(user, "person"):
+        raise Http404
+    relationship = get_object_or_404(
+        GuardianChildRelationship,
+        guardian_person=user.person,
+        student_person_id=person_id,
+        status="verified",
+        may_manage_photo_consents=True,
+    )
+    if not relationship.student_person.classmembership_set.filter(
+        school_class=gallery.school_class, status="active"
+    ).exists():
+        raise Http404
+    return relationship.student_person
+
+
+@login_required
+@require_POST
+def assign_child(request, photo_id):
+    photo = get_object_or_404(Photo.objects.select_related("gallery"), id=photo_id)
+    if not (may_view_photo(request.user, photo) or may_preview_photo(request.user, photo)):
+        raise Http404
+    child = _manageable_child(request.user, photo.gallery, request.POST.get("person_id"))
+    declaration, _ = PhotoSubjectDeclaration.objects.update_or_create(
+        photo=photo,
+        person=child,
+        kind=PhotoSubjectDeclaration.Kind.KNOWN,
+        defaults={
+            "declared_by": request.user,
+            "confirmed_by": request.user,
+            "status": PhotoSubjectDeclaration.Status.CONFIRMED,
+            "confirmed_at": timezone.now(),
+        },
+    )
+    AuditEvent.objects.create(
+        actor=request.user,
+        action="photo.subject_assigned",
+        target_type="photo",
+        target_id=str(photo.id),
+        metadata={"declaration_id": declaration.id},
+    )
+    return redirect("gallery-detail", gallery_id=photo.gallery_id)
+
+
+@login_required
+@require_POST
+def remove_child_assignment(request, photo_id, person_id):
+    photo = get_object_or_404(Photo.objects.select_related("gallery"), id=photo_id)
+    child = _manageable_child(request.user, photo.gallery, person_id)
+    PhotoSubjectDeclaration.objects.filter(
+        photo=photo, person=child, kind=PhotoSubjectDeclaration.Kind.KNOWN
+    ).delete()
+    AuditEvent.objects.create(
+        actor=request.user,
+        action="photo.subject_assignment_removed",
+        target_type="photo",
+        target_id=str(photo.id),
+        metadata={},
+    )
+    return redirect("gallery-detail", gallery_id=photo.gallery_id)
 
 
 @login_required
@@ -96,7 +216,9 @@ def photo_file(request, photo_id, variant):
     )
     download = variant == "download"
     if not (
-        may_download_photo(request.user, photo) if download else may_view_photo(request.user, photo)
+        may_download_photo(request.user, photo)
+        if download
+        else may_view_photo(request.user, photo) or may_preview_photo(request.user, photo)
     ):
         raise Http404
     field = (

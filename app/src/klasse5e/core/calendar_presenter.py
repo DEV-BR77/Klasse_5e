@@ -293,6 +293,9 @@ def _timeline_context(*, school_class, selected_day, week_start, view, items):
     timeline_end = max(ends or [16 * 60])
     timeline_start = (timeline_start // 15) * 15
     timeline_end = max(timeline_start + 60, ((timeline_end + 14) // 15) * 15)
+    if not periods:
+        timeline_start = (timeline_start // 60) * 60
+        timeline_end = max(timeline_start + 60, ((timeline_end + 59) // 60) * 60)
     span = timeline_end - timeline_start
     timeline_days = []
     for day in visible_dates:
@@ -312,12 +315,11 @@ def _timeline_context(*, school_class, selected_day, week_start, view, items):
                 }
             )
         timeline_days.append({"date": day, "items": positioned, "all_day": all_day})
-    return {
-        "timeline_days": timeline_days,
-        "timeline_height": max(540, int(span * 1.25)),
-        "timeline_periods": [
+    if periods:
+        timeline_periods = [
             {
                 "number": period.number,
+                "label": f"{period.number}. Stunde",
                 "start": period.starts_at.strftime("%H:%M"),
                 "end": period.ends_at.strftime("%H:%M"),
                 "duration": int(
@@ -327,5 +329,31 @@ def _timeline_context(*, school_class, selected_day, week_start, view, items):
                 "top_percent": round((_minutes(period.starts_at) - timeline_start) * 100 / span, 3),
             }
             for period in periods
-        ],
+        ]
+    else:
+        # Imported lessons already contain authoritative start/end times.  A missing
+        # locally maintained TimeGrid must therefore never collapse the day view.
+        # Quarter-hour rounded markers keep irregular and substituted lessons useful.
+        marker_start = (timeline_start // 60) * 60
+        marker_end = ((timeline_end + 59) // 60) * 60
+        timeline_periods = []
+        for minute in range(marker_start, marker_end + 1, 60):
+            if minute < timeline_start or minute > timeline_end:
+                continue
+            clock = f"{minute // 60:02d}:{minute % 60:02d}"
+            timeline_periods.append(
+                {
+                    "number": None,
+                    "label": f"{clock} Uhr",
+                    "start": clock,
+                    "end": "",
+                    "duration": None,
+                    "top_percent": round((minute - timeline_start) * 100 / span, 3),
+                }
+            )
+    return {
+        "timeline_days": timeline_days,
+        "timeline_height": max(540, int(span * 1.25)),
+        "timeline_periods": timeline_periods,
+        "timeline_uses_school_grid": bool(periods),
     }

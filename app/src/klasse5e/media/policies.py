@@ -67,6 +67,13 @@ def may_view_photo(user, photo):
     return photo.status == "published" and may_access_gallery(user, photo.gallery) and allowed
 
 
+def may_preview_photo(user, photo):
+    """Private preview for the uploader and gallery team before publication."""
+    return may_access_gallery(user, photo.gallery) and (
+        photo.uploader_id == user.id or may_manage_gallery(user, photo.gallery)
+    )
+
+
 def may_download_photo(user, photo):
     allowed, _ = photo_consent_result(photo, download=True)
     return (

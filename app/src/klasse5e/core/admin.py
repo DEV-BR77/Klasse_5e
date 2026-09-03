@@ -6,6 +6,7 @@ from django.db import models
 from django.utils import timezone
 
 from .models import (
+    AccountDeletionRequest,
     ActivationGrant,
     AuditEvent,
     BrandingAsset,
@@ -14,6 +15,9 @@ from .models import (
     ConsentDecision,
     ConsentTextVersion,
     ConsentType,
+    DepartureRetentionCase,
+    FamilyAccessCode,
+    FamilyRegistrationRequest,
     GuardianChildRelationship,
     Household,
     Invitation,
@@ -68,12 +72,17 @@ class RegistrationApplicationAdmin(admin.ModelAdmin):
             AuditEvent.objects.create(actor=request.user, action="registration.rejected", target_type="registration", target_id=str(item.pk))
 
 
+admin.site.register(
+    [FamilyAccessCode, FamilyRegistrationRequest, AccountDeletionRequest, DepartureRetentionCase]
+)
+
+
 @admin.register(UserAccount)
 class AccountAdmin(UserAdmin):
     ordering = ("email",)
     list_display = ("email", "is_active", "is_staff", "locked_at")
     fieldsets = UserAdmin.fieldsets + (
-        ("Klasse 5e", {"fields": ("email_verified_at", "locked_at")}),
+        ("Klasse 5e", {"fields": ("email_verified_at", "locked_at", "selected_theme")}),
     )
     add_fieldsets = ((None, {"classes": ("wide",), "fields": ("email", "password1", "password2")}),)
 

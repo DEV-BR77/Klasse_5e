@@ -1,13 +1,16 @@
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(os.environ.get("APP_ROOT", Path.cwd())).resolve()
-APP_VERSION = "0.3.0-beta.2"
+APP_VERSION = "0.3.0-beta.3"
 APP_RELEASE_CHANNEL = "beta"
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY", "unsafe-test-only-4f8d2a6c9e1b7d3f5a8c2e6b9d1f4a7c0e3b6d9f"
 )
-DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
+# Tests must never inherit production-only HTTPS redirects from a developer's
+# shell. Production still requires DJANGO_DEBUG=0 explicitly.
+DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1" or "pytest" in sys.modules
 ALLOWED_HOSTS = [
     item for item in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost").split(",") if item
 ]
@@ -21,6 +24,7 @@ INSTALLED_APPS = [
     "klasse5e.events",
     "klasse5e.mobility",
     "klasse5e.media",
+    "klasse5e.meals",
     "klasse5e.biometrics",
     "klasse5e.chat",
     "klasse5e.schedule",
@@ -168,6 +172,10 @@ GALLERY_MAX_PIXELS = 40_000_000
 GALLERY_MAX_BATCH = 25
 GALLERY_MAX_TOTAL_BYTES = 5 * 1024 * 1024 * 1024
 GALLERY_RETENTION_GRACE_DAYS = 30
+MEAL_PLAN_SOURCE_URL = os.environ.get(
+    "MEAL_PLAN_SOURCE_URL", "https://www.wollino.de/newpagefa4f13d4"
+)
+MEAL_PLAN_SYNC_ENABLED = os.environ.get("MEAL_PLAN_SYNC_ENABLED", "1") == "1"
 BIOMETRIC_SEARCH_ENABLED = os.environ.get("BIOMETRIC_SEARCH_ENABLED", "0") == "1"
 VISION_BASE_URL = os.environ.get("VISION_BASE_URL", "http://klasse-5e-vision:8000").rstrip("/")
 VISION_SERVICE_TOKEN = os.environ.get("VISION_SERVICE_TOKEN", "")

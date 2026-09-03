@@ -30,9 +30,58 @@ class UserAccount(AbstractUser):
     email = models.EmailField(unique=True)
     email_verified_at = models.DateTimeField(null=True, blank=True)
     locked_at = models.DateTimeField(null=True, blank=True)
+    selected_theme = models.ForeignKey(
+        "PortalTheme", null=True, blank=True, on_delete=models.SET_NULL, related_name="users"
+    )
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
     objects = UserAccountManager()
+
+
+class PortalTheme(models.Model):
+    class Audience(models.TextChoices):
+        ALL = "all", "Alle"
+        ADULTS = "adults", "Eltern und Erwachsene"
+        CHILDREN = "children", "Kinder"
+
+    key = models.SlugField(unique=True)
+    name = models.CharField(max_length=80)
+    description = models.CharField(max_length=180, blank=True)
+    audience = models.CharField(max_length=16, choices=Audience, default=Audience.ALL)
+    is_dark = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    primary = models.CharField(max_length=7, default="#5558A6")
+    primary_dark = models.CharField(max_length=7, default="#3F427F")
+    primary_light = models.CharField(max_length=7, default="#EEECFF")
+    accent = models.CharField(max_length=7, default="#8B6BE8")
+    background = models.CharField(max_length=7, default="#F4F5FA")
+    surface = models.CharField(max_length=7, default="#FFFFFF")
+    text = models.CharField(max_length=7, default="#25283A")
+    text_muted = models.CharField(max_length=7, default="#74778A")
+    radius = models.CharField(max_length=12, default="1.15rem")
+    shadow_strength = models.PositiveSmallIntegerField(default=10)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["audience", "name"]
+
+    @property
+    def css_variables(self):
+        return ";".join(
+            (
+                f"--color-primary:{self.primary}",
+                f"--color-primary-dark:{self.primary_dark}",
+                f"--color-primary-light:{self.primary_light}",
+                f"--color-accent:{self.accent}",
+                f"--color-background:{self.background}",
+                f"--color-surface:{self.surface}",
+                f"--color-text:{self.text}",
+                f"--color-text-muted:{self.text_muted}",
+                f"--radius:{self.radius}",
+                f"--shadow-card:0 10px 30px rgb(20 24 50/{min(self.shadow_strength, 30)}%)",
+            )
+        )
 
 
 class Visibility(models.TextChoices):
@@ -52,6 +101,14 @@ class Person(models.Model):
     street = models.CharField(max_length=180, blank=True)
     postal_code = models.CharField(max_length=10, blank=True)
     city = models.CharField(max_length=120, blank=True)
+    home_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    home_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    chat_display_name = models.CharField(max_length=80, blank=True)
+    contribution_name_mode = models.CharField(
+        max_length=16,
+        choices=[("family", "Familienname"), ("child", "Name des Kindes"), ("personal", "Eigener Anzeigename")],
+        default="family",
+    )
     profile_photo = models.ImageField(upload_to="profiles/opaque/", blank=True)
     email_visibility = models.CharField(
         max_length=16, choices=Visibility, default=Visibility.HIDDEN
@@ -143,6 +200,13 @@ class RegistrationApplication(models.Model):
     reviewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    family_request = models.ForeignKey(
+        "FamilyRegistrationRequest",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="applications",
+    )
 
     @classmethod
     def issue(cls, *, email, first_name, last_name, password_hash, lifetime=timedelta(hours=24)):
@@ -503,16 +567,24 @@ class Invitation(models.Model):
     expires_at = models.DateTimeField()
     used_at = models.DateTimeField(null=True, blank=True)
     invited_by = models.ForeignKey(UserAccount, on_delete=models.PROTECT)
+    first_name = models.CharField(max_length=100, blank=True)
+    last_name = models.CharField(max_length=100, blank=True)
+    school_class = models.ForeignKey(SchoolClass, null=True, blank=True, on_delete=models.CASCADE)
+    household = models.ForeignKey(Household, null=True, blank=True, on_delete=models.CASCADE)
+    family_request = models.ForeignKey(
+        "FamilyRegistrationRequest", null=True, blank=True, on_delete=models.CASCADE
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     @classmethod
-    def issue(cls, email, invited_by, lifetime=timedelta(days=7)):
+    def issue(cls, email, invited_by, lifetime=timedelta(days=7), **extra):
         token = secrets.token_urlsafe(32)
         invitation = cls.objects.create(
             email=email.casefold(),
             token_hash=hashlib.sha256(token.encode()).hexdigest(),
             expires_at=timezone.now() + lifetime,
             invited_by=invited_by,
+            **extra,
         )
         return invitation, token
 
@@ -525,6 +597,93 @@ class Invitation(models.Model):
         invitation.used_at = timezone.now()
         invitation.save(update_fields=["used_at"])
         return invitation
+
+
+class FamilyAccessCode(models.Model):
+    batch_id = models.UUIDField()
+    serial_number = models.PositiveSmallIntegerField()
+    token_hash = models.CharField(max_length=64, unique=True)
+    school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE)
+    expires_at = models.DateTimeField()
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(UserAccount, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["batch_id", "serial_number"], name="unique_family_code_serial"
+            )
+        ]
+
+    @classmethod
+    def issue(cls, *, batch_id, serial_number, school_class, created_by, lifetime=timedelta(days=60)):
+        token = secrets.token_urlsafe(32)
+        item = cls.objects.create(
+            batch_id=batch_id,
+            serial_number=serial_number,
+            token_hash=hashlib.sha256(token.encode()).hexdigest(),
+            school_class=school_class,
+            created_by=created_by,
+            expires_at=timezone.now() + lifetime,
+        )
+        return item, token
+
+    @classmethod
+    def resolve(cls, token, *, for_update=False):
+        query = cls.objects.select_for_update() if for_update else cls.objects
+        item = query.filter(token_hash=hashlib.sha256(token.encode()).hexdigest()).first()
+        if not item or item.submitted_at or item.revoked_at or item.expires_at <= timezone.now():
+            return None
+        return item
+
+
+class FamilyRegistrationRequest(models.Model):
+    access_code = models.OneToOneField(
+        FamilyAccessCode, on_delete=models.PROTECT, related_name="family_request"
+    )
+    household_label = models.CharField(max_length=120)
+    additional_adults = models.JSONField(default=list, blank=True)
+    children = models.JSONField(default=list)
+    household = models.OneToOneField(Household, null=True, blank=True, on_delete=models.SET_NULL)
+    status = models.CharField(max_length=20, default="email_pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+class AccountDeletionRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Zur Löschung vorgemerkt"
+        COMPLETED = "completed", "Gelöscht und anonymisiert"
+        FAILED = "failed", "Prüfung erforderlich"
+
+    user = models.OneToOneField(
+        UserAccount, on_delete=models.PROTECT, related_name="deletion_request"
+    )
+    requested_at = models.DateTimeField(default=timezone.now)
+    execute_after = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=16, choices=Status, default=Status.PENDING)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    failure_reason = models.CharField(max_length=240, blank=True)
+
+
+class DepartureRetentionCase(models.Model):
+    """Tracks the maximum 90-day retention period after a child leaves a class."""
+
+    student = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="departure_cases")
+    school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE)
+    left_at = models.DateField()
+    purge_after = models.DateField()
+    access_revoked_at = models.DateTimeField(null=True, blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "school_class"], name="unique_student_departure_case"
+            )
+        ]
 
 
 class ConsentCategory(models.TextChoices):

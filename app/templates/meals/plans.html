@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load meal_tags %}
+{% block content %}
+<section class="meal-page">
+  <header class="page-heading"><div><p class="eyebrow">Mensa</p><h1>Speiseplan</h1><p class="lede">Die veröffentlichten Menüs übersichtlich im KlassID-Design. Bei Allergien und kurzfristigen Änderungen ist immer die aktuelle Auskunft der Mensa maßgeblich.</p></div></header>
+  {% for plan in plans %}<article class="meal-week">
+    <header><div><p class="eyebrow">Kalenderwoche {{ plan.iso_week }}</p><h2>{{ plan.starts_on|date:"d.m." }} – {{ plan.ends_on|date:"d.m.Y" }}</h2></div><small>Aktualisiert {{ plan.fetched_at|date:"d.m., H:i" }} Uhr</small></header>
+    <div class="meal-days">{% for day in plan.days.all %}<section class="meal-day {% if day.date == today %}is-today{% endif %}"><header><span>{{ day.date|date:"l" }}</span><strong>{{ day.date|date:"d.m." }}</strong>{% if day.date == today %}<em>Heute</em>{% endif %}</header>{% for option in day.options.all %}<div class="meal-option"><h3>Menü {{ option.line }}</h3><ul>{% for component in option.components %}<li>{{ component }}</li>{% endfor %}</ul>{% if option.allergen_codes or option.additive_codes %}<div class="meal-codes">{% for code in option.allergen_codes %}<span title="{{ code }}: {{ plan.legend.allergens|get_item:code }}">{{ code }}</span>{% endfor %}{% for code in option.additive_codes %}<span title="{{ code }}: {{ plan.legend.additives|get_item:code }}">{{ code }}</span>{% endfor %}</div>{% endif %}</div>{% endfor %}</section>{% endfor %}</div>
+    <details class="meal-legend"><summary>Allergene und Zusatzstoffe erklären</summary><div><h3>Allergene</h3><dl>{% for code, label in plan.legend.allergens.items %}<dt>{{ code }}</dt><dd>{{ label }}</dd>{% endfor %}</dl><h3>Zusatzstoffe</h3><dl>{% for code, label in plan.legend.additives.items %}<dt>{{ code }}</dt><dd>{{ label }}</dd>{% endfor %}</dl></div></details>
+  </article>{% empty %}<div class="empty-state"><h2>Noch kein Speiseplan verfügbar</h2><p>Der nächste freigegebene Wochenplan wird beim täglichen Abruf automatisch ergänzt.</p></div>{% endfor %}
+</section>
+{% endblock %}

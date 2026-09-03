@@ -1,9 +1,11 @@
 import hashlib
 from io import BytesIO
 
+from django.conf import settings
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -12,10 +14,15 @@ from .models import (
     ActivationGrant,
     AuditEvent,
     ClassMembership,
+    GuardianChildRelationship,
+    Household,
+    Invitation,
     Person,
     RegistrationApplication,
+    RelationshipStatus,
     Role,
     RoleAssignment,
+    StudentProfile,
     UserAccount,
 )
 
@@ -92,6 +99,61 @@ def activate(token):
     app.status = RegistrationApplication.Status.ACTIVATED
     app.save(update_fields=["status", "updated_at"])
     AuditEvent.objects.create(actor=user, action="registration.activated", target_type="user", target_id=str(user.pk))
+    family = app.family_request
+    if family and not family.completed_at:
+        household = Household.objects.create(label=family.household_label)
+        household.members.add(person)
+        family.household = household
+        for child_data in family.children:
+            child = Person.objects.create(
+                first_name=child_data["first_name"][:100],
+                last_name=child_data["last_name"][:100],
+            )
+            household.members.add(child)
+            ClassMembership.objects.create(
+                school_class=app.school_class,
+                person=child,
+                valid_from=timezone.localdate(),
+                status="active",
+            )
+            StudentProfile.objects.create(person=child)
+            GuardianChildRelationship.objects.create(
+                guardian_person=person,
+                student_person=child,
+                relationship_type="guardian",
+                is_legal_guardian=True,
+                may_view_student_profile=True,
+                may_manage_profile=True,
+                may_manage_general_consents=True,
+                may_manage_photo_consents=True,
+                may_manage_biometric_consents=True,
+                valid_from=timezone.localdate(),
+                status=RelationshipStatus.VERIFIED,
+                verified_by=app.reviewed_by,
+                verified_at=timezone.now(),
+            )
+        for adult in family.additional_adults:
+            invitation, family_token = Invitation.issue(
+                adult["email"],
+                app.reviewed_by,
+                first_name=adult["first_name"],
+                last_name=adult["last_name"],
+                school_class=app.school_class,
+                household=household,
+                family_request=family,
+            )
+            link = f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/invitation/{family_token}/"
+            send_mail(
+                "Dein persönlicher KlassID-Familienzugang",
+                f"Lege über diesen einmaligen Link innerhalb von 7 Tagen dein eigenes Passwort fest: {link}",
+                settings.DEFAULT_FROM_EMAIL,
+                [invitation.email],
+            )
+        family.status = "completed"
+        family.completed_at = timezone.now()
+        family.save(update_fields=["household", "status", "completed_at"])
+        family.access_code.completed_at = timezone.now()
+        family.access_code.save(update_fields=["completed_at"])
     return user
 
 

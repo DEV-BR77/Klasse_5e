@@ -3,7 +3,7 @@
 <section>
   <header class="page-heading calendar-heading compact-heading">
     <div><p class="eyebrow">Kalenderwoche {{ calendar_week_number }}</p><h1>Kalender</h1></div>
-    <div class="calendar-sync"><span>{% if webuntis_last_sync %}Aktualisiert {{ webuntis_last_sync|date:"H:i" }} Uhr{% else %}Noch nicht synchronisiert{% endif %}</span><a class="icon-button" href="/mehr/webuntis/" aria-label="Schuldaten aktualisieren">↻</a></div>
+    <div class="calendar-sync"><span>{% if webuntis_last_sync %}Aktualisiert {{ webuntis_last_sync|date:"H:i" }} Uhr{% else %}Noch nicht synchronisiert{% endif %}</span><a class="icon-button" href="/mehr/webuntis/" aria-label="Daten, Kalender und Hausaufgaben synchronisieren">↻</a></div>
   </header>
 
   <div class="calendar-toolbar card">
@@ -38,7 +38,7 @@
       <div class="calendar-timeline-head" style="--calendar-columns: {{ timeline_days|length }}"><span class="calendar-time-corner">Uhrzeit</span>{% for day in timeline_days %}<a href="?tag={{ day.date|date:'Y-m-d' }}&amp;ansicht=day&amp;{{ category_query }}"{% if day.date == selected_day %} aria-current="date"{% endif %}><strong>{{ day.date|date:"D" }}</strong><span>{{ day.date|date:"d.m." }}</span></a>{% endfor %}</div>
       <div class="calendar-all-day" style="--calendar-columns: {{ timeline_days|length }}"><span class="calendar-time-corner">Ganzt&auml;gig</span>{% for day in timeline_days %}<div>{% for item in day.all_day %}<span class="calendar-chip calendar-chip-{{ item.kind }}"><span class="calendar-dot calendar-dot-{{ item.kind }}"></span>{{ item.title }}</span>{% endfor %}</div>{% endfor %}</div>
       <div class="calendar-timeline" style="--calendar-columns: {{ timeline_days|length }}; --timeline-height: {{ timeline_height }}px">
-        <aside class="calendar-time-axis" aria-label="Schulstunden">{% for period in timeline_periods %}<div class="calendar-time-marker" style="--marker-top: {{ period.top_percent }}%"><strong>{{ period.number }}. Stunde</strong><span>{{ period.start }}–{{ period.end }}</span><small>{{ period.duration }} Min.</small></div>{% empty %}<p class="muted">Kein Zeitraster hinterlegt.</p>{% endfor %}</aside>
+        <aside class="calendar-time-axis" aria-label="Zeitraster">{% for period in timeline_periods %}<div class="calendar-time-marker" style="--marker-top: {{ period.top_percent }}%"><strong>{{ period.label }}</strong>{% if period.end %}<span>{{ period.start }}–{{ period.end }}</span>{% endif %}{% if period.duration %}<small>{{ period.duration }} Min.</small>{% endif %}</div>{% endfor %}</aside>
         {% for day in timeline_days %}<section class="calendar-time-day" aria-label="{{ day.date|date:'l, d. F Y' }}">{% for item in day.items %}<article class="calendar-time-item calendar-chip-{{ item.kind }}" style="--item-top: {{ item.top_percent }}%; --item-height: {{ item.height_percent }}%"><p class="agenda-label">{{ item.time }}–{{ item.end_time }}{% if item.duration_minutes %} · {{ item.duration_minutes }} Min.{% endif %}</p><strong>{% if item.url %}<a href="{{ item.url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</strong>{% if item.is_double %}<span class="double-lesson-badge">Doppelstunde</span>{% endif %}{% if item.meta %}<small>{{ item.meta }}</small>{% endif %}</article>{% endfor %}</section>{% endfor %}
       </div>
     </div>

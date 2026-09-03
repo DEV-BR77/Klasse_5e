@@ -74,8 +74,8 @@ STEP_CONTENT = {
         ("push_general", "push_chat", "push_events"),
     ),
     8: (
-        "WebUntis",
-        "Jede Kategorie ist einzeln und nur für einen manuellen Abruf aktivierbar.",
+        "Daten, Kalender und Hausaufgaben synchronisieren",
+        "Lege je Kind fest, welche Schuldaten automatisch aktualisiert werden dürfen.",
         (
             "webuntis_timetable",
             "webuntis_timetable_extended",

@@ -9,11 +9,25 @@ from klasse5e.core.models import SchoolClass, SchoolYear
 from klasse5e.events.models import Event
 
 
+class ChatRetentionCategory(models.Model):
+    name = models.CharField(max_length=80, unique=True)
+    retention_days = models.PositiveSmallIntegerField(default=30)
+    intended_for_events = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-intended_for_events", "retention_days", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.retention_days} Tage)"
+
+
 class ChatRoom(models.Model):
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE)
     school_year = models.ForeignKey(SchoolYear, on_delete=models.PROTECT)
     event = models.OneToOneField(Event, null=True, blank=True, on_delete=models.CASCADE)
+    retention_category = models.ForeignKey(ChatRetentionCategory, null=True, blank=True, on_delete=models.PROTECT)
     title = models.CharField(max_length=120)
     is_open = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -34,7 +48,21 @@ class ChatMessage(models.Model):
     mentions = models.ManyToManyField(
         settings.AUTH_USER_MODEL, blank=True, related_name="chat_mentions"
     )
-    body = models.CharField(max_length=2000)
+    body = models.CharField(max_length=2000, blank=True)
+    attachment = models.FileField(upload_to="chat/opaque/", blank=True)
+    attachment_name = models.CharField(max_length=180, blank=True)
+    attachment_content_type = models.CharField(max_length=80, blank=True)
+    attachment_safety_status = models.CharField(
+        max_length=16,
+        choices=[
+            ("not_applicable", "Nicht erforderlich"),
+            ("pending", "Prüfung ausstehend"),
+            ("approved", "Freigegeben"),
+            ("blocked", "Gesperrt"),
+        ],
+        default="not_applicable",
+    )
+    language_filter_hits = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     edited_at = models.DateTimeField(null=True, blank=True)
     withdrawn_at = models.DateTimeField(null=True, blank=True)

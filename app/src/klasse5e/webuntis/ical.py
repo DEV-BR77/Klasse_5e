@@ -23,8 +23,8 @@ def build_calendar(connection):
         "VERSION:2.0",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
-        "PRODID:-//Klasse 5e//WebUntis//DE",
-        "X-WR-CALNAME:WebUntis",
+        "PRODID:-//KlassID//Schuldaten//DE",
+        "X-WR-CALNAME:KlassID Schule",
         "X-PUBLISHED-TTL:PT6H",
     ]
     start = timezone.now() - timedelta(days=14)

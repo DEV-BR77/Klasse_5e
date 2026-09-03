@@ -98,7 +98,7 @@ def test_map_picker_replaces_manual_coordinate_fields(client, guardian, school_c
     response = client.get("/mehr/mobilitaet/")
     html = response.content.decode()
     assert "data-local-map" in html
-    assert "Start auf der Karte markieren" in html
+    assert "Ungefähren Startbereich markieren" in html
     assert "Breitengrad (optional)" not in html
 
 

@@ -13,7 +13,7 @@
     <h2>Bestätigte Zuordnungen</h2>
     <ul>{% for relationship in relationships %}<li>{{ relationship.student_person.first_name }} {{ relationship.student_person.last_name }} – {{ relationship.get_relationship_type_display }}</li>{% empty %}<li>Keine bestätigte Kindzuordnung. Damit kannst du nur für dich selbst entscheiden.</li>{% endfor %}</ul>
   {% elif step == 4 %}
-    <p>Pflichtdaten sichern Anmeldung, Klassenmitgliedschaft und Berechtigungen. Kontaktprofil, Fotos, Push, WebUntis und Gesichtssuche sind getrennt freiwillig.</p>
+    <p>Pflichtdaten sichern Anmeldung, Klassenmitgliedschaft und Berechtigungen. Kontaktprofil, Fotos, Push, Schuldaten-Synchronisierung und Gesichtssuche sind getrennt freiwillig.</p>
     <p><a href="/datenschutz/">Ausführliche Datenschutzinformation</a></p>
   {% elif step == 10 %}
     <p>Du kannst jede freiwillige Entscheidung später unter <a href="/mehr/einwilligungen/">Einwilligungen</a> widerrufen. Der Widerruf ist genauso erreichbar wie die Zustimmung.</p>

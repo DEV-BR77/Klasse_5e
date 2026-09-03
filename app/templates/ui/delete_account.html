@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="danger-page narrow-page">
+  <a class="back-link" href="{% url 'ui-more' %}">← Einstellungen</a>
+  <header class="page-heading"><div><p class="eyebrow">Selbstbestimmt</p><h1>Konto und persönliche Daten löschen</h1><p class="lede">Der Zugang wird sofort gesperrt. Persönliche Profildaten, Zugangsdaten, Push-Geräte, eigene Chat-Inhalte und eigene Upload-Dateien werden entfernt oder anonymisiert.</p></div></header>
+  <div class="notice"><strong>Wenn ein Kind die Klasse verlässt:</strong> Der Familienzugriff endet sofort. Ohne eigenen Löschauftrag werden die personenbezogenen Daten spätestens 90 Tage nach dem Austritt verarbeitet.</div>
+  {% if error %}<div class="notice notice-error">{{ error }}</div>{% endif %}
+  <form method="post" class="settings-panel form-stack">{% csrf_token %}
+    <label>Aktuelles Passwort<input type="password" name="password" autocomplete="current-password" required></label>
+    <label>Zur Bestätigung „Konto löschen“ eingeben<input name="confirmation" required autocomplete="off"></label>
+    <button class="button button-danger">Konto und Daten jetzt löschen</button>
+    <small>Dieser Vorgang kann nicht rückgängig gemacht werden. Rechtlich notwendige Audit-Nachweise bleiben ohne Namen und Kontaktdaten erhalten.</small>
+  </form>
+</section>
+{% endblock %}

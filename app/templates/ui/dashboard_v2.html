@@ -6,12 +6,7 @@
     <button class="icon-button refresh-button" type="button" onclick="window.location.reload()" aria-label="Startseite aktualisieren">↻</button>
   </header>
 
-  <nav class="quick-access" aria-label="Schnellzugriff">
-    {% if enabled_modules.webuntis_homework %}<a href="#homework"><span class="quick-icon quick-lilac">{% include "ui/_icon.html" with name="document" %}</span><strong>Hausaufgaben</strong>{% if notification_counts.homework %}<small>{{ notification_counts.homework }} neu</small>{% endif %}</a>{% endif %}
-    <a href="/kalender/"><span class="quick-icon quick-blue">{% include "ui/_icon.html" with name="calendar" %}</span><strong>Kalender</strong></a>
-    {% if enabled_modules.chat %}<a href="/chat/"><span class="quick-icon quick-green">{% include "ui/_icon.html" with name="chat" %}</span><strong>Chat</strong>{% if chat_unread %}<small>{{ chat_unread }} neu</small>{% endif %}</a>{% endif %}
-    {% if enabled_modules.mobility %}<a href="/mehr/mobilitaet/"><span class="quick-icon quick-orange">{% include "ui/_icon.html" with name="people" %}</span><strong>Mobilität</strong></a>{% endif %}
-  </nav>
+  {% if notification_counts.chat_mention %}<a class="mention-alert" href="{% url 'notification-list' %}"><span>@</span><div><strong>{{ notification_counts.chat_mention }} neue Erwähnung{% if notification_counts.chat_mention != 1 %}en{% endif %}</strong><small>Jemand hat dich in einem Chat angesprochen.</small></div><b>Öffnen →</b></a>{% endif %}
 
   <section class="today-strip" aria-labelledby="today-heading">
     <div class="section-heading"><div><p class="eyebrow">Diese Woche</p><h2 id="today-heading">Dein Überblick</h2></div><a href="/kalender/">Alle Termine</a></div>
@@ -37,6 +32,11 @@
     <article class="feature-card events-card">
       <header class="card-header"><div><p class="eyebrow">Vormerken</p><h2>Nächste Veranstaltungen</h2></div><a href="/mehr/veranstaltungen/">Alle</a></header>
       <ul class="event-preview-list">{% for item in events %}<li><time><strong>{{ item.starts_at|date:"d" }}</strong><span>{{ item.starts_at|date:"M" }}</span></time><div><a href="/mehr/veranstaltungen/{{ item.id }}/"><strong>{{ item.title }}</strong></a><small>{{ item.starts_at|date:"H:i" }} Uhr · {{ item.location }}</small></div></li>{% empty %}<li class="empty-compact">Keine Veranstaltung geplant.</li>{% endfor %}</ul>
+    </article>
+
+    <article class="feature-card meal-card">
+      <header class="card-header"><div><p class="eyebrow">{% if next_meal.date == selected_day %}Heute{% else %}Nächster Essenstag{% endif %}</p><h2>Speiseplan</h2></div><a href="{% url 'meal-plans' %}">Alle Wochen</a></header>
+      {% if next_meal %}<p class="meal-date">{{ next_meal.date|date:"l, d.m." }} · KW {{ next_meal.plan.iso_week }}</p><div class="dashboard-meals">{% for option in next_meal.options.all %}<section><strong>Menü {{ option.line }}</strong><p>{{ option.components|join:", " }}</p><div class="meal-codes">{% for code in option.allergen_codes %}<span title="Allergen">{{ code }}</span>{% endfor %}{% for code in option.additive_codes %}<span title="Zusatzstoff">{{ code }}</span>{% endfor %}</div></section>{% endfor %}</div><small>Änderungen vorbehalten · Stand {{ next_meal.plan.fetched_at|date:"d.m., H:i" }} Uhr</small>{% else %}<p class="empty-compact">Noch kein veröffentlichter Speiseplan verfügbar.</p>{% endif %}
     </article>
   </div>
   <p class="sync-note">{% if webuntis_last_sync %}Schuldaten zuletzt aktualisiert: {{ webuntis_last_sync|date:"d.m.Y, H:i" }} Uhr{% else %}Noch keine Schuldaten synchronisiert.{% endif %}</p>

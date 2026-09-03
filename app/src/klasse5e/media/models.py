@@ -91,6 +91,19 @@ class Photo(models.Model):
         default=False,
         help_text="Separate ausdrückliche Freigabe für die lokale technische Analyse",
     )
+    analysis_status = models.CharField(
+        max_length=20,
+        choices=[
+            ("not_requested", "Nicht angefordert"),
+            ("queued", "Vorgemerkt"),
+            ("analyzing", "Wird analysiert"),
+            ("ready", "Analysiert"),
+            ("review", "Prüfung nötig"),
+            ("disabled", "Nicht freigegeben"),
+        ],
+        default="not_requested",
+    )
+    ai_labels = models.JSONField(default=list, blank=True)
 
 
 class PhotoSubjectDeclaration(models.Model):

@@ -7,6 +7,7 @@ WEEKDAYS = [("mo", "Mo"), ("tu", "Di"), ("we", "Mi"), ("th", "Do"), ("fr", "Fr")
 
 
 class MobilityListingForm(forms.ModelForm):
+    use_home_area = forms.BooleanField(required=False, label="Meinen gespeicherten Wohnbereich verwenden")
     start_latitude = forms.DecimalField(required=False, widget=forms.HiddenInput())
     start_longitude = forms.DecimalField(required=False, widget=forms.HiddenInput())
     weekdays = forms.MultipleChoiceField(
@@ -18,6 +19,10 @@ class MobilityListingForm(forms.ModelForm):
             "Fahrerlaubnis und Kindersitze klären die beteiligten Erwachsenen."
         )
     )
+
+    def __init__(self, *args, person=None, **kwargs):
+        self.person = person
+        super().__init__(*args, **kwargs)
 
     class Meta:
         model = MobilityListing
@@ -62,6 +67,12 @@ class MobilityListingForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        if cleaned.get("use_home_area"):
+            if self.person and self.person.home_latitude is not None and self.person.home_longitude is not None:
+                cleaned["start_latitude"] = self.person.home_latitude
+                cleaned["start_longitude"] = self.person.home_longitude
+            else:
+                self.add_error("use_home_area", "Speichere zuerst deinen Wohnbereich im persönlichen Profil.")
         if (
             cleaned.get("time_from")
             and cleaned.get("time_until")

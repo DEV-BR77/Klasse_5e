@@ -10,14 +10,24 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
 from django.db.models import Count, Q
-from django.http import Http404, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import content_disposition_header
+from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods, require_POST
 
-from klasse5e.chat.models import ChatReadState, ChatRoom
+from klasse5e.chat.models import ChatReadState, ChatRetentionCategory, ChatRoom
 from klasse5e.content.models import Post, ProtectedDocument, TeacherProfile
-from klasse5e.events.models import ContributionCategory, ContributionItem, Event, Reservation
+from klasse5e.events.models import (
+    ContributionCategory,
+    ContributionItem,
+    Event,
+    EventPoll,
+    EventPollOption,
+    EventPollVote,
+    Reservation,
+)
 from klasse5e.events.services import cancel_reservation_for_user, create_reservation
 from klasse5e.events.spoonacular import SpoonacularUnavailable, search_food_items
 from klasse5e.itslearning.models import (
@@ -27,8 +37,9 @@ from klasse5e.itslearning.models import (
     WebDavSpace,
 )
 from klasse5e.itslearning.webdav import used_bytes
+from klasse5e.meals.models import MealDay, MealPlan
 from klasse5e.media.models import Gallery
-from klasse5e.media.policies import may_access_gallery
+from klasse5e.media.policies import may_access_gallery, may_manage_gallery
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
 from klasse5e.webuntis.models import WebUntisConnection, WebUntisHomework, WebUntisLesson
 
@@ -40,11 +51,14 @@ from .models import (
     Person,
     PilotReport,
     PortalModule,
+    PortalTheme,
+    PushPreference,
     PushSubscription,
     RegistrationApplication,
     Role,
     School,
     SchoolClass,
+    StudentProfile,
     UserNotification,
 )
 from .policies import active_roles, family_label, has_active_membership
@@ -80,9 +94,18 @@ def _membership(user):
 
 def _class_or_404(user):
     membership = _membership(user)
-    if not membership:
-        raise Http404
-    return membership.school_class
+    if membership:
+        return membership.school_class
+    if user.is_superuser or active_roles(user) & {
+        Role.PRIMARY_ADMIN,
+        Role.DEPUTY_ADMIN,
+        Role.SCHOOL_ADMIN,
+        Role.CLASS_ADMIN,
+    }:
+        school_class = SchoolClass.objects.filter(status="active").order_by("id").first()
+        if school_class:
+            return school_class
+    raise Http404
 
 
 def _day_from_request(request):
@@ -137,7 +160,50 @@ def _webuntis_connections(user):
 @login_required
 def dashboard(request):
     school_class = _class_or_404(request.user)
+    # The due scheduler is deliberately request-assisted: after a login the first
+    # dashboard request claims at most one due schedule transactionally. This keeps
+    # homework current without requiring a separate worker or a hidden manual click.
+    try:
+        from klasse5e.webuntis.scheduler import run_due_schedules
+
+        run_due_schedules()
+    except Exception:
+        # A school provider outage must not make the portal or login unavailable.
+        pass
+    try:
+        from django.core.cache import cache
+
+        from klasse5e.chat.retention import cleanup_expired_messages
+
+        if cache.add("chat-retention-cleanup", True, 6 * 60 * 60):
+            cleanup_expired_messages()
+    except Exception:
+        pass
+    try:
+        from django.core.cache import cache
+
+        from klasse5e.meals.source import sync_plans
+
+        if settings.MEAL_PLAN_SYNC_ENABLED and not settings.DEBUG and cache.add(
+            "meal-plan-sync", True, 12 * 60 * 60
+        ):
+            sync_plans()
+    except Exception:
+        pass
     day = _day_from_request(request)
+    meal_reference_day = day
+    if day == timezone.localdate() and timezone.localtime().hour >= 15:
+        meal_reference_day += timedelta(days=1)
+    next_meal = (
+        MealDay.objects.filter(
+            plan__status=MealPlan.Status.READY,
+            date__gte=meal_reference_day,
+        )
+        .select_related("plan")
+        .prefetch_related("options")
+        .order_by("date")
+        .first()
+    )
     context = _shared(request, "Start", "start")
     portal_connections = _itslearning_connections(request.user)
     webuntis_connections = _webuntis_connections(request.user)
@@ -173,6 +239,7 @@ def dashboard(request):
                 status=Event.Status.PUBLISHED,
                 ends_at__gte=timezone.now(),
             ).order_by("starts_at")[:2],
+            "next_meal": next_meal,
             "posts": Post.objects.filter(
                 school_class=school_class, status=Post.Status.PUBLISHED
             ).order_by("-important", "-pinned", "-updated_at")[:3],
@@ -246,11 +313,15 @@ def chat_overview(request):
         _require_portal_admin(request.user)
         title = request.POST.get("title", "").strip()[:120]
         if title:
+            retention = ChatRetentionCategory.objects.filter(
+                pk=request.POST.get("retention_category"), is_active=True, intended_for_events=False
+            ).first()
             ChatRoom.objects.create(
                 school_class=school_class,
                 school_year=school_class.school_year,
                 title=title,
                 is_open=True,
+                retention_category=retention or ChatRetentionCategory.objects.filter(is_active=True, intended_for_events=False).order_by("retention_days").first(),
             )
             messages.success(request, "Der Chatraum wurde angelegt.")
         return redirect("ui-chat")
@@ -270,6 +341,7 @@ def chat_overview(request):
         )
     context = _shared(request, "Chat", "chat")
     context["room_rows"] = room_rows
+    context["retention_categories"] = ChatRetentionCategory.objects.filter(is_active=True, intended_for_events=False)
     return render(request, "ui/chat_overview.html", context)
 
 
@@ -282,7 +354,7 @@ def chat_room(request, room_id):
     if request.method == "POST":
         from klasse5e.chat.services import create_message
 
-        create_message(room, request.user, request.POST.get("body", ""), None)
+        create_message(room, request.user, request.POST.get("body", ""), None, request.FILES.get("attachment"))
         return redirect("ui-chat-room", room_id=room.public_id)
     ChatReadState.objects.update_or_create(
         room=room, user=request.user, defaults={"last_read_at": timezone.now()}
@@ -294,9 +366,38 @@ def chat_room(request, room_id):
             "chat_messages": room.messages.select_related("author__person", "reply_to").order_by(
                 "created_at"
             )[:200],
+            "emojis": "😀 😄 😂 😊 😍 🥳 😎 🤔 👍 👏 🙌 💪 ❤️ 🎉 🚲 ⚽ 📚 ✏️".split(),
+            "mention_names": [
+                display or first
+                for display, first in Person.objects.filter(
+                    classmembership__school_class=room.school_class,
+                    classmembership__status="active",
+                    user__isnull=False,
+                ).exclude(user=request.user).values_list("chat_display_name", "first_name").distinct()
+            ],
         }
     )
     return render(request, "ui/chat_room.html", context)
+
+
+@login_required
+def chat_attachment(request, message_id):
+    from klasse5e.chat.models import ChatMessage
+
+    message = get_object_or_404(ChatMessage.objects.select_related("room"), public_id=message_id)
+    if not has_active_membership(request.user, message.room.school_class) or not message.attachment:
+        raise Http404
+    if (
+        message.attachment_content_type.startswith("image/")
+        and message.attachment_safety_status != "approved"
+    ):
+        raise Http404
+    response = FileResponse(message.attachment.open("rb"), content_type=message.attachment_content_type or "application/octet-stream")
+    disposition = "inline" if message.attachment_content_type.startswith(("image/", "audio/")) else "attachment"
+    response["Content-Disposition"] = content_disposition_header(disposition == "attachment", message.attachment_name)
+    response["Cache-Control"] = "private, no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @login_required
@@ -314,6 +415,16 @@ def portal_management(request):
         }
     )
     return render(request, "ui/portal_management.html", context)
+
+
+@login_required
+def presentation(request):
+    _class_or_404(request.user)
+    return render(
+        request,
+        "ui/presentation.html",
+        _shared(request, "KlassID kennenlernen", "more"),
+    )
 
 
 @login_required
@@ -378,7 +489,162 @@ def pilot_report(request):
 @login_required
 def more(request):
     context = _shared(request, "Mehr", "more")
+    school_class = _class_or_404(request.user)
+    catalog = _menu_catalog()
+    stored = school_class.visible_menu_items if isinstance(school_class.visible_menu_items, dict) else {}
+    configured = stored.get("items") or [{"key": key, "group": item[3]} for key, item in catalog.items()]
+    labels = {"class": "Klassenleben", "communication": "Kalender & Kommunikation", "account": "Mein Konto"}
+    labels.update(stored.get("group_labels") or {})
+    groups = []
+    for group_key in ("class", "communication", "account"):
+        entries = []
+        for row in configured:
+            if row.get("group") != group_key or row.get("key") not in catalog:
+                continue
+            label, url, icon, _default_group = catalog[row["key"]]
+            entries.append({"key": row["key"], "label": label, "url": url, "icon": icon})
+        groups.append({"key": group_key, "label": labels[group_key], "items": entries})
+    context["menu_groups"] = groups
     return render(request, "ui/more.html", context)
+
+
+def _menu_catalog():
+    return {
+        "events": ("Veranstaltungen & Mitbringen", "/mehr/veranstaltungen/", "event", "class"),
+        "mobility": ("Wir fahren zusammen", "/mehr/mobilitaet/", "people", "class"),
+        "news": ("Aktuelles", "/mehr/aktuelles/", "news", "class"),
+        "gallery": ("Fotos & Galerie", "/mehr/fotos/", "photo", "class"),
+        "meals": ("Speiseplan", "/mehr/speiseplan/", "event", "class"),
+        "documents": ("PDF-Formulare", "/mehr/dokumente/", "document", "class"),
+        "calendar_subscription": ("Kalender verbinden", "/kalender/verbinden/", "calendar", "communication"),
+        "school_data": ("Daten, Kalender und Hausaufgaben synchronisieren", "/mehr/webuntis/", "calendar", "communication"),
+        "profile": ("Meine Daten", "/einstellungen/profil/", "people", "account"),
+        "family": ("Familie & Kinder", "/mehr/familie/", "people", "account"),
+        "themes": ("Design & Themes", "/einstellungen/design/", "consent", "account"),
+        "consents": ("Datenschutz & Einwilligungen", "/mehr/einwilligungen/", "consent", "account"),
+        "notifications": ("Benachrichtigungen & App", "/mehr/benachrichtigungen/", "bell", "account"),
+        "security": ("Zwei-Faktor-Anmeldung", "/accounts/2fa/", "consent", "account"),
+        "tutorial": ("Einführung", "/tutorial/", "home", "account"),
+        "presentation": ("Portal-Präsentation", "/praesentation/", "home", "communication"),
+        "delete_account": ("Konto und Daten löschen", "/einstellungen/konto-loeschen/", "consent", "account"),
+    }
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def menu_management(request):
+    _require_portal_admin(request.user)
+    school_class = _class_or_404(request.user)
+    catalog = _menu_catalog()
+    stored = school_class.visible_menu_items if isinstance(school_class.visible_menu_items, dict) else {}
+    existing = {item.get("key"): item for item in stored.get("items", [])}
+    if request.method == "POST":
+        items = []
+        for key in catalog:
+            group = request.POST.get(f"group_{key}", catalog[key][3])
+            if group not in {"class", "communication", "account"}:
+                group = catalog[key][3]
+            try:
+                position = int(request.POST.get(f"position_{key}", "99"))
+            except ValueError:
+                position = 99
+            items.append({"key": key, "group": group, "position": position})
+        items.sort(key=lambda item: (item["group"], item["position"], item["key"]))
+        school_class.visible_menu_items = {
+            "group_labels": {
+                "class": request.POST.get("label_class", "Klassenleben")[:60],
+                "communication": request.POST.get("label_communication", "Kalender & Kommunikation")[:60],
+                "account": request.POST.get("label_account", "Mein Konto")[:60],
+            },
+            "items": items,
+        }
+        school_class.save(update_fields=["visible_menu_items"])
+        messages.success(request, "Menüstruktur gespeichert.")
+        return redirect("menu-management")
+    rows = []
+    for index, (key, (label, _url, _icon, default_group)) in enumerate(catalog.items(), 1):
+        item = existing.get(key, {})
+        rows.append({"key": key, "label": label, "group": item.get("group", default_group), "position": item.get("position", index)})
+    context = _shared(request, "Menü verwalten", "management")
+    context.update({"rows": rows, "stored": stored})
+    return render(request, "ui/menu_management.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def theme_settings(request):
+    _class_or_404(request.user)
+    audience = (
+        PortalTheme.Audience.CHILDREN
+        if hasattr(request.user, "person")
+        and StudentProfile.objects.filter(person=request.user.person).exists()
+        else PortalTheme.Audience.ADULTS
+    )
+    themes = PortalTheme.objects.filter(is_active=True).filter(
+        Q(audience=PortalTheme.Audience.ALL) | Q(audience=audience)
+    )
+    if request.method == "POST":
+        selected = get_object_or_404(themes, pk=request.POST.get("theme_id"))
+        request.user.selected_theme = selected
+        request.user.save(update_fields=["selected_theme"])
+        messages.success(request, f"Theme „{selected.name}“ ist jetzt aktiv.")
+        return redirect("theme-settings")
+    context = _shared(request, "Design & Themes", "more")
+    context.update({"themes": themes, "audience": audience})
+    return render(request, "ui/theme_settings.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def theme_management(request):
+    if not (
+        request.user.is_superuser
+        or request.user.roleassignment_set.filter(
+            active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+        ).exists()
+    ):
+        raise Http404
+    if request.method == "POST":
+        action = request.POST.get("action", "create")
+        if action == "toggle":
+            item = get_object_or_404(PortalTheme, pk=request.POST.get("theme_id"))
+            item.is_active = not item.is_active
+            item.save(update_fields=["is_active", "updated_at"])
+            messages.success(request, f"„{item.name}“ wurde {'aktiviert' if item.is_active else 'deaktiviert'}.")
+            return redirect("theme-management")
+        import re
+
+        colors = {
+            field: request.POST.get(field, "").strip().upper()
+            for field in ("primary", "primary_dark", "primary_light", "accent", "background", "surface", "text", "text_muted")
+        }
+        if not all(re.fullmatch(r"#[0-9A-F]{6}", value) for value in colors.values()):
+            messages.error(request, "Bitte für jede Farbe einen vollständigen HEX-Wert angeben.")
+        else:
+            base_key = slugify(request.POST.get("name", ""))[:45] or "theme"
+            key = base_key
+            suffix = 2
+            while PortalTheme.objects.filter(key=key).exists():
+                key, suffix = f"{base_key}-{suffix}", suffix + 1
+            try:
+                shadow_strength = min(30, max(0, int(request.POST.get("shadow_strength", "10") or 10)))
+            except ValueError:
+                shadow_strength = 10
+            PortalTheme.objects.create(
+                key=key,
+                name=request.POST.get("name", "Neues Theme").strip()[:80],
+                description=request.POST.get("description", "").strip()[:180],
+                audience=request.POST.get("audience") if request.POST.get("audience") in PortalTheme.Audience.values else PortalTheme.Audience.ALL,
+                is_dark=request.POST.get("is_dark") == "on",
+                radius=request.POST.get("radius") if request.POST.get("radius") in {".7rem", "1rem", "1.35rem", "1.7rem"} else "1rem",
+                shadow_strength=shadow_strength,
+                **colors,
+            )
+            messages.success(request, "Das neue Theme ist sofort zur Auswahl verfügbar.")
+            return redirect("theme-management")
+    context = _shared(request, "Themes verwalten", "management")
+    context.update({"themes": PortalTheme.objects.all(), "audiences": PortalTheme.Audience.choices})
+    return render(request, "ui/theme_management.html", context)
 
 
 @login_required
@@ -443,19 +709,33 @@ def events(request):
             status=Event.Status.PUBLISHED,
         )
         item.organizers.add(request.user)
-        requested_items = [
-            label.strip()[:160]
-            for label in request.POST.get("bring_items", "").splitlines()
-            if label.strip()
-        ][:30]
+        ChatRoom.objects.create(
+            school_class=school_class,
+            school_year=school_class.school_year,
+            event=item,
+            title=item.title,
+            retention_category=ChatRetentionCategory.objects.filter(is_active=True, intended_for_events=True).order_by("-retention_days").first(),
+        )
+        requested_items = []
+        for line in request.POST.get("bring_items", "").splitlines()[:30]:
+            parts = [part.strip() for part in line.split("|")]
+            if not parts[0]:
+                continue
+            try:
+                amount = Decimal(parts[1]) if len(parts) > 1 else Decimal("1")
+                if amount <= 0:
+                    raise ValueError
+            except (InvalidOperation, ValueError):
+                amount = Decimal("1")
+            requested_items.append((parts[0][:160], amount, (parts[2] if len(parts) > 2 else "Stück")[:40]))
         if requested_items:
             category = ContributionCategory.objects.create(event=item, name="Mitbringliste")
             ContributionItem.objects.bulk_create(
                 [
                     ContributionItem(
-                        category=category, label=label, desired_quantity=1, unit="Stück"
+                        category=category, label=label, desired_quantity=amount, unit=unit
                     )
-                    for label in requested_items
+                    for label, amount, unit in requested_items
                 ]
             )
         messages.success(request, "Die Veranstaltung wurde veröffentlicht.")
@@ -464,14 +744,115 @@ def events(request):
     context["events"] = Event.objects.filter(
         school_class=school_class, status=Event.Status.PUBLISHED
     ).order_by("starts_at")
+    context["event_polls"] = EventPoll.objects.filter(
+        school_class=school_class, finalized_event__isnull=True
+    ).prefetch_related("options__votes").order_by("closes_at")
     return render(request, "ui/events.html", context)
+
+
+@login_required
+@require_POST
+def create_event_poll(request):
+    school_class = _class_or_404(request.user)
+    _require_portal_admin(request.user)
+    try:
+        closes_at = timezone.datetime.fromisoformat(request.POST.get("closes_at", ""))
+        if timezone.is_naive(closes_at):
+            closes_at = timezone.make_aware(closes_at)
+        if closes_at <= timezone.now():
+            raise ValueError
+        options = []
+        for index in range(1, 7):
+            raw = request.POST.get(f"option_{index}", "")
+            if not raw:
+                continue
+            starts_at = timezone.datetime.fromisoformat(raw)
+            if timezone.is_naive(starts_at):
+                starts_at = timezone.make_aware(starts_at)
+            options.append(starts_at)
+        if len(options) < 2:
+            raise ValueError
+    except (TypeError, ValueError):
+        messages.error(request, "Bitte gib mindestens zwei gültige Termine und ein Schlussdatum an.")
+        return redirect("ui-events")
+    poll = EventPoll.objects.create(
+        school_class=school_class,
+        title=request.POST.get("title", "").strip()[:200],
+        description=request.POST.get("description", "").strip(),
+        closes_at=closes_at,
+        created_by=request.user,
+    )
+    EventPollOption.objects.bulk_create(
+        [EventPollOption(poll=poll, starts_at=start, ends_at=start + timedelta(hours=1)) for start in options]
+    )
+    return redirect("ui-event-poll", poll_id=poll.id)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def event_poll(request, poll_id):
+    school_class = _class_or_404(request.user)
+    poll = get_object_or_404(EventPoll, id=poll_id, school_class=school_class)
+    options = poll.options.annotate(vote_count=Count("votes")).order_by("starts_at")
+    if request.method == "POST" and poll.is_open:
+        selected = set(request.POST.getlist("options"))
+        EventPollVote.objects.filter(option__poll=poll, user=request.user).exclude(
+            option_id__in=selected
+        ).delete()
+        for option in options.filter(id__in=selected):
+            EventPollVote.objects.get_or_create(option=option, user=request.user)
+        messages.success(request, "Deine möglichen Termine wurden gespeichert.")
+        return redirect("ui-event-poll", poll_id=poll.id)
+    context = _shared(request, poll.title, "more")
+    context.update(
+        {
+            "poll": poll,
+            "poll_options": options,
+            "my_votes": set(EventPollVote.objects.filter(option__poll=poll, user=request.user).values_list("option_id", flat=True)),
+            "is_organizer": poll.created_by_id == request.user.id or request.user.is_superuser,
+        }
+    )
+    return render(request, "ui/event_poll.html", context)
+
+
+@login_required
+@require_POST
+def finalize_event_poll(request, poll_id):
+    school_class = _class_or_404(request.user)
+    _require_portal_admin(request.user)
+    poll = get_object_or_404(EventPoll, id=poll_id, school_class=school_class, finalized_event__isnull=True)
+    option = get_object_or_404(EventPollOption, id=request.POST.get("option_id"), poll=poll)
+    meeting_url = request.POST.get("meeting_url", "").strip()[:200]
+    event_item = Event.objects.create(
+        school_class=school_class,
+        school_year=school_class.school_year,
+        title=poll.title,
+        description=poll.description,
+        starts_at=option.starts_at,
+        ends_at=option.ends_at,
+        location=meeting_url or "Wird bekannt gegeben",
+        meeting_url=meeting_url,
+        change_deadline=option.starts_at,
+        status=Event.Status.PUBLISHED,
+    )
+    event_item.organizers.add(request.user)
+    poll.finalized_event = event_item
+    poll.save(update_fields=["finalized_event"])
+    ChatRoom.objects.create(
+        school_class=school_class,
+        school_year=school_class.school_year,
+        event=event_item,
+        title=event_item.title,
+        retention_category=ChatRetentionCategory.objects.filter(is_active=True, intended_for_events=True).order_by("-retention_days").first(),
+    )
+    return redirect("ui-event", event_id=event_item.id)
 
 
 @login_required
 def event(request, event_id):
     school_class = _class_or_404(request.user)
     item = get_object_or_404(Event, id=event_id, school_class=school_class, status="published")
-    categories = item.categories.prefetch_related("items__reservations")
+    categories = item.categories.prefetch_related("items__reservations__user__person")
     reservations = Reservation.objects.filter(
         item__category__event=item, user=request.user, status=Reservation.Status.ACTIVE
     )
@@ -479,6 +860,19 @@ def event(request, event_id):
     food_results = []
     food_error = ""
     is_organizer = item.organizers.filter(id=request.user.id).exists()
+    contribution_items = [entry for category in categories for entry in category.items.all()]
+    for entry in contribution_items:
+        entry.active_reservations = [reservation for reservation in entry.reservations.all() if reservation.status == "active"]
+        for reservation in entry.active_reservations:
+            person = reservation.user.person
+            child = person.guardian_relationships.filter(status="verified").select_related("student_person").first()
+            reservation.display_name = (
+                child.student_person.first_name
+                if person.contribution_name_mode == "child" and child
+                else (person.chat_display_name or person.first_name)
+                if person.contribution_name_mode == "personal"
+                else f"Familie {child.student_person.last_name if child else person.last_name}"
+            )
     if food_query and is_organizer:
         try:
             food_results = search_food_items(food_query)
@@ -498,6 +892,7 @@ def event(request, event_id):
             "food_results": food_results,
             "food_error": food_error,
             "food_status": request.GET.get("food_status", ""),
+            "contribution_items": contribution_items,
         }
     )
     return render(request, "ui/event_detail.html", context)
@@ -568,6 +963,18 @@ def cancel_reservation(request, reservation_id):
 
 
 @login_required
+@require_POST
+def fulfill_reservation(request, reservation_id):
+    reservation = get_object_or_404(Reservation.objects.select_related("item__category__event"), id=reservation_id, status=Reservation.Status.ACTIVE)
+    event_item = reservation.item.category.event
+    if reservation.user_id != request.user.id and not event_item.organizers.filter(id=request.user.id).exists():
+        raise Http404
+    reservation.fulfilled_at = timezone.now() if not reservation.fulfilled_at else None
+    reservation.save(update_fields=["fulfilled_at"])
+    return redirect("ui-event", event_id=event_item.id)
+
+
+@login_required
 def teachers(request):
     school_class = _class_or_404(request.user)
     context = _shared(request, "Lehrkräfte", "more")
@@ -578,15 +985,42 @@ def teachers(request):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
 def galleries(request):
     school_class = _class_or_404(request.user)
+    roles = active_roles(request.user, school_class)
+    can_create = bool(
+        request.user.is_superuser
+        or roles
+        & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.CLASS_ADMIN, Role.EDITOR}
+    )
+    if request.method == "POST":
+        if not can_create:
+            raise Http404
+        title = request.POST.get("title", "").strip()[:200]
+        if not title:
+            messages.error(request, "Bitte gib der Galerie einen Namen.")
+        else:
+            gallery = Gallery.objects.create(
+                school_class=school_class,
+                school_year=school_class.school_year,
+                title=title,
+                description=request.POST.get("description", "").strip(),
+                status=Gallery.Status.PUBLISHED,
+                upload_allowed=True,
+                moderation_required=True,
+                created_by=request.user,
+                published_at=timezone.now(),
+            )
+            messages.success(request, f"Galerie „{gallery.title}“ wurde angelegt.")
+            return redirect("gallery-detail", gallery_id=gallery.id)
     visible = [
         gallery
         for gallery in Gallery.objects.filter(school_class=school_class).order_by("-created_at")
-        if may_access_gallery(request.user, gallery)
+        if may_access_gallery(request.user, gallery) or may_manage_gallery(request.user, gallery)
     ]
     context = _shared(request, "Fotos", "more")
-    context["galleries"] = visible
+    context.update({"galleries": visible, "can_create": can_create})
     return render(request, "ui/galleries.html", context)
 
 
@@ -665,7 +1099,23 @@ def notifications(request):
     ).exists()
     context["push_subscriptions"] = PushSubscription.objects.filter(user=request.user, enabled=True)
     context["vapid_configured"] = bool(settings.VAPID_PUBLIC_KEY)
+    context["mention_push_enabled"] = PushPreference.objects.filter(
+        user=request.user, key="push_chat_mentions", enabled=True
+    ).exists()
     return render(request, "ui/notifications.html", context)
+
+
+@login_required
+@require_POST
+def notification_preference(request):
+    key = request.POST.get("key")
+    if key != "push_chat_mentions":
+        raise Http404
+    PushPreference.objects.update_or_create(
+        user=request.user, key=key, defaults={"enabled": request.POST.get("enabled") == "on"}
+    )
+    messages.success(request, "Push-Einstellung gespeichert.")
+    return redirect("ui-notifications")
 
 
 @login_required

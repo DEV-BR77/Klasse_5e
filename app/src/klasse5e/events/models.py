@@ -21,6 +21,7 @@ class Event(models.Model):
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
     location = models.CharField(max_length=200)
+    meeting_url = models.URLField(blank=True)
     organizers = models.ManyToManyField(UserAccount, related_name="organized_events")
     change_deadline = models.DateTimeField()
     status = models.CharField(max_length=16, choices=Status, default=Status.DRAFT)
@@ -82,6 +83,7 @@ class Reservation(models.Model):
     note = models.CharField(max_length=300, blank=True)
     idempotency_key = models.CharField(max_length=80)
     status = models.CharField(max_length=16, choices=Status, default=Status.ACTIVE)
+    fulfilled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -103,4 +105,40 @@ class ReminderDelivery(models.Model):
             models.UniqueConstraint(
                 fields=["event", "user", "reason"], name="unique_event_reminder"
             )
+        ]
+
+
+class EventPoll(models.Model):
+    school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    closes_at = models.DateTimeField()
+    created_by = models.ForeignKey(UserAccount, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    finalized_event = models.OneToOneField(
+        Event, null=True, blank=True, on_delete=models.SET_NULL, related_name="source_poll"
+    )
+
+    @property
+    def is_open(self):
+        return self.closes_at > timezone.now() and not self.finalized_event_id
+
+
+class EventPollOption(models.Model):
+    poll = models.ForeignKey(EventPoll, on_delete=models.CASCADE, related_name="options")
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ["starts_at"]
+
+
+class EventPollVote(models.Model):
+    option = models.ForeignKey(EventPollOption, on_delete=models.CASCADE, related_name="votes")
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["option", "user"], name="unique_event_poll_vote")
         ]
