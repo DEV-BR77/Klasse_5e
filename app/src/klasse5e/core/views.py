@@ -83,6 +83,19 @@ def register(request):
 
 @csrf_protect
 @require_http_methods(["GET", "POST"])
+def invitation_entry(request):
+    if request.method == "POST":
+        token = request.POST.get("code", "").strip()
+        if _rate_limit(request, "invitation-entry"):
+            return render(request, "core/invitation_entry.html", {"error": "Bitte versuche es später erneut."}, status=429)
+        if token and FamilyAccessCode.resolve(token):
+            return redirect("family-register", token=token)
+        return render(request, "core/invitation_entry.html", {"error": "Der Einladungscode ist ungültig oder abgelaufen."}, status=400)
+    return render(request, "core/invitation_entry.html")
+
+
+@csrf_protect
+@require_http_methods(["GET", "POST"])
 def family_register(request, token):
     invitation = FamilyAccessCode.resolve(token)
     if invitation is None:

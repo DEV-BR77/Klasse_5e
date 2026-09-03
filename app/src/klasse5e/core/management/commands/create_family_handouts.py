@@ -104,7 +104,7 @@ class Command(BaseCommand):
             pdf.setFont("Helvetica-Bold", 9)
             pdf.drawString(27, 27, f"Einladung {item.serial_number:02d} / {len(invitations):02d}")
             pdf.setFont("Helvetica", 6.5)
-            pdf.drawRightString(width - 27, 28, "Einmalig gueltig - Datenschutz und Impressum im Portal")
+            pdf.drawRightString(width - 27, 28, "Einmalig gueltig - Familie einrichten - weitere Zugaenge persoenlich")
             pdf.setStrokeColor(teal)
             pdf.setLineWidth(1.2)
             pdf.line(27, 43, width - 27, 43)

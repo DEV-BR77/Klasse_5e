@@ -1,156 +1,108 @@
-# Klasse 5e – unser digitales Klassenportal
+# KlassID – gemeinsames digitales Klassenzimmer
 
-**[🇩🇪 Deutsch](#deutsch) · [🇬🇧 English](#english)**
+KlassID ist ein privat betriebenes, geschütztes Portal für das tägliche
+Zusammenleben von Schule und Familie. Zum Start wird das Portal für das THG
+und die Klasse 5e vorbereitet. Später kann dieselbe Struktur weitere Schulen
+und Klassen aufnehmen.
 
-> Ein privater, geschützter Ort für Informationen, Austausch und gemeinsame
-> Erinnerungen unserer Klasse.
+## Für Eltern und Familien
 
----
+Die wichtigste Zielgruppe sind Eltern und andere berechtigte Bezugspersonen.
+Der Zugang erfolgt ausschließlich mit einer persönlichen Einladung. Jede
+erwachsene Person nutzt ein eigenes Konto; Familien- und Kinderbeziehungen
+werden anschließend geprüft und mit passenden Zugriffsrechten versehen.
+Geteilte Familienpasswörter und frei behauptete Zuordnungen gibt es nicht.
 
-## Deutsch
+So entsteht ein gemeinsamer Ort für kurze, verlässliche Wege im Alltag – ohne
+wichtige Informationen auf Zettel, viele E-Mail-Verläufe oder offene Messenger-
+Gruppen verteilen zu müssen. KlassID ist kein Ersatz für Notfallkontakte und
+kein offizielles Schulportal.
 
-### Willkommen bei der Klasse 5e! 👋
+## Die wichtigsten Bereiche
 
-Dieses Projekt wird ein gemeinsames digitales Zuhause für die Schülerinnen und
-Schüler, Eltern und Klassenlehrkräfte der Klasse 5e. Statt wichtige
-Informationen über viele einzelne Chats, Zettel und E-Mails zu verteilen,
-sollen sie hier übersichtlich und sicher an einem Ort zu finden sein.
-
-Das Portal ist keine öffentliche Plattform. Der spätere Zugang erfolgt nur mit
-einer persönlichen Einladung. Jede Familie erhält eigene Zugänge, und Eltern
-können sicher mit ihren Kindern und der Klasse verbunden werden.
-
-### Das gehört zum Klassenportal
-
-| | Bereich | Wofür er gedacht ist |
+| | Bereich | Nutzen im Alltag |
 |:--:|---|---|
-| 📰 | **Aktuelles** | Neuigkeiten, Beiträge und wichtige Hinweise aus der Klasse |
-| 📄 | **Dokumente & Formulare** | PDF-Dokumente herunterladen und vorbereitete Formulare direkt ausfüllen |
-| 📅 | **Termine & Stundenplan** | Unterricht, Veranstaltungen und Änderungen übersichtlich sehen |
-| 🍽️ | **Speiseplan** | Das heutige Essen und die aktuellen Wochenpläne schnell finden |
-| 🧺 | **Mitbringlisten** | Einfach auswählen, wer zum Frühstück oder Klassenfest was mitbringt |
-| 💬 | **Klassenchat** | Geschützter Austausch innerhalb der Klassengemeinschaft |
-| 👩‍🏫 | **Unsere Lehrkräfte** | Klassenlehrkräfte und ihre Unterrichtsfächer kennenlernen |
-| 📷 | **Fotos & Erinnerungen** | Private Alben von Ausflügen, Projekten und Klassenfahrten ansehen |
-| 🔔 | **Erinnerungen** | Auf Wunsch Hinweise zu wichtigen Terminen und Änderungen erhalten |
+| 📅 | **Termine & Stundenplan** | Unterricht, Veranstaltungen und Änderungen auf einen Blick |
+| 🍽️ | **Speiseplan** | Wochenplan und heutiges Essen schnell finden |
+| 🧺 | **Mitbringlisten** | Für Frühstücke und Klassenfeste verbindlich eintragen, wer was mitbringt |
+| 🚲 | **Schulweg & Mitfahren** | Auto-, Fahrrad- und Laufgruppen mit groben Treffpunkten koordinieren |
+| 💬 | **Klassenchat** | Klassenbezogen kommunizieren, statt Informationen über private WhatsApp-Gruppen zu verteilen |
+| 📷 | **Fotogalerie** | Geschützte Klassenmomente teilen; sensible Vorschauen können maskiert bleiben |
+| 📄 | **Dokumente & Formulare** | Wichtige PDFs sicher bereitstellen und ausfüllen |
+| 🔔 | **Push-Hinweise** | Auf Wunsch direkt über neue Termine oder relevante Änderungen informiert werden |
 
-Das Portal ist für Smartphones, Tablets und Computer gedacht und soll sich als
-Web-App auf dem Startbildschirm installieren lassen.
+Die Funktionen sind für Smartphone, Tablet und Computer gedacht und können als
+Web-App auf dem Startbildschirm installiert werden.
 
-### Gemeinsam, aber mit persönlichen Zugängen 🤝
+## Sicher unterwegs – für Kinder, Eltern und Schule
 
-Mütter, Väter und andere berechtigte Bezugspersonen erhalten jeweils ein
-eigenes Konto. Familienmitglieder können sicher mit ihrem Kind verbunden
-werden, ohne Passwörter teilen zu müssen. So bleibt nachvollziehbar, wer einen
-Beitrag geschrieben, etwas zugesagt oder eine Einwilligung erteilt hat.
+Die Mitfahr- und Schulwegfunktion soll mehrere Probleme gleichzeitig entschärfen:
+Kinder bekommen verlässliche Begleitung, wenn sie sich allein noch nicht trauen;
+Eltern können Absprachen nachvollziehbar treffen; und vor dem Schultor werden
+Auto- und Abholverkehre entzerrt. Gemeinsames Laufen und Radfahren fördern
+Bewegung, Gemeinschaft und Selbstständigkeit und können den CO₂-Ausstoß senken.
 
-### Fotos und Privatsphäre 🔒
+Startbereiche werden nur ungefähr dargestellt. Eine Hausnummer oder ein Live-
+Standort wird nicht veröffentlicht. Exakte Abholadressen sind nur als
+befristete, widerrufbare Freigabe zwischen angenommenen Beteiligten vorgesehen.
 
-Klassenfotos sind schöne Erinnerungen – gleichzeitig verdienen sie besonderen
-Schutz. Bilder werden deshalb nicht öffentlich gezeigt und bleiben innerhalb
-des geschützten Klassenbereichs. Für Fotos, sichtbare Kontaktdaten und eine
-optionale Bildsuche gibt es getrennte, verständliche Einwilligungen. Eine
-Einwilligung kann widerrufen werden.
+## Kinder- und Datenschutz
 
-Geplant ist eine freiwillige Funktion, mit der Eltern Bilder finden können, auf
-denen ihr eigenes Kind zu sehen sein könnte. Die Bilderkennung läuft
-ausschließlich lokal auf dem privat betriebenen Server. Fotos und biometrische
-Vergleichsdaten werden dafür nicht an einen Cloud-Anbieter übertragen. Das
-System trifft keine endgültige Entscheidung: Vorschläge müssen immer von einem
-berechtigten Menschen geprüft werden. Die Funktion bleibt ausgeschaltet, bis
-alle technischen, rechtlichen und lizenzrechtlichen Voraussetzungen erfüllt
-sind.
+Kinderprofile sind von erwachsenen Konten getrennt. Zugriffe entstehen nur aus
+bestätigten Beziehungen und können jederzeit entzogen werden. Fotos liegen in
+geschützten Bereichen; Kontaktdaten und freiwillige Funktionen werden getrennt
+freigegeben. Sensible Bildzuordnungen bleiben standardmäßig ausgeschaltet.
 
-### Unser Grundsatz 🌱
+Im Demo-Bereich zeigen wir bewusst nur fiktive Inhalte. Eine Bildvorschau kann
+dort sichtbar maskiert sein, um zu zeigen, dass Kinderfotos nicht automatisch
+für alle sichtbar werden. Es werden keine echten Namen, Schulen, Termine oder
+Familien in die Demo übernommen.
 
-So viel Hilfe wie nötig, so wenig Daten wie möglich. Keine Werbung, keine
-Tracker, keine öffentliche Registrierung und keine öffentliche Fotogalerie.
-Sicherheit, Einwilligung und ein respektvoller Umgang miteinander gehören von
-Anfang an zum Projekt.
+## Rolle von Schule und Lehrkräften
 
-### Projektstand
+Lehrkräfte und die Schule können Informationen, Termine, Dokumente und
+freigegebene Inhalte beitragen. Sie sind eine wichtige unterstützende Rolle,
+aber der Schwerpunkt liegt auf einem alltagstauglichen Portal für Eltern und
+Familien. Berechtigungen gelten immer nur im jeweiligen Schul- und
+Klassenkontext.
 
-Das Portal befindet sich noch im Aufbau und ist noch nicht für den regulären
-Klassenbetrieb freigegeben. Die Grundlagen und mehrere geschützte Funktionen
-sind bereits entwickelt und automatisiert getestet. Echte Klassen-, Kontakt-
-oder Fotodaten gehören nicht in dieses öffentliche Repository.
+## Grundsätze
 
-Technische Hintergründe und die detaillierte Planung stehen im
-[technischen Projektüberblick](docs/TechnicalOverview.md).
+- Zugang nur mit persönlicher Einladung; keine offene Registrierung.
+- Keine Werbung, kein Tracking und keine öffentliche Fotogalerie.
+- Kurze Wege und Push-Hinweise statt unübersichtlicher Verteiler.
+- So viel Unterstützung wie sinnvoll, so wenig personenbezogene Daten wie möglich.
+- Biometrische Funktionen bleiben standardmäßig deaktiviert und benötigen eine
+  gesonderte Freigabe sowie dokumentierte Einwilligung.
 
----
+## Projektstand
 
-## English
+KlassID befindet sich in der Beta-Phase. Die ersten Rollouts starten jetzt
+schrittweise; Rückmeldungen aus dem praktischen Einsatz fließen direkt in die
+Vervollständigung von Portal, Inhalten und Rollen ein. Die Beta ist invite-only
+und wird kontrolliert erweitert. Produktive Daten, Fotos und Geheimnisse
+gehören nicht in dieses Repository.
 
-### Welcome to Class 5e! 👋
+Eine öffentliche Vorschau mit ausschließlich synthetischen Beispielen ist unter
+`/demo/` vorgesehen. Rechtliche Informationen stehen im Portal unter
+`/impressum/` und `Open-Source-Lizenzen`.
 
-This project is intended to become a shared digital home for the pupils,
-parents and teachers of one school class in Germany. Instead of spreading
-important information across many chats, paper notices and emails, the portal
-will provide one clear and protected place for everyday class life.
+Technische Architektur, Datenschutzgrenzen und Abnahmekriterien stehen im
+[technischen Projektüberblick](docs/TechnicalOverview.md), in der
+[Architektur](docs/Architecture.md) und in der [Roadmap](docs/Roadmap.md).
 
-This is not a public social platform. Access to the future portal will be by
-personal invitation only. Each parent can have a separate account while still
-being securely connected to their child and class.
+## English summary
 
-### What belongs in the class portal
+KlassID is a privately operated, invitation-only digital classroom for families,
+teachers and schools. It brings timetables, dates, meal plans, contribution
+lists, school travel coordination, protected chat, documents and photo albums
+together in one place. Parents are the primary audience; school staff can
+contribute within their assigned class context.
 
-| | Area | What it is for |
-|:--:|---|---|
-| 📰 | **Class news** | Updates, posts and important information from the class |
-| 📄 | **Documents & forms** | Download PDFs and complete prepared forms directly |
-| 📅 | **Dates & timetable** | See lessons, events and changes at a glance |
-| 🍽️ | **Lunch menu** | Quickly find today's meal and the current weekly menus |
-| 🧺 | **Contribution lists** | Choose who brings what to a breakfast or class event |
-| 💬 | **Class chat** | Protected conversation within the class community |
-| 👩‍🏫 | **Our teachers** | Meet the class teachers and learn which subjects they teach |
-| 📷 | **Photos & memories** | View private albums from trips, projects and class activities |
-| 🔔 | **Reminders** | Optionally receive notices about important dates and changes |
+There is no public registration, advertising or tracking. Adults use separate
+personal accounts, child relationships are verified, and optional photo or
+biometric features are consent-based. The demo uses synthetic data only.
 
-The portal is designed for phones, tablets and computers and can be installed
-on a home screen as a web app.
-
-### One family, personal accounts 🤝
-
-Mothers, fathers and other authorised guardians each receive their own
-account. Family members can be securely linked to their child without sharing
-passwords. This keeps it clear who wrote a post, made a contribution or gave
-consent.
-
-### Photos and privacy 🔒
-
-Class photographs are valuable memories, but they also deserve special
-protection. Photos will never be presented as a public gallery and will remain
-inside the protected class area. Separate, understandable consent choices are
-used for photographs, visible contact details and optional photo search.
-Consent can be withdrawn.
-
-We are evaluating an optional feature that may help parents find photographs
-containing their own child. All face processing is designed to run locally on
-the privately managed server. Photographs and biometric comparison data are
-not sent to a cloud recognition provider. The system never makes a final
-identification automatically: every suggestion requires review by an
-authorised person. This feature remains disabled until all technical, privacy
-and model-licensing requirements have been satisfied.
-
-### Our guiding principle 🌱
-
-As much assistance as useful, as little data as possible. No advertising, no
-tracking, no public registration and no public photo gallery. Security,
-informed consent and respectful communication are part of the project from the
-start.
-
-### Current status
-
-The portal is still under development and is not yet approved for routine use
-by the class. Its foundations and several protected features have already been
-implemented and automatically tested. Real class, contact and photo data do
-not belong in this public repository.
-
-Technical background and the detailed project documentation are available in
-the [technical overview](docs/TechnicalOverview.md).
-
----
-
-This is a parent-operated, non-commercial project. It is currently neither an
-official school product nor a commercial service.
+KlassID is currently in beta, with the first controlled rollouts starting now
+and further portal features being completed iteratively. This is a
+non-commercial project and is not an official school product.

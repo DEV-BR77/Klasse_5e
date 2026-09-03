@@ -18,6 +18,7 @@ from klasse5e.webuntis import views as webuntis_views
 
 urlpatterns = [
     path("registrieren/", views.register, name="register"),
+    path("einladung/", views.invitation_entry, name="invitation-entry"),
     path("familie/start/<str:token>/", views.family_register, name="family-register"),
     path("registrieren/email/<str:token>/", views.verify_registration_email, name="registration-email-verify"),
     path("aktivieren/<str:token>/", views.activate_registration, name="registration-activate"),
@@ -26,6 +27,8 @@ urlpatterns = [
         TemplateView.as_view(template_name="privacy/information_v2.html"),
         name="privacy-information",
     ),
+    path("projekt/", TemplateView.as_view(template_name="core/project.html"), name="project"),
+    path("demo/", TemplateView.as_view(template_name="core/demo.html"), name="demo"),
     path("onboarding/", onboarding_experience_views.onboarding_step, name="onboarding-resume"),
     path("onboarding/pausiert/", onboarding_experience_views.onboarding_paused, name="onboarding-paused"),
     path(

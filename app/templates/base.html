@@ -19,17 +19,17 @@
 <div class="app-shell{% if not request.user.is_authenticated %} app-shell-public{% endif %}">
   <header class="topbar">
     <a class="brand" href="/" aria-label="KlassID Home">
-      <img src="{% static 'icons/klassid.svg' %}" alt="" width="44" height="44">
-      <span><strong>KlassID</strong><small>{% if membership %}{{ membership.school_class.display_name|default:membership.school_class.name }}{% elif school_class %}{{ school_class.display_name|default:school_class.name }}{% else %}Privater Klassenraum{% endif %}</small></span>
+      {% if membership %}<img class="brand-logo brand-logo-class" src="{% static 'branding/thg-5e.png' %}" alt="THG Klasse 5e">
+      {% else %}<img class="brand-logo" src="{% static 'branding/klassid-main.png' %}" alt="KlassID">
+      {% endif %}
     </a>
     {% if request.user.is_authenticated %}
     <div class="topbar-actions">
+      {% if active_section != "start" and active_section != "more" %}<a class="topbar-back" href="{% url 'ui-more' %}">← <span>Hauptmenü</span></a>{% endif %}
       <a class="icon-link {% if notification_unread_count %}has-unread{% endif %}" href="/benachrichtigungen/" aria-label="Benachrichtigungen öffnen, {{ notification_unread_count }} ungelesen">
         {% include "ui/_icon.html" with name="bell" %}{% if notification_unread_count %}<span class="notification-badge">{{ notification_unread_count }}</span>{% endif %}
       </a>
-      <a class="profile-link" href="/einstellungen/profil/" aria-label="Profil von {{ personal_display_name|default:request.user.email }} öffnen">
-        <span class="avatar" aria-hidden="true">{{ personal_display_name|first|default:"K" }}</span><span class="desktop-only">{{ personal_display_name|default:request.user.email }}</span>
-      </a>
+      <details class="profile-menu"><summary class="profile-link" aria-label="Profilmenü öffnen"><span class="avatar" aria-hidden="true">{{ personal_display_name|first|default:"K" }}</span><span class="desktop-only">{{ personal_display_name|default:request.user.email }}</span></summary><nav aria-label="Profilmenü"><a href="/einstellungen/profil/">Mein Profil</a><a href="/accounts/logout/">Abmelden</a></nav></details>
     </div>
     {% endif %}
   </header>

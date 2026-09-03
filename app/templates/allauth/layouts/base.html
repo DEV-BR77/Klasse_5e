@@ -14,9 +14,8 @@
     <a class="skip-link" href="#main-content">Zum Inhalt springen</a>
     <div class="auth-shell">
         <header class="auth-header">
-            <a class="brand" href="/" aria-label="KlassID – Startseite">
-                <img src="{% static 'icons/klassid.svg' %}" alt="" width="48" height="48">
-                <span><strong>KlassID</strong><small>Dein privater Klassenraum</small></span>
+            <a class="auth-logo" href="/" aria-label="KlassID – Startseite">
+                <img src="{% static 'branding/klassid-main.png' %}" alt="KlassID – deine Klasse, alles im Blick">
             </a>
         </header>
         <main id="main-content" class="auth-main" tabindex="-1">
@@ -30,14 +29,14 @@
                 {% endif %}
                 {% block content %}{% endblock content %}
             </section>
-            <aside class="auth-aside" aria-label="Hinweise zur Anmeldung">
-                <p class="eyebrow">Gemeinsam organisiert</p>
-                <h2>Der Alltag deiner Klasse. Übersichtlich an einem Ort.</h2>
-                <p>Mitfahrgelegenheiten finden, Mitbringlisten abstimmen, Termine sehen, im Klassenchat schreiben und geschützte Fotos oder Dokumente teilen.</p>
+            <aside class="auth-aside" aria-label="Das bietet KlassID">
+                <p class="eyebrow">Der Treffpunkt für Schule und Familie</p>
+                <h2>Alles Wichtige für euren Schulalltag an einem Ort.</h2>
+                <p>Termine, Stundenplan, Speiseplan und Klassenleben – klar, geschützt und gemeinsam organisiert.</p>
                 <ul class="auth-benefits">
-                    <li>Fahr- und Fahrradgruppen einfach koordinieren</li>
-                    <li>Mitbringlisten ohne doppelte Zusagen organisieren</li>
-                    <li>Chat, Kalender, Galerie und PDF-Vorlagen griffbereit</li>
+                    <li>Termine und Stundenplan im Blick</li>
+                    <li>Speiseplan und Mitbringlisten gemeinsam planen</li>
+                    <li>Fotogalerie und Chat geschützt teilen</li>
                 </ul>
             </aside>
         </main>
