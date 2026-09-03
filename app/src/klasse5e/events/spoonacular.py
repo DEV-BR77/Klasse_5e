@@ -101,11 +101,10 @@ def search_food_items(query: str) -> list[FoodSuggestion]:
         return suggestions[: settings.SPOONACULAR_MAX_RESULTS]
     try:
         payload = _request(
-            "food/ingredients/autocomplete",
+            "food/products/search",
             {
                 "query": normalized,
                 "number": str(settings.SPOONACULAR_MAX_RESULTS),
-                "metaInformation": "false",
             },
         )
     except SpoonacularUnavailable:
@@ -113,8 +112,8 @@ def search_food_items(query: str) -> list[FoodSuggestion]:
             return suggestions
         raise
     existing = {item.name.casefold() for item in suggestions}
-    for item in payload if isinstance(payload, list) else payload.get("results", []):
-        name = str(item.get("name") or "").strip()[:160]
+    for item in payload.get("products", []):
+        name = str(item.get("title") or item.get("name") or "").strip()[:160]
         if not name or name.casefold() in existing:
             continue
         suggestions.append(

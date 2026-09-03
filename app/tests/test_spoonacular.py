@@ -34,6 +34,17 @@ def test_common_german_food_groups_work_without_provider(settings):
     assert [item.name for item in results][:3] == ["Äpfel", "Bananen", "Weintrauben"]
 
 
+def test_unknown_food_query_uses_apilayer_product_search(settings):
+    settings.SPOONACULAR_MAX_RESULTS = 6
+    with patch(
+        "klasse5e.events.spoonacular._request",
+        return_value={"products": [{"id": 42, "title": "Papaya nectar"}]},
+    ) as provider:
+        results = search_food_items("Papaya")
+    provider.assert_called_once_with("food/products/search", {"query": "papaya", "number": "6"})
+    assert results == [FoodSuggestion(source_id="42", name="Papaya nectar")]
+
+
 @pytest.mark.django_db
 def test_organizer_can_search_food_without_sending_event_data(client, guardian, breakfast_event):
     client.force_login(guardian)
