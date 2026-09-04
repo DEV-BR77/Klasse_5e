@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page portal-adapter-detail">
+  <header class="page-heading"><div><p class="eyebrow">{{ adapter.school }}</p><h1>{{ adapter.name }}</h1><p class="lede">{{ provider_definition.hint }}</p></div><div class="button-row">{% if adapter.base_url %}<a class="button button-secondary" href="{{ adapter.base_url }}" target="_blank" rel="noreferrer">Portal extern öffnen ↗</a>{% endif %}<a class="button button-secondary" href="{% url 'portal-adapter-management' %}">← Alle Adapter</a></div></header>
+
+  <form method="post" class="settings-panel form-stack">{% csrf_token %}<input type="hidden" name="action" value="save_adapter">
+    <div class="section-heading"><div><p class="eyebrow">Verbindung</p><h2>Adresse und Kennungen</h2></div><label class="switch-field"><input type="checkbox" name="is_enabled" {% if adapter.is_enabled %}checked{% endif %}><span>Adapter freigeben</span></label></div>
+    <label>Portal-Adresse<input type="url" name="base_url" value="{{ adapter.base_url }}" placeholder="https://…"></label>
+    <div class="field-pair"><label>Projektkennung <input name="project_identifier" value="{{ adapter.project_identifier }}" placeholder="z. B. MensaMax-Projekt"></label><label>Einrichtungskennung <input name="institution_identifier" value="{{ adapter.institution_identifier }}" placeholder="z. B. Schule / Einrichtung"></label><label>Schulnummer <input name="school_number" value="{{ adapter.school_number }}" placeholder="z. B. DSBmobile-Schulnummer"></label><span></span></div>
+    <label>Weitere technische Konfiguration <textarea name="configuration_note" rows="4" placeholder="Nur technische Hinweise, Zuordnung oder Abrufweg – keine Passwörter.">{{ adapter.configuration_note }}</textarea></label>
+    <p class="help-text">Zugänge von Kindern oder Mitarbeitenden werden nicht als Klartext gespeichert. Bevor ein Abrufadapter Zugangsdaten benötigt, bekommt er einen getrennten, verschlüsselten Einrichtungsweg.</p><button class="button button-primary">Adapter speichern</button>
+  </form>
+
+  <section><div class="section-heading"><div><p class="eyebrow">Einzeln steuerbar</p><h2>Module</h2><p class="muted">Ein aktivierter Adapter veröffentlicht noch kein Modul. Jedes Modul wird separat konfiguriert und freigegeben.</p></div></div>
+  <div class="settings-grid">{% for module in adapter.modules.all %}
+    <form method="post" class="content-card form-stack">{% csrf_token %}<input type="hidden" name="action" value="save_module"><input type="hidden" name="module_id" value="{{ module.id }}">
+      <div class="section-heading"><div><h3>{{ module.label }}</h3><p>{{ module.description }}</p></div><label class="switch-field"><input type="checkbox" name="is_enabled" {% if module.is_enabled %}checked{% endif %}><span>Freigeben</span></label></div>
+      <p class="status {% if module.is_enabled %}status-success{% else %}status-info{% endif %}">{{ module.get_status_display }}</p>
+      <label>Modul-Konfiguration <textarea name="configuration_note" rows="3" placeholder="z. B. relevante Jahrgänge, Filter oder Anzeigehinweise">{{ module.configuration_note }}</textarea></label>
+      <button class="button button-secondary">Modul speichern</button>
+    </form>
+  {% empty %}<p class="empty-state">Diesem Adapter sind noch keine Module zugeordnet.</p>{% endfor %}</div></section>
+
+  <details class="settings-panel"><summary>Weiteres Modul anlegen</summary><form method="post" class="form-stack settings-details-body">{% csrf_token %}<input type="hidden" name="action" value="add_module"><label>Name <input name="label" maxlength="120" required placeholder="z. B. Abwesenheiten"></label><label>Technische Kennung <input name="key" maxlength="80" placeholder="wird sonst automatisch erzeugt"></label><label>Beschreibung <textarea name="description" rows="2" maxlength="300"></textarea></label><button class="button button-primary">Modul anlegen</button></form></details>
+</section>
+{% endblock %}

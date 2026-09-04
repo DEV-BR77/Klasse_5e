@@ -40,6 +40,12 @@ from klasse5e.itslearning.webdav import used_bytes
 from klasse5e.meals.models import MealDay, MealPlan
 from klasse5e.media.models import Gallery
 from klasse5e.media.policies import may_access_gallery, may_manage_gallery
+from klasse5e.portal_adapters.catalog import (
+    ADAPTER_CATALOG,
+    provider_definition,
+    seed_default_modules,
+)
+from klasse5e.portal_adapters.models import PortalAdapter, PortalAdapterModule
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
 from klasse5e.webuntis.models import (
     HomeworkProgress,
@@ -51,6 +57,7 @@ from klasse5e.webuntis.models import (
 from .calendar_presenter import build_calendar_context
 from .family_handouts import create_family_handout
 from .models import (
+    AuditEvent,
     ClassMembership,
     ConsentDecision,
     ConsentType,
@@ -178,6 +185,19 @@ def _manageable_classes(user):
     ).values("school_class_id")
     return query.filter(Q(school_id__in=school_ids) | Q(id__in=class_ids)).order_by(
         "school__name", "display_name", "name"
+    )
+
+
+def _manageable_schools(user):
+    if (
+        user.is_superuser
+        or user.roleassignment_set.filter(
+            active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+        ).exists()
+    ):
+        return School.objects.filter(is_active=True).order_by("name")
+    return School.objects.filter(pk__in=_manageable_classes(user).values("school_id")).order_by(
+        "name"
     )
 
 
@@ -597,6 +617,123 @@ def portal_management(request):
         }
     )
     return render(request, "ui/portal_management.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def portal_adapter_management(request):
+    """Configure reviewed portal connectors without collecting credentials here."""
+    _require_portal_admin(request.user)
+    schools = _manageable_schools(request.user)
+    if request.method == "POST":
+        provider = request.POST.get("provider", "")
+        if provider not in ADAPTER_CATALOG:
+            messages.error(request, "Bitte wähle einen bekannten Adapter aus.")
+            return redirect("portal-adapter-management")
+        school = get_object_or_404(schools, pk=request.POST.get("school_id"))
+        definition = provider_definition(provider)
+        name = request.POST.get("name", "").strip()[:120] or definition["label"]
+        adapter, created = PortalAdapter.objects.get_or_create(
+            school=school,
+            provider=provider,
+            name=name,
+            defaults={"base_url": definition["default_url"]},
+        )
+        if created:
+            seed_default_modules(adapter)
+            AuditEvent.objects.create(
+                actor=request.user,
+                action="portal_adapter.created",
+                target_type="portal_adapter",
+                target_id=str(adapter.pk),
+                metadata={"provider": provider, "school_id": school.pk},
+            )
+            messages.success(request, f"{definition['label']} wurde für {school} angelegt.")
+        else:
+            messages.info(request, "Dieser Adapter ist für die Schule bereits vorhanden.")
+        return redirect("portal-adapter-detail", adapter_id=adapter.pk)
+    adapters = PortalAdapter.objects.filter(school__in=schools).select_related("school").prefetch_related(
+        "modules"
+    )
+    context = _shared(request, "Schulportal-Adapter", "management")
+    context.update({"schools": schools, "adapters": adapters, "adapter_catalog": ADAPTER_CATALOG.items()})
+    return render(request, "ui/portal_adapter_management.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def portal_adapter_detail(request, adapter_id):
+    _require_portal_admin(request.user)
+    schools = _manageable_schools(request.user)
+    adapter = get_object_or_404(
+        PortalAdapter.objects.select_related("school").prefetch_related("modules"),
+        pk=adapter_id,
+        school__in=schools,
+    )
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "save_adapter":
+            adapter.base_url = request.POST.get("base_url", "").strip()[:200]
+            adapter.project_identifier = request.POST.get("project_identifier", "").strip()[:120]
+            adapter.institution_identifier = request.POST.get("institution_identifier", "").strip()[:120]
+            adapter.school_number = request.POST.get("school_number", "").strip()[:40]
+            adapter.configuration_note = request.POST.get("configuration_note", "").strip()[:1200]
+            adapter.is_enabled = request.POST.get("is_enabled") == "on"
+            try:
+                adapter.full_clean()
+            except ValidationError:
+                messages.error(request, "Bitte prüfe die Adresse des Adapters.")
+            else:
+                adapter.save()
+                AuditEvent.objects.create(
+                    actor=request.user,
+                    action="portal_adapter.updated",
+                    target_type="portal_adapter",
+                    target_id=str(adapter.pk),
+                )
+                messages.success(request, "Adapter-Konfiguration gespeichert.")
+        elif action in {"save_module", "toggle_module"}:
+            module = get_object_or_404(adapter.modules, pk=request.POST.get("module_id"))
+            module.is_enabled = request.POST.get("is_enabled") == "on"
+            if action == "save_module":
+                module.configuration_note = request.POST.get("configuration_note", "").strip()[:1200]
+                if module.is_enabled and module.status == PortalAdapterModule.Status.NOT_CONFIGURED:
+                    module.status = PortalAdapterModule.Status.READY
+            module.save()
+            AuditEvent.objects.create(
+                actor=request.user,
+                action="portal_adapter.module.updated",
+                target_type="portal_adapter_module",
+                target_id=str(module.pk),
+                metadata={"adapter_id": adapter.pk, "enabled": module.is_enabled},
+            )
+            messages.success(request, f"Modul „{module.label}“ gespeichert.")
+        elif action == "add_module":
+            label = request.POST.get("label", "").strip()[:120]
+            key = slugify(request.POST.get("key", "") or label)[:80]
+            if not label or not key:
+                messages.error(request, "Bitte gib für das neue Modul mindestens einen Namen an.")
+            elif adapter.modules.filter(key=key).exists():
+                messages.error(request, "Diese Modulkennung gibt es bei diesem Adapter bereits.")
+            else:
+                module = PortalAdapterModule.objects.create(
+                    adapter=adapter,
+                    key=key,
+                    label=label,
+                    description=request.POST.get("description", "").strip()[:300],
+                )
+                AuditEvent.objects.create(
+                    actor=request.user,
+                    action="portal_adapter.module.created",
+                    target_type="portal_adapter_module",
+                    target_id=str(module.pk),
+                    metadata={"adapter_id": adapter.pk},
+                )
+                messages.success(request, f"Modul „{module.label}“ angelegt.")
+        return redirect("portal-adapter-detail", adapter_id=adapter.pk)
+    context = _shared(request, adapter.name, "management")
+    context.update({"adapter": adapter, "provider_definition": provider_definition(adapter.provider)})
+    return render(request, "ui/portal_adapter_detail.html", context)
 
 
 @login_required

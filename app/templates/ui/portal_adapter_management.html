@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page portal-adapter-management">
+  <header class="page-heading">
+    <div><p class="eyebrow">Nur für Administratoren</p><h1>Schulportal-Adapter</h1><p class="lede">Jedes Portal bleibt pro Schule getrennt. Erst freigegebene Module dürfen später Daten abrufen oder einen externen Zugang öffnen.</p></div>
+    <a class="button button-secondary" href="{% url 'portal-management' %}">← Zur Verwaltung</a>
+  </header>
+
+  <section class="settings-panel"><h2>Adapter hinzufügen</h2><p class="help-text">Die Zugangsdaten von Kindern werden hier nie eingegeben oder gespeichert. Du pflegst zunächst nur Adresse und technische Kennungen.</p>
+    <div class="adapter-catalog-grid">
+      {% for provider, item in adapter_catalog %}
+      <form method="post" class="content-card form-stack">{% csrf_token %}
+        <input type="hidden" name="provider" value="{{ provider }}">
+        <div><h3>{{ item.label }}</h3><p>{{ item.hint }}</p></div>
+        <label>Schule<select name="school_id" required><option value="">Bitte auswählen</option>{% for school in schools %}<option value="{{ school.id }}">{{ school }}</option>{% endfor %}</select></label>
+        <label>Anzeigename <input name="name" maxlength="120" value="{{ item.label }}"></label>
+        <button class="button button-primary">Adapter anlegen</button>
+      </form>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section><div class="section-heading"><div><p class="eyebrow">Eingerichtet</p><h2>Adapter nach Schule</h2></div></div>
+    <div class="card-grid">{% for adapter in adapters %}
+      <a class="content-card" href="{% url 'portal-adapter-detail' adapter.id %}"><p class="eyebrow">{{ adapter.school }}</p><h3>{{ adapter.name }}</h3><p>{{ adapter.modules.count }} Module · {% if adapter.is_enabled %}Adapter freigegeben{% else %}Adapter pausiert{% endif %}</p><p class="muted">{{ adapter.base_url|default:"Noch keine Adresse hinterlegt" }}</p></a>
+    {% empty %}<div class="empty-state"><h3>Noch kein Adapter eingerichtet</h3><p>Lege oben ein Portal für die gewünschte Schule an. Danach konfigurierst und veröffentlichst du die einzelnen Module unabhängig voneinander.</p></div>{% endfor %}</div>
+  </section>
+</section>
+{% endblock %}

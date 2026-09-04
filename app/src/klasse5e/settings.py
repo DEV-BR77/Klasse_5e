@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "klasse5e.schedule",
     "klasse5e.webuntis",
     "klasse5e.itslearning",
+    "klasse5e.portal_adapters",
     "wagtail.contrib.forms",
     "wagtail.contrib.redirects",
     "wagtail.embeds",

@@ -93,6 +93,16 @@ urlpatterns = [
         name="ui-chat-attachment",
     ),
     path("verwaltung/", ui_views.portal_management, name="portal-management"),
+    path(
+        "verwaltung/adapter/",
+        ui_views.portal_adapter_management,
+        name="portal-adapter-management",
+    ),
+    path(
+        "verwaltung/adapter/<int:adapter_id>/",
+        ui_views.portal_adapter_detail,
+        name="portal-adapter-detail",
+    ),
     path("verwaltung/anmeldung/", ui_views.registration_invitation, name="registration-invitation"),
     path(
         "verwaltung/familien-einladungen/",
