@@ -244,3 +244,15 @@ def test_disabled_account_loses_access(client, guardian):
     guardian.is_active = False
     guardian.save()
     assert client.get("/").status_code == 302
+
+
+@pytest.mark.django_db
+def test_dashboard_renders_when_personal_lessons_are_empty(rf, admin_user, school_class):
+    from klasse5e.core.ui_views import dashboard
+
+    request = rf.get("/")
+    request.user = admin_user
+
+    response = dashboard(request)
+
+    assert response.status_code == 200

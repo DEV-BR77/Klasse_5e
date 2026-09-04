@@ -241,7 +241,7 @@ def dashboard(request):
                 for offset in range(7)
             ],
             "webuntis_last_sync": webuntis_last_sync,
-            "lessons": personal_lessons if personal_lessons.exists() else manual_lessons,
+            "lessons": personal_lessons if personal_lessons else manual_lessons,
             "homework": WebUntisHomework.objects.filter(
                 connection__in=webuntis_connections,
                 due_on__gte=day,
