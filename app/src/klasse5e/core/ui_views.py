@@ -433,6 +433,64 @@ def portal_management(request):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
+def presentation_poll_settings(request):
+    """Admin-only storage and restart screen for the presentation poll."""
+    _require_portal_admin(request.user)
+    school_class = _class_or_404(request.user)
+    if request.method == "POST":
+        action = request.POST.get("action")
+        poll = get_object_or_404(
+            EventPoll, pk=request.POST.get("poll_id"), school_class=school_class
+        )
+        meeting_url = request.POST.get("meeting_url", "").strip()[:200]
+        if meeting_url and not meeting_url.startswith(("https://", "http://")):
+            messages.error(request, "Bitte gib einen gültigen Teams- oder Meeting-Link mit https:// ein.")
+            return redirect("presentation-poll-settings")
+        if action == "save_link":
+            poll.meeting_url = meeting_url
+            poll.save(update_fields=["meeting_url"])
+            messages.success(request, "Der aktuelle Teams-Link wurde gespeichert.")
+        elif action == "restart":
+            try:
+                closes_at = timezone.datetime.fromisoformat(request.POST.get("closes_at", ""))
+                if timezone.is_naive(closes_at):
+                    closes_at = timezone.make_aware(closes_at)
+                if closes_at <= timezone.now():
+                    raise ValueError
+            except (TypeError, ValueError):
+                messages.error(request, "Bitte gib ein zukünftiges Ende der Umfrage an.")
+                return redirect("presentation-poll-settings")
+            new_poll = EventPoll.objects.create(
+                school_class=school_class,
+                title=poll.title,
+                description=poll.description,
+                meeting_url=meeting_url,
+                closes_at=closes_at,
+                created_by=request.user,
+            )
+            EventPollOption.objects.bulk_create(
+                [
+                    EventPollOption(poll=new_poll, starts_at=option.starts_at, ends_at=option.ends_at)
+                    for option in poll.options.all()
+                ]
+            )
+            poll.closes_at = timezone.now()
+            poll.save(update_fields=["closes_at"])
+            messages.success(request, "Die Terminumfrage wurde neu gestartet.")
+        return redirect("presentation-poll-settings")
+    polls = (
+        EventPoll.objects.filter(school_class=school_class)
+        .prefetch_related("options")
+        .select_related("finalized_event")
+        .order_by("-created_at")[:12]
+    )
+    context = _shared(request, "Terminumfrage", "management")
+    context.update({"polls": polls, "current_poll": polls[0] if polls else None})
+    return render(request, "ui/presentation_poll_settings.html", context)
+
+
+@login_required
 def presentation(request):
     _class_or_404(request.user)
     return render(
@@ -655,8 +713,19 @@ def theme_management(request):
             )
             messages.success(request, "Das neue Theme ist sofort zur Auswahl verfügbar.")
             return redirect("theme-management")
+    # External inspirations are kept as a review catalogue. We do not copy
+    # third-party markup into the portal until an administrator has approved
+    # the license, accessibility and dependency profile.
+    template_catalog = [
+        {"name": "Velora UI", "stack": "Next.js · Tailwind · Motion", "license": "MIT", "repo": "https://github.com/ColorlibHQ/velora-ui", "source": "Colorlib 33 Tailwind templates"},
+        {"name": "HyperUI", "stack": "HTML · Tailwind", "license": "MIT", "repo": "https://github.com/markmead/hyperui", "source": "Colorlib 33 Tailwind templates"},
+        {"name": "Flowbite", "stack": "HTML/JS · Tailwind", "license": "MIT", "repo": "https://github.com/themesberg/flowbite", "source": "Colorlib 33 Tailwind templates"},
+        {"name": "Preline UI", "stack": "HTML · Tailwind plugin", "license": "MIT", "repo": "https://github.com/htmlstreamofficial/preline", "source": "Colorlib 33 Tailwind templates"},
+        {"name": "AstroWind", "stack": "Astro · Tailwind", "license": "MIT", "repo": "https://github.com/arthelokyo/astrowind", "source": "Colorlib 33 Tailwind templates"},
+        {"name": "Cruip Open React", "stack": "Next.js · React · Tailwind", "license": "MIT", "repo": "https://github.com/cruip/open-react-template", "source": "Colorlib 33 Tailwind templates"},
+    ]
     context = _shared(request, "Themes verwalten", "management")
-    context.update({"themes": PortalTheme.objects.all(), "audiences": PortalTheme.Audience.choices})
+    context.update({"themes": PortalTheme.objects.all(), "audiences": PortalTheme.Audience.choices, "template_catalog": template_catalog})
     return render(request, "ui/theme_management.html", context)
 
 
@@ -836,6 +905,8 @@ def finalize_event_poll(request, poll_id):
     poll = get_object_or_404(EventPoll, id=poll_id, school_class=school_class, finalized_event__isnull=True)
     option = get_object_or_404(EventPollOption, id=request.POST.get("option_id"), poll=poll)
     meeting_url = request.POST.get("meeting_url", "").strip()[:200]
+    poll.meeting_url = meeting_url
+    poll.save(update_fields=["meeting_url"])
     event_item = Event.objects.create(
         school_class=school_class,
         school_year=school_class.school_year,

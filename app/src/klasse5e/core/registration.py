@@ -24,7 +24,9 @@ from .models import (
     RoleAssignment,
     StudentProfile,
     UserAccount,
+    UserNotification,
 )
+from .policies import active_class_for_user
 
 
 def create_application(*, email, first_name, last_name, password):
@@ -56,6 +58,62 @@ def verify_email(token):
         item.status = RegistrationApplication.Status.REVIEW_PENDING
         item.email_verified_at = timezone.now()
         item.save(update_fields=["status", "email_verified_at", "updated_at"])
+        admin_emails = set(
+            UserAccount.objects.filter(is_superuser=True).values_list("email", flat=True)
+        )
+        admin_emails.update(
+            RoleAssignment.objects.filter(
+                active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+            ).values_list("user__email", flat=True)
+        )
+        admin_users = list(
+            UserAccount.objects.filter(is_superuser=True)
+            | UserAccount.objects.filter(
+                roleassignment__active=True,
+                roleassignment__role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN],
+            )
+        )
+        revision = hashlib.sha256(f"registration:{item.pk}:{item.updated_at.isoformat()}".encode()).hexdigest()[:32]
+        for admin in admin_users:
+            target_class = active_class_for_user(admin)
+            if target_class is None:
+                target_class = (
+                    RoleAssignment.objects.filter(
+                        user=admin,
+                        active=True,
+                        role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN],
+                        school_class__isnull=False,
+                    )
+                    .values_list("school_class", flat=True)
+                    .first()
+                )
+                if target_class:
+                    from .models import SchoolClass
+
+                    target_class = SchoolClass.objects.filter(pk=target_class).first()
+            if target_class:
+                UserNotification.objects.get_or_create(
+                    user=admin,
+                    school_class=target_class,
+                    category="registrations",
+                    object_type="registration_application",
+                    object_id=str(item.pk),
+                    revision=revision,
+                    defaults={
+                        "title": "Neue Anmeldung",
+                        "summary": f"{item.first_name} {item.last_name} wartet auf Prüfung.",
+                        "target_url": "/admin/core/registrationapplication/",
+                    },
+                )
+        if admin_emails:
+            send_mail(
+                "Neue KlassID-Anmeldung wartet auf Prüfung",
+                f"{item.first_name} {item.last_name} ({item.email}) hat die E-Mail-Adresse bestätigt. "
+                "Der Antrag kann im Admin-Bereich unter Registrierungen geprüft und einer Schule/Klasse zugeordnet werden.",
+                settings.DEFAULT_FROM_EMAIL,
+                sorted(admin_emails),
+                fail_silently=True,
+            )
     return item
 
 

@@ -112,6 +112,7 @@ class EventPoll(models.Model):
     school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    meeting_url = models.URLField(blank=True)
     closes_at = models.DateTimeField()
     created_by = models.ForeignKey(UserAccount, on_delete=models.PROTECT)
     created_at = models.DateTimeField(auto_now_add=True)

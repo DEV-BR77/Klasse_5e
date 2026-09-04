@@ -64,6 +64,7 @@ urlpatterns = [
     path("verwaltung/anmeldung/", ui_views.registration_invitation, name="registration-invitation"),
     path("verwaltung/themes/", ui_views.theme_management, name="theme-management"),
     path("verwaltung/menue/", ui_views.menu_management, name="menu-management"),
+    path("verwaltung/terminumfrage/", ui_views.presentation_poll_settings, name="presentation-poll-settings"),
     path("verwaltung/anmeldung/qr.svg", ui_views.registration_invitation_qr, name="registration-invitation-qr"),
     path("pilot/melden/", ui_views.pilot_report, name="pilot-report"),
     path("mehr/", ui_views.more, name="ui-more"),
