@@ -12,6 +12,18 @@ class Command(BaseCommand):
         parser.add_argument("path", type=Path)
         parser.add_argument("--dry-run", action="store_true")
         parser.add_argument("--batch-size", type=int, default=500)
+        parser.add_argument(
+            "--city",
+            dest="cities",
+            action="append",
+            help="Nur Schulen aus diesem Ort importieren (mehrfach verwendbar).",
+        )
+        parser.add_argument(
+            "--postal-prefix",
+            dest="postal_prefixes",
+            action="append",
+            help="Nur Postleitzahlen mit diesem Präfix importieren (mehrfach verwendbar).",
+        )
 
     def handle(self, *args, **options):
         path = options["path"]
@@ -21,7 +33,13 @@ class Command(BaseCommand):
         if not 10 <= size <= 5000:
             raise CommandError("Batchgröße muss zwischen 10 und 5000 liegen.")
         try:
-            encoding, stats = import_schools(path, dry_run=options["dry_run"], batch_size=size)
+            encoding, stats = import_schools(
+                path,
+                dry_run=options["dry_run"],
+                batch_size=size,
+                cities=options.get("cities"),
+                postal_prefixes=options.get("postal_prefixes"),
+            )
         except (UnicodeError, ValueError) as exc:
             raise CommandError(str(exc)) from exc
         self.stdout.write(

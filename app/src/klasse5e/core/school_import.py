@@ -100,7 +100,15 @@ def duplicate_key(row):
     return hashlib.sha256("\x1f".join(parts).encode()).hexdigest()[:24] if any(parts) else ""
 
 
-def import_schools(path, *, dry_run=False, batch_size=500, source_name="schools.csv"):
+def import_schools(
+    path,
+    *,
+    dry_run=False,
+    batch_size=500,
+    source_name="schools.csv",
+    cities=None,
+    postal_prefixes=None,
+):
     data = path.read_bytes()
     encoding = detect_encoding(data)
     text = data.decode(encoding, errors="strict")
@@ -110,7 +118,16 @@ def import_schools(path, *, dry_run=False, batch_size=500, source_name="schools.
     stats = ImportStats()
     seen_duplicates = {}
     rows = []
+    city_filter = {search_value(value) for value in (cities or []) if search_value(value)}
+    postal_filter = tuple(nfc(value, limit=10) for value in (postal_prefixes or []) if nfc(value, limit=10))
     for _position, source in enumerate(reader, start=2):
+        source_city = search_value(source.get("city"))
+        source_postal = nfc(source.get("zip"), limit=10)
+        if city_filter or postal_filter:
+            city_match = source_city in city_filter if city_filter else False
+            postal_match = any(source_postal.startswith(prefix) for prefix in postal_filter) if postal_filter else False
+            if not city_match and not postal_match:
+                continue
         stats.rows += 1
         try:
             source_id = nfc(source.get("id"), limit=80)

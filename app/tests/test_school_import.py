@@ -44,6 +44,20 @@ def test_import_is_idempotent_preserves_zero_zip_and_updates(tmp_path: Path):
     assert school.location_valid
 
 
+@pytest.mark.django_db
+def test_import_can_be_restricted_to_region(tmp_path: Path):
+    path = tmp_path / "schools.csv"
+    rows = (
+        '1,Schule Wolfsburg,, ,38440,Wolfsburg,,,,,,,,,,"{}",\n'
+        '2,Schule Gifhorn,, ,38518,Gifhorn,,,,,,,,,,"{}",\n'
+        '3,Schule Berlin,, ,10115,Berlin,,,,,,,,,,"{}",\n'
+    )
+    path.write_text(HEADER + rows, encoding="utf-8")
+    _, stats = import_schools(path, cities=["Wolfsburg", "Gifhorn"], batch_size=10)
+    assert stats.rows == 2
+    assert set(School.objects.values_list("city", flat=True)) == {"Wolfsburg", "Gifhorn"}
+
+
 def test_hostname_rules():
     assert propose_class_hostname("5.1", "THG") == "5-1-thg.klassid.de"
     assert validate_class_hostname("5e.klassid.de", reserved_exception=True)
