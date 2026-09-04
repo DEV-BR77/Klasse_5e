@@ -122,7 +122,7 @@ def build_calendar_context(
             starts_at__date__gte=grid_start,
             starts_at__date__lt=grid_end,
         ).order_by("starts_at")
-    )
+    ))
     personal_days = {timezone.localtime(lesson.starts_at).date() for lesson in lessons}
     for lesson in lessons:
         starts_at = timezone.localtime(lesson.starts_at)
@@ -297,7 +297,7 @@ def _timeline_context(*, school_class, selected_day, week_start, view, items):
         .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=selected_day))
         .order_by("-valid_from")
         .first()
-    )))
+    )
     periods = list(grid.periods.all()) if grid else []
     starts = [_minutes(period.starts_at) for period in periods]
     starts.extend(_minutes(item["starts_at"].time()) for item in timed_items)
