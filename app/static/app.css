@@ -139,8 +139,31 @@
 .compact-timeline li>div{display:flex;align-items:baseline;flex-wrap:wrap;gap:.15rem .45rem}
 .compact-timeline .lesson-meta{display:inline;margin:0}
 .compact-tasks li{padding:.55rem 0}
+.compact-tasks .homework-row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.65rem;align-items:center;overflow:hidden;padding:.15rem 0;background:linear-gradient(90deg,var(--color-success-soft) 0 6rem,transparent 6rem)}
+.homework-open{min-width:0;min-height:4.15rem;display:grid;grid-template-columns:2.5rem minmax(0,1fr);gap:.65rem;align-items:center;padding:.5rem .15rem;border:0;background:var(--color-surface);color:var(--color-text);text-align:left;cursor:pointer;transform:translateX(var(--homework-swipe,0));transition:transform .18s ease,opacity .18s ease}
+.homework-open:hover .homework-preview strong{text-decoration:underline;text-underline-offset:.18em}
+.homework-open:after{content:"Vollständig lesen";position:absolute;right:.25rem;top:.25rem;color:var(--color-primary);font-size:.68rem;font-weight:750;opacity:0;transition:opacity .16s ease}
+.homework-open:hover:after,.homework-open:focus-visible:after{opacity:1}
+.homework-preview{min-width:0;display:grid;gap:.08rem}
+.homework-preview-text{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;color:var(--color-text-muted);line-height:1.4}
+.homework-completion{display:grid;justify-items:center;gap:.2rem;color:var(--color-text-muted);font-size:.72rem;font-weight:750}
+.homework-row.is-completed .homework-open{opacity:.62}
+.homework-row.is-completed .homework-preview strong{text-decoration:line-through}
+.homework-row.is-completed .task-icon{background:var(--color-success-soft);color:var(--color-success)}
+.homework-row.is-swiping .homework-open{transition:none}
+.homework-dialog{width:min(calc(100% - 1.25rem),44rem)}
+.homework-dialog-body{display:grid;gap:1.1rem;padding:1.25rem}
+.dialog-close-small{width:36px;height:36px;min-height:36px;flex:0 0 36px;font-size:1rem}
+.homework-meta{display:flex;flex-wrap:wrap;gap:.7rem 1.5rem;margin:0;padding:.75rem 0;border-block:1px solid var(--color-border)}
+.homework-meta div{display:grid;gap:.05rem}
+.homework-meta dt{color:var(--color-text-muted);font-size:.72rem;font-weight:750;text-transform:uppercase;letter-spacing:.05em}
+.homework-meta dd{margin:0;font-weight:800}
+.homework-full-text{min-height:7rem;padding:1rem;border-radius:calc(var(--radius)*.8);background:color-mix(in srgb,var(--color-surface) 88%,var(--color-primary) 12%);color:var(--color-text);font-size:1rem;line-height:1.65;white-space:normal}
+.homework-dialog-action{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;align-items:center;padding-top:.2rem}
+.homework-dialog-action>div{display:grid}
+.homework-dialog-action small{color:var(--color-text-muted)}
 .dashboard-more-link{display:inline-flex;margin-top:.75rem;font-weight:750;text-decoration:none}
-@media(max-width:760px){.dashboard-tabs{display:flex;overflow-x:auto;padding:.1rem 0 .35rem;scrollbar-width:thin}.dashboard-tab{flex:0 0 min(15rem,72vw)}.dashboard-panel{min-height:0;padding:.85rem}.dashboard-summary-grid{grid-template-columns:1fr}.dashboard-subsection+.dashboard-subsection{padding:1rem 0 0;border-left:0;border-top:1px solid var(--color-border)}}
+@media(max-width:760px){.dashboard-tabs{display:flex;overflow-x:auto;padding:.1rem 0 .35rem;scrollbar-width:thin}.dashboard-tab{flex:0 0 min(15rem,72vw)}.dashboard-panel{min-height:0;padding:.85rem}.dashboard-summary-grid{grid-template-columns:1fr}.dashboard-subsection+.dashboard-subsection{padding:1rem 0 0;border-left:0;border-top:1px solid var(--color-border)}.homework-open:after{display:none}.homework-dialog-action{grid-template-columns:1fr auto}.homework-full-text{min-height:5rem}.compact-tasks .homework-row:before{content:"Nach rechts wischen: erledigt";position:absolute;left:.7rem;top:50%;transform:translateY(-50%);max-width:5rem;color:var(--color-success);font-size:.64rem;font-weight:800;line-height:1.15}}
 .family-invitation-form{padding:1.1rem}.family-invitation-form label{display:grid;gap:.4rem}.family-invitation-form small{color:var(--color-text-muted);font-weight:500}.family-invitation-form .flow-actions{justify-content:flex-end}
 
 /* Mobility filters stay one visual control per filter in every theme. */

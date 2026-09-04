@@ -32,7 +32,57 @@
 
         <article id="homework" class="dashboard-subsection">
           <header class="card-header"><div><p class="eyebrow">Demnächst</p><h2>Hausaufgaben</h2></div>{% if notification_counts.homework %}<span class="new-label">{{ notification_counts.homework }} neu</span>{% endif %}</header>
-          <ul class="task-list compact-tasks">{% for item in homework|slice:":3" %}<li><span class="task-icon">{% include "ui/_icon.html" with name="document" %}</span><div><strong>{{ item.subject|default:"Aufgabe" }}</strong><p>{{ item.text|truncatechars:100 }}</p>{% if item.due_on %}<small>Bis {{ item.due_on|date:"d.m.Y" }}</small>{% endif %}</div></li>{% empty %}<li class="empty-compact">Keine offenen Hausaufgaben.</li>{% endfor %}</ul>
+          <ul class="task-list compact-tasks">
+            {% for item in homework|slice:":3" %}
+              <li class="homework-row{% if item.is_completed %} is-completed{% endif %}" data-homework-row="{{ item.id }}" data-homework-swipe>
+                <button class="homework-open" type="button" data-dialog-open="homework-detail-{{ item.id }}" aria-label="Hausaufgabe {{ item.subject|default:'Aufgabe' }} vollständig lesen">
+                  <span class="task-icon">{% include "ui/_icon.html" with name="document" %}</span>
+                  <span class="homework-preview">
+                    <strong>{{ item.subject|default:"Aufgabe" }}</strong>
+                    <span class="homework-preview-text">{{ item.text|default:"Keine weitere Beschreibung vorhanden." }}</span>
+                    {% if item.due_on %}<small>Bis {{ item.due_on|date:"d.m.Y" }}</small>{% endif %}
+                  </span>
+                </button>
+                <span class="homework-completion">
+                  <span data-homework-state-label="{{ item.id }}">{% if item.is_completed %}Erledigt{% else %}Offen{% endif %}</span>
+                  <label class="switch" title="Hausaufgabe als erledigt markieren">
+                    <input type="checkbox" data-homework-toggle data-homework-id="{{ item.id }}" data-url="{% url 'homework-progress' item.id %}" {% if item.is_completed %}checked{% endif %}>
+                    <span aria-hidden="true"></span>
+                    <span class="sr-only">Hausaufgabe erledigt</span>
+                  </label>
+                </span>
+              </li>
+            {% empty %}
+              <li class="empty-compact">Keine anstehenden Hausaufgaben.</li>
+            {% endfor %}
+          </ul>
+          {% for item in homework|slice:":3" %}
+            <dialog id="homework-detail-{{ item.id }}" class="app-dialog homework-dialog">
+              <div class="homework-dialog-body">
+                <header class="dialog-head">
+                  <div><p class="eyebrow">Hausaufgabe</p><h2>{{ item.subject|default:"Aufgabe" }}</h2></div>
+                  <button type="button" class="icon-button dialog-close-small" data-dialog-close aria-label="Hausaufgabe schließen">×</button>
+                </header>
+                <dl class="homework-meta">
+                  {% if item.connection.student %}<div><dt>Für</dt><dd>{{ item.connection.student.first_name }}</dd></div>{% endif %}
+                  {% if item.assigned_on %}<div><dt>Aufgegeben</dt><dd>{{ item.assigned_on|date:"d.m.Y" }}</dd></div>{% endif %}
+                  {% if item.due_on %}<div><dt>Fällig</dt><dd>{{ item.due_on|date:"d.m.Y" }}</dd></div>{% endif %}
+                </dl>
+                <div class="homework-full-text">{{ item.text|default:"Keine weitere Beschreibung vorhanden."|linebreaksbr }}</div>
+                <div class="homework-dialog-action">
+                  <div><strong>Status</strong><small>Der Stand wird für {{ item.connection.student.first_name|default:"das Kind" }} auf allen Geräten gespeichert.</small></div>
+                  <span class="homework-completion">
+                    <span data-homework-state-label="{{ item.id }}">{% if item.is_completed %}Erledigt{% else %}Offen{% endif %}</span>
+                    <label class="switch" title="Hausaufgabe als erledigt markieren">
+                      <input type="checkbox" data-homework-toggle data-homework-id="{{ item.id }}" data-url="{% url 'homework-progress' item.id %}" {% if item.is_completed %}checked{% endif %}>
+                      <span aria-hidden="true"></span>
+                      <span class="sr-only">Hausaufgabe erledigt</span>
+                    </label>
+                  </span>
+                </div>
+              </div>
+            </dialog>
+          {% endfor %}
           {% if homework|length > 3 %}<a class="dashboard-more-link" href="/kalender/">Alle Hausaufgaben anzeigen →</a>{% endif %}
         </article>
       </div>

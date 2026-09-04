@@ -106,6 +106,75 @@
   }));
   document.querySelectorAll("[data-dialog-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog")?.close()));
   document.querySelectorAll("dialog").forEach((dialog) => dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); }));
+
+  const applyHomeworkState = (homeworkId, completed) => {
+    document.querySelectorAll(`[data-homework-id="${homeworkId}"]`).forEach((toggle) => {
+      toggle.checked = completed;
+    });
+    document.querySelectorAll(`[data-homework-state-label="${homeworkId}"]`).forEach((label) => {
+      label.textContent = completed ? "Erledigt" : "Offen";
+    });
+    document.querySelector(`[data-homework-row="${homeworkId}"]`)?.classList.toggle("is-completed", completed);
+  };
+  const saveHomeworkState = async (toggle, completed) => {
+    const homeworkId = toggle.dataset.homeworkId;
+    const previous = !completed;
+    const related = [...document.querySelectorAll(`[data-homework-id="${homeworkId}"]`)];
+    applyHomeworkState(homeworkId, completed);
+    related.forEach((item) => { item.disabled = true; });
+    try {
+      const response = await fetch(toggle.dataset.url, {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": csrf(), Accept: "application/json"},
+        body: new URLSearchParams({completed: completed ? "yes" : "no"}),
+        credentials: "same-origin",
+      });
+      if (!response.ok) throw new Error("save_failed");
+      const data = await response.json();
+      applyHomeworkState(homeworkId, Boolean(data.completed));
+      announce(data.completed ? "Hausaufgabe als erledigt markiert." : "Hausaufgabe wieder als offen markiert.");
+    } catch (_) {
+      applyHomeworkState(homeworkId, previous);
+      announce("Der Hausaufgabenstatus konnte nicht gespeichert werden.");
+    } finally {
+      related.forEach((item) => { item.disabled = false; });
+    }
+  };
+  document.querySelectorAll("[data-homework-toggle]").forEach((toggle) => {
+    toggle.addEventListener("change", () => saveHomeworkState(toggle, toggle.checked));
+  });
+  document.querySelectorAll("[data-homework-swipe]").forEach((row) => {
+    let start = null;
+    row.addEventListener("touchstart", (event) => {
+      if (event.target.closest(".homework-completion")) return;
+      const touch = event.touches[0];
+      start = {x: touch.clientX, y: touch.clientY};
+    }, {passive: true});
+    row.addEventListener("touchmove", (event) => {
+      if (!start) return;
+      const touch = event.touches[0];
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (dx <= 0 || Math.abs(dx) <= Math.abs(dy)) return;
+      event.preventDefault();
+      row.classList.add("is-swiping");
+      row.style.setProperty("--homework-swipe", `${Math.min(dx, 96)}px`);
+    }, {passive: false});
+    row.addEventListener("touchend", (event) => {
+      if (!start) return;
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      start = null;
+      row.classList.remove("is-swiping");
+      row.style.removeProperty("--homework-swipe");
+      if (dx < 72 || Math.abs(dx) <= Math.abs(dy)) return;
+      event.preventDefault();
+      const toggle = row.querySelector("[data-homework-toggle]");
+      if (toggle && !toggle.checked && !toggle.disabled) saveHomeworkState(toggle, true);
+    });
+  });
+
   document.querySelectorAll("[data-gallery-upload]").forEach((form) => form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = form.querySelector("button[type='submit']");

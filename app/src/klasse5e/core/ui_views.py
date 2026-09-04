@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
 from django.db.models import Count, Q
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.http import content_disposition_header
@@ -41,7 +41,12 @@ from klasse5e.meals.models import MealDay, MealPlan
 from klasse5e.media.models import Gallery
 from klasse5e.media.policies import may_access_gallery, may_manage_gallery
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
-from klasse5e.webuntis.models import WebUntisConnection, WebUntisHomework, WebUntisLesson
+from klasse5e.webuntis.models import (
+    HomeworkProgress,
+    WebUntisConnection,
+    WebUntisHomework,
+    WebUntisLesson,
+)
 
 from .calendar_presenter import build_calendar_context
 from .family_handouts import create_family_handout
@@ -267,6 +272,27 @@ def dashboard(request):
     manual_lessons = TimetableEntry.objects.filter(
         school_class=school_class, weekday=day.isoweekday()
     )
+    homework = list(
+        WebUntisHomework.objects.filter(
+            connection__in=webuntis_connections,
+            due_on__gte=day,
+        )
+        .select_related("connection__student")
+        .order_by("due_on", "subject")[:12]
+    )
+    progress = {
+        (item.student_id, item.external_fingerprint): item.completed
+        for item in HomeworkProgress.objects.filter(
+            student_id__in={item.connection.student_id for item in homework},
+            external_fingerprint__in={item.external_fingerprint for item in homework},
+        )
+    }
+    for item in homework:
+        item.is_completed = progress.get(
+            (item.connection.student_id, item.external_fingerprint), False
+        )
+    homework.sort(key=lambda item: (item.is_completed, item.due_on, item.subject.casefold()))
+    homework = homework[:5]
     context.update(
         {
             "app_version": settings.APP_VERSION,
@@ -278,10 +304,7 @@ def dashboard(request):
             ],
             "webuntis_last_sync": webuntis_last_sync,
             "lessons": personal_lessons if personal_lessons else manual_lessons,
-            "homework": WebUntisHomework.objects.filter(
-                connection__in=webuntis_connections,
-                due_on__gte=day,
-            ).order_by("due_on", "subject")[:5],
+            "homework": homework,
             "calendar_entries": CalendarEntry.objects.filter(
                 school_class=school_class, starts_at__date=day
             ).order_by("starts_at")[:5],
@@ -315,6 +338,33 @@ def dashboard(request):
         }
     )
     return render(request, "ui/dashboard_v2.html", context)
+
+
+@login_required
+@require_POST
+def homework_progress(request, homework_id):
+    homework = get_object_or_404(
+        WebUntisHomework.objects.select_related("connection__student"),
+        id=homework_id,
+        connection__in=_webuntis_connections(request.user),
+    )
+    completed = request.POST.get("completed", "").lower() in {"1", "true", "yes", "on"}
+    progress, _ = HomeworkProgress.objects.update_or_create(
+        student=homework.connection.student,
+        external_fingerprint=homework.external_fingerprint,
+        defaults={
+            "completed": completed,
+            "completed_by": request.user if completed else None,
+            "completed_at": timezone.now() if completed else None,
+        },
+    )
+    return JsonResponse(
+        {
+            "homework_id": homework.id,
+            "completed": progress.completed,
+            "completed_at": progress.completed_at.isoformat() if progress.completed_at else None,
+        }
+    )
 
 
 def _unread_count(user, school_class):

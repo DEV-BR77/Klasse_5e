@@ -56,6 +56,11 @@ urlpatterns = [
         name="tutorial-step",
     ),
     path("", ui_views.dashboard, name="dashboard"),
+    path(
+        "hausaufgaben/<int:homework_id>/erledigt/",
+        ui_views.homework_progress,
+        name="homework-progress",
+    ),
     path("einstellungen/profil/", views.personal_profile, name="personal-profile"),
     path("einstellungen/design/", ui_views.theme_settings, name="theme-settings"),
     path("einstellungen/konto-loeschen/", views.delete_account, name="delete-account"),

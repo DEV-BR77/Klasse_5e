@@ -146,6 +146,33 @@ class WebUntisHomework(models.Model):
         ]
 
 
+class HomeworkProgress(models.Model):
+    """A child's local completion state for one stable WebUntis homework item."""
+
+    student = models.ForeignKey(
+        Person, on_delete=models.CASCADE, related_name="homework_progress"
+    )
+    external_fingerprint = models.CharField(max_length=128)
+    completed = models.BooleanField(default=False)
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="homework_progress_updates",
+    )
+    completed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "external_fingerprint"],
+                name="unique_student_homework_progress",
+            )
+        ]
+
+
 class SyncSchedule(models.Model):
     class Mode(models.TextChoices):
         INTERVAL = "interval", "Festes Intervall"
