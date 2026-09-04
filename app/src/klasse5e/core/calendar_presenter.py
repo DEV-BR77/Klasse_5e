@@ -328,6 +328,22 @@ def _timeline_context(*, school_class, selected_day, week_start, view, items):
                     "height_percent": round(max(30, end - start) * 100 / span, 3),
                 }
             )
+        # Lay overlapping lessons out in side-by-side lanes instead of stacking
+        # them on top of each other. Consecutive double lessons keep one lane.
+        lanes = []
+        for item in sorted(positioned, key=lambda value: (value["top_percent"], value["height_percent"])):
+            start = item["top_percent"]
+            end = start + item["height_percent"]
+            lane = next((index for index, lane_end in enumerate(lanes) if lane_end <= start), None)
+            if lane is None:
+                lane = len(lanes)
+                lanes.append(end)
+            else:
+                lanes[lane] = end
+            item["lane"] = lane
+        lane_count = max(1, len(lanes))
+        for item in positioned:
+            item["lane_count"] = lane_count
         timeline_days.append({"date": day, "items": positioned, "all_day": all_day})
     if periods:
         timeline_periods = [
