@@ -37,7 +37,7 @@ class Command(BaseCommand):
                 created_by=admin,
             )
             url = f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/familie/start/{token}/"
-            invitations.append((item, url))
+            invitations.append((item, url, token))
         output = Path(options["output"]).resolve()
         output.parent.mkdir(parents=True, exist_ok=True)
         self._build_pdf(output, school_class, invitations)
@@ -48,7 +48,7 @@ class Command(BaseCommand):
         width, height = A5
         pdf = canvas.Canvas(str(output), pagesize=A5, pageCompression=1)
         pdf.setTitle(f"KlassID Familien-Einladungen {school_class.display_name}")
-        for item, url in invitations:
+        for item, url, token in invitations:
             navy, teal, pale, coral = map(
                 HexColor, ("#102D3B", "#35A4C6", "#EAF7FB", "#FF786C")
             )
@@ -83,6 +83,10 @@ class Command(BaseCommand):
             pdf.setFillColor(navy)
             pdf.setFont("Helvetica-Bold", 12)
             pdf.drawCentredString(width / 2, qr_y - 27, "SCANNEN UND FAMILIE ANLEGEN")
+            pdf.setFont("Helvetica-Bold", 8.5)
+            pdf.drawCentredString(width / 2, qr_y - 43, "Einladungscode")
+            pdf.setFont("Courier-Bold", 8)
+            pdf.drawCentredString(width / 2, qr_y - 56, token)
 
             icon_path = Path(settings.BASE_DIR) / "static" / "branding" / "flyer-icons.png"
             if icon_path.is_file():
