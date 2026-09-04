@@ -23,16 +23,41 @@ class Command(BaseCommand):
             defaults={
                 "name": "Theodor-Heuss-Gymnasium Wolfsburg",
                 "short_name": "THG",
+                "address": "Martin-Luther-Straße 23",
+                "postal_code": "38440",
                 "city": "Wolfsburg",
                 "federal_state": "Niedersachsen",
+                "latitude": "52.419130",
+                "longitude": "10.768277",
+                "location_valid": True,
                 "is_active": True,
             },
         )
         school.name = "Theodor-Heuss-Gymnasium Wolfsburg"
         school.short_name = "THG"
+        school.address = "Martin-Luther-Straße 23"
+        school.postal_code = "38440"
         school.city = "Wolfsburg"
+        school.federal_state = "Niedersachsen"
+        school.latitude = "52.419130"
+        school.longitude = "10.768277"
+        school.location_valid = True
         school.is_active = True
-        school.save(update_fields=["name", "short_name", "city", "is_active", "updated_at"])
+        school.save(
+            update_fields=[
+                "name",
+                "short_name",
+                "address",
+                "postal_code",
+                "city",
+                "federal_state",
+                "latitude",
+                "longitude",
+                "location_valid",
+                "is_active",
+                "updated_at",
+            ]
+        )
 
         school_class, _ = SchoolClass.objects.get_or_create(
             school=school,
