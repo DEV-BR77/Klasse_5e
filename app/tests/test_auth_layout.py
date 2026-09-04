@@ -13,9 +13,10 @@ def test_login_uses_branded_invitation_layout(client):
     assert "Speiseplan und Mitbringlisten gemeinsam planen" in content
     assert "Du hast einen Einladungscode erhalten?" in content
     assert "/einladung/" in content
-    assert "klassid-main.png" in content
-    assert "Demo ansehen" in content
-    assert "/demo/" in content
+    assert "auth-project-card" in content
+    assert "Projekt kennenlernen" in content
+    assert "Demo ansehen" not in content
+    assert "Mehr erfahren" not in content
     assert "Willkommen zurück" not in content
     assert "Melde dich mit deinem bestätigten KlassID-Konto an" not in content
     assert "/accounts/signup/" not in content

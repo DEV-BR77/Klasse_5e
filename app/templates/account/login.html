@@ -27,11 +27,6 @@
         {% endelement %}
     {% endif %}
     <p class="auth-intro auth-invitation">Du hast einen Einladungscode erhalten? <a href="{% url 'invitation-entry' %}">Code eingeben</a></p>
-    <nav class="auth-feature-grid" aria-label="KlassID entdecken">
-        <a href="{% url 'project' %}"><strong>Projekt kennenlernen</strong><span>Was KlassID für Schule und Familie möglich macht.</span></a>
-        <a href="{% url 'privacy-information' %}"><strong>Mehr erfahren</strong><span>Datenschutz verständlich und transparent erklärt.</span></a>
-        <a href="{% url 'demo' %}"><strong>Demo ansehen</strong><span>Möchtest du einen ersten Eindruck gewinnen?</span></a>
-    </nav>
 {% endblock content %}
 
 {% block extra_body %}
