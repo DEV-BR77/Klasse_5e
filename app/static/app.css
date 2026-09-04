@@ -81,3 +81,4 @@
 .calendar-time-item{left:calc(var(--item-lane,0) * (100% / var(--item-lanes,1)) + .2rem);width:calc(100% / var(--item-lanes,1) - .4rem)}
 .topbar-actions{margin-left:auto}
 .app-shell-public>.topbar{display:none}
+.local-map.leaflet-container{font:inherit;background:#e8edf0}

@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="{% static 'onboarding.css' %}">
   <link rel="stylesheet" href="{% static 'onboarding-v2.css' %}">
   <link rel="stylesheet" href="{% static 'itslearning.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+  {% block extra_head %}{% endblock %}
   <title>{{ page_title|default:"Home" }} · KlassID</title>
 </head>
 <body>
@@ -50,7 +52,8 @@
 <dialog id="pilot-report" class="app-dialog"><form method="post" action="/pilot/melden/" enctype="multipart/form-data" class="form-stack">{% csrf_token %}<header class="dialog-head"><div><p class="eyebrow">Feedback</p><h2>Idee oder Fehler melden</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header><label>Art<select name="kind"><option value="idea">Idee</option><option value="note">Anmerkung</option><option value="bug">Fehler</option></select></label><label>Beschreibung<textarea name="description" rows="5" required maxlength="3000"></textarea></label><label>Screenshot (optional)<input type="file" name="screenshot" accept="image/png,image/jpeg,image/webp"></label><input type="hidden" name="page_path" value="{{ request.get_full_path }}"><button class="button button-primary" type="submit">Meldung senden</button></form></dialog>
 {% endif %}
 <div id="live-status" class="sr-only" aria-live="polite"></div>
-<script src="{% static 'app.js' %}?v=3" defer></script>
+<script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
+<script src="{% static 'app.js' %}?v=4" defer></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js')}</script>
 </body>
 </html>

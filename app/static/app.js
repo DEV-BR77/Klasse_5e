@@ -65,7 +65,66 @@
   const readJsonScript = (id, fallback) => {
     try { return JSON.parse(document.getElementById(id)?.textContent || JSON.stringify(fallback)); } catch (_) { return fallback; }
   };
+  const initLeafletMap = (container) => {
+    const bounds = readJsonScript(container.dataset.boundsId, {south:52.329, west:10.623, north:52.509, east:10.913});
+    const points = readJsonScript(container.dataset.pointsId, []);
+    const loading = container.querySelector(".map-loading");
+    loading?.remove();
+    container.querySelector("canvas")?.remove();
+    const leafletMap = window.L.map(container, {zoomControl:false, scrollWheelZoom:true});
+    const southWest = [Number(bounds.south), Number(bounds.west)];
+    const northEast = [Number(bounds.north), Number(bounds.east)];
+    const validPoints = points.filter((point) => Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude)));
+    const schoolPoint = validPoints.find((point) => point.kind === "school") || validPoints[0];
+    if (validPoints.length > 1) {
+      leafletMap.fitBounds(window.L.latLngBounds(validPoints.map((point) => [Number(point.latitude), Number(point.longitude)])), {padding:[42, 42], maxZoom:15});
+    } else if (schoolPoint) {
+      leafletMap.setView([Number(schoolPoint.latitude), Number(schoolPoint.longitude)], 13);
+    } else {
+      leafletMap.fitBounds([southWest, northEast], {padding:[18, 18]});
+    }
+    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a>',
+    }).addTo(leafletMap);
+    window.L.control.zoom({position:"topright"}).addTo(leafletMap);
+    validPoints.forEach((point) => {
+      const latitude = Number(point.latitude);
+      const longitude = Number(point.longitude);
+      const school = point.kind === "school";
+      const marker = window.L.circleMarker([latitude, longitude], {
+        radius: school ? 9 : 8,
+        color: "#fff",
+        weight: 3,
+        fillColor: school ? "#ec6f5f" : "#6256c7",
+        fillOpacity: 1,
+      }).addTo(leafletMap);
+      if (point.label) marker.bindTooltip(point.label, {permanent: school, direction:"top", offset:[0, -8]});
+      if (Number(point.radiusMeters) > 0) {
+        window.L.circle([latitude, longitude], {radius:Number(point.radiusMeters), color:"#6256c7", weight:2, fillColor:"#6256c7", fillOpacity:.12}).addTo(leafletMap);
+      }
+    });
+    if (container.dataset.connectPoints === "true" && validPoints.length > 1) {
+      window.L.polyline(validPoints.map((point) => [Number(point.latitude), Number(point.longitude)]), {color:"#6256c7", weight:5, opacity:.85, dashArray:"10 8", lineCap:"round", lineJoin:"round"}).addTo(leafletMap);
+    }
+    if (container.dataset.selectLat && container.dataset.selectLon) {
+      let selectedMarker;
+      leafletMap.on("click", (event) => {
+        const latitude = event.latlng.lat;
+        const longitude = event.latlng.lng;
+        document.getElementById(container.dataset.selectLat).value = latitude.toFixed(6);
+        document.getElementById(container.dataset.selectLon).value = longitude.toFixed(6);
+        selectedMarker?.remove();
+        selectedMarker = window.L.circleMarker([latitude, longitude], {radius:8, color:"#fff", weight:3, fillColor:"#6256c7", fillOpacity:1}).addTo(leafletMap);
+        window.L.circle([latitude, longitude], {radius:Number(container.dataset.selectionRadius || 0), color:"#6256c7", weight:2, fillColor:"#6256c7", fillOpacity:.12}).addTo(leafletMap);
+        const output = container.parentElement?.querySelector(".map-selection-status");
+        if (output) output.textContent = "Position markiert. Du kannst sie durch erneutes Tippen verschieben.";
+      });
+    }
+    window.setTimeout(() => leafletMap.invalidateSize(), 0);
+  };
   document.querySelectorAll("[data-local-map]").forEach(async (map) => {
+    if (window.L) { initLeafletMap(map); return; }
     const canvas = map.querySelector("canvas");
     const loading = map.querySelector(".map-loading");
     if (!canvas) return;
