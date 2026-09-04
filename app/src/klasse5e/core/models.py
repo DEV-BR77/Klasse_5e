@@ -620,19 +620,25 @@ class FamilyAccessCode(models.Model):
 
     @classmethod
     def issue(cls, *, batch_id, serial_number, school_class, created_by, lifetime=timedelta(days=60)):
-        token = secrets.token_urlsafe(32)
-        item = cls.objects.create(
-            batch_id=batch_id,
-            serial_number=serial_number,
-            token_hash=hashlib.sha256(token.encode()).hexdigest(),
-            school_class=school_class,
-            created_by=created_by,
-            expires_at=timezone.now() + lifetime,
-        )
-        return item, token
+        alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        for _ in range(10):
+            token = "".join(secrets.choice(alphabet) for _ in range(10))
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            if not cls.objects.filter(token_hash=token_hash).exists():
+                item = cls.objects.create(
+                    batch_id=batch_id,
+                    serial_number=serial_number,
+                    token_hash=token_hash,
+                    school_class=school_class,
+                    created_by=created_by,
+                    expires_at=timezone.now() + lifetime,
+                )
+                return item, token
+        raise RuntimeError("Konnte keinen eindeutigen Einladungscode erzeugen.")
 
     @classmethod
     def resolve(cls, token, *, for_update=False):
+        token = (token or "").strip().upper()
         query = cls.objects.select_for_update() if for_update else cls.objects
         item = query.filter(token_hash=hashlib.sha256(token.encode()).hexdigest()).first()
         if not item or item.submitted_at or item.revoked_at or item.expires_at <= timezone.now():
