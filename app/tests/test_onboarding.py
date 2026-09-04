@@ -192,7 +192,9 @@ def test_privacy_page_is_public_and_contains_no_tracking(client):
     response = client.get("/datenschutz/")
     html = response.content.decode()
     assert response.status_code == 200
-    assert "Widerruf" in html
+    assert "Einwilligungen bleiben unter deiner Kontrolle" in html
+    assert 'class="privacy-principle"' in html
+    assert 'class="choice-card"' not in html
     assert "google-analytics" not in html.casefold()
 
 

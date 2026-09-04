@@ -90,3 +90,27 @@
 .topbar-actions{margin-left:auto}
 .app-shell-public>.topbar{display:none}
 .local-map.leaflet-container{font:inherit;background:#e8edf0}
+
+/* Public privacy information: isolated from interactive .choice-card rules. */
+.privacy-page{padding:clamp(.5rem,2vw,1.5rem) 0 1rem}
+.privacy-hero{max-width:54rem;margin-bottom:clamp(1.5rem,3vw,2.25rem)}
+.privacy-back-link{display:inline-flex;align-items:center;gap:.45rem;margin-bottom:1.4rem;color:var(--color-primary-dark);font-size:.88rem;font-weight:750;text-decoration:none}
+.privacy-back-link:hover{text-decoration:underline}
+.privacy-hero .eyebrow{margin:0 0 .45rem}
+.privacy-hero h1{max-width:15ch;margin:0 0 .8rem;font-size:clamp(2.15rem,5.5vw,4rem);line-height:1.02;letter-spacing:-.045em}
+.privacy-hero .lede{max-width:48rem;margin:0;color:var(--color-text-muted);font-size:clamp(1.02rem,1.8vw,1.2rem);line-height:1.6}
+.privacy-principles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.privacy-principle{min-width:0;display:grid;grid-template-columns:3rem minmax(0,1fr);gap:1rem;align-items:start;padding:clamp(1.1rem,2.5vw,1.5rem);border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface,#fff);box-shadow:var(--shadow-card)}
+.privacy-principle__icon{width:3rem;height:3rem;display:grid;place-items:center;border-radius:.9rem;background:var(--color-primary-light);color:var(--color-primary)}
+.privacy-principle__icon .icon{width:1.35rem;height:1.35rem;fill:currentColor}
+.privacy-principle__label{margin:.05rem 0 .45rem;color:var(--color-primary);font-size:.72rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+.privacy-principle h2{margin:0 0 .55rem;color:var(--color-text);font-size:clamp(1.05rem,2vw,1.22rem);line-height:1.25}
+.privacy-principle p:last-child{margin:0;color:var(--color-text-muted);font-size:.94rem;line-height:1.55}
+.privacy-summary{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1rem 2rem;align-items:center;margin:1rem 0;padding:1rem 1.2rem;border-radius:var(--radius);background:var(--color-primary-light);color:var(--color-primary-dark)}
+.privacy-summary strong{white-space:nowrap}
+.privacy-summary ul{display:flex;flex-wrap:wrap;gap:.5rem 1.35rem;margin:0;padding:0;list-style:none}
+.privacy-summary li{position:relative;padding-left:1rem;font-size:.86rem}
+.privacy-summary li:before{content:"";position:absolute;left:0;top:.52em;width:.42rem;height:.42rem;border-radius:50%;background:var(--color-primary)}
+.privacy-actions{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1.25rem}
+.privacy-actions .button{text-align:center}
+@media(max-width:760px){.privacy-principles{grid-template-columns:1fr}.privacy-principle{grid-template-columns:2.7rem minmax(0,1fr);gap:.8rem}.privacy-principle__icon{width:2.7rem;height:2.7rem}.privacy-summary{grid-template-columns:1fr;gap:.65rem}.privacy-summary ul{display:grid;gap:.45rem}.privacy-actions{display:grid}.privacy-actions .button{width:100%}}

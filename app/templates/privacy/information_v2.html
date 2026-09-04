@@ -1,1 +1,94 @@
-{% extends "base.html" %}{% block content %}<section class="onboarding-v2"><p class="eyebrow">Datenschutz</p><h1>Welche Daten wofür verwendet werden</h1><p class="lede">Pflichtdaten ermöglichen Anmeldung und Klassenberechtigung. Kontaktprofil, Galerie, Push, Schuldaten-Synchronisierung und Biometrie sind voneinander getrennte freiwillige Bereiche und zunächst ausgeschaltet.</p><div class="relationship-grid"><article class="choice-card"><h2>Pflichtbereich</h2><p>Konto, aktive Klassenmitgliedschaft und bestätigte Familienzuordnung sichern den Zugang zum geschützten Portal.</p></article><article class="choice-card"><h2>Freiwillige Funktionen</h2><p>Vor jeder Wahl werden Wirkung, Daten und die Folge eines Neins erklärt. Ein Nein beeinträchtigt die Kernfunktionen nicht.</p></article><article class="choice-card"><h2>Widerruf</h2><p>Einwilligungen können unter Menü → Datenschutz &amp; Einwilligungen für die Zukunft widerrufen und neu eingestellt werden.</p></article><article class="choice-card"><h2>Schuldaten</h2><p>Die persönliche Verbindung aktualisiert nur ausdrücklich gewählte Kalender- und Hausaufgabendaten des bestätigten Kindes.</p></article></div>{% if request.user.is_authenticated %}<p><a class="button button-primary" href="{% url 'onboarding-resume' %}">Zurück zur Einführung</a></p>{% endif %}</section>{% endblock %}
+{% extends "base.html" %}
+
+{% block content %}
+<section class="public-page privacy-page">
+  <header class="privacy-hero">
+    <a class="privacy-back-link" href="{% url 'project' %}">
+      <span aria-hidden="true">←</span> Projekt kennenlernen
+    </a>
+    <p class="eyebrow">Datenschutz</p>
+    <h1>Deine Daten. Deine Entscheidung.</h1>
+    <p class="lede">
+      KlassID nutzt nur die Daten, die für den geschützten Klassenraum nötig sind.
+      Zusätzliche Funktionen bleiben getrennt, freiwillig und zunächst ausgeschaltet.
+    </p>
+  </header>
+
+  <div class="privacy-principles" aria-label="Unsere Datenschutz-Grundsätze">
+    <article class="privacy-principle">
+      <span class="privacy-principle__icon" aria-hidden="true">
+        {% include "ui/_icon.html" with name="consent" %}
+      </span>
+      <div>
+        <p class="privacy-principle__label">Notwendige Daten</p>
+        <h2>Sicher in die richtige Klasse</h2>
+        <p>
+          Konto, Einladung, aktive Klassenmitgliedschaft und bestätigte
+          Familienzuordnung stellen sicher, dass nur berechtigte Personen Zugang erhalten.
+        </p>
+      </div>
+    </article>
+
+    <article class="privacy-principle">
+      <span class="privacy-principle__icon" aria-hidden="true">
+        {% include "ui/_icon.html" with name="more" %}
+      </span>
+      <div>
+        <p class="privacy-principle__label">Freiwillige Bereiche</p>
+        <h2>Du schaltest Funktionen einzeln frei</h2>
+        <p>
+          Kontaktdaten, Fotos, Benachrichtigungen, Schuldaten und lokale
+          Bilderkennung werden getrennt erklärt. Ein Nein schränkt die Grundfunktionen nicht ein.
+        </p>
+      </div>
+    </article>
+
+    <article class="privacy-principle">
+      <span class="privacy-principle__icon" aria-hidden="true">
+        {% include "ui/_icon.html" with name="people" %}
+      </span>
+      <div>
+        <p class="privacy-principle__label">Klare Rollen</p>
+        <h2>Jede Person sieht nur, was sie sehen darf</h2>
+        <p>
+          Eltern, Lehrkräfte und Verwaltung erhalten nur die Rechte, die zu ihrer
+          Aufgabe gehören. Entscheidungen für Kinder setzen eine bestätigte Beziehung voraus.
+        </p>
+      </div>
+    </article>
+
+    <article class="privacy-principle">
+      <span class="privacy-principle__icon" aria-hidden="true">
+        {% include "ui/_icon.html" with name="calendar" %}
+      </span>
+      <div>
+        <p class="privacy-principle__label">Jederzeit änderbar</p>
+        <h2>Einwilligungen bleiben unter deiner Kontrolle</h2>
+        <p>
+          Freigaben lassen sich später in den persönlichen Einstellungen ändern
+          oder widerrufen. Die Änderung gilt für die zukünftige Nutzung der Funktion.
+        </p>
+      </div>
+    </article>
+  </div>
+
+  <aside class="privacy-summary" aria-label="Datenschutz auf einen Blick">
+    <strong>Auf einen Blick</strong>
+    <ul>
+      <li>geschützter Klassenraum</li>
+      <li>keine Werbetracker</li>
+      <li>freiwillige Funktionen standardmäßig aus</li>
+      <li>Einwilligungen nachvollziehbar und widerrufbar</li>
+    </ul>
+  </aside>
+
+  <div class="privacy-actions">
+    {% if request.user.is_authenticated %}
+      <a class="button button-primary" href="{% url 'onboarding-resume' %}">Zurück zur Einführung</a>
+    {% else %}
+      <a class="button button-primary" href="{% url 'account_login' %}">Zum geschützten Zugang</a>
+    {% endif %}
+    <a class="button button-secondary" href="{% url 'project' %}">Zurück zum Projekt</a>
+  </div>
+</section>
+{% endblock %}

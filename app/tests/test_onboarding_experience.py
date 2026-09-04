@@ -80,7 +80,7 @@ def test_privacy_information_does_not_reset_incomplete_onboarding(client, guardi
     response = client.get("/datenschutz/")
     html = response.content.decode()
     assert response.status_code == 200
-    assert "Welche Daten wofür" in html
+    assert "Deine Daten. Deine Entscheidung." in html
     assert "Zurück zur Einführung" in html
     assert OnboardingState.objects.get(user=guardian).current_step == 4
 
