@@ -22,7 +22,7 @@
   <header class="topbar">
     {% if request.user.is_authenticated %}
     <div class="topbar-actions">
-      {% if active_section != "start" and active_section != "more" %}<a class="topbar-back" href="{% url 'ui-more' %}">← <span>Hauptmenü</span></a>{% endif %}
+      {% if active_section != "start" and request.path != "/mehr/" %}<a class="topbar-back" href="{% url 'ui-more' %}">← <span>Hauptmenü</span></a>{% endif %}
       <a class="icon-link {% if notification_unread_count %}has-unread{% endif %}" href="/benachrichtigungen/" aria-label="Benachrichtigungen öffnen, {{ notification_unread_count }} ungelesen">
         {% include "ui/_icon.html" with name="bell" %}{% if notification_unread_count %}<span class="notification-badge">{{ notification_unread_count }}</span>{% endif %}
       </a>

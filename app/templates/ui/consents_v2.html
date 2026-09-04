@@ -1,1 +1,26 @@
-{% extends "base.html" %}{% block content %}<section class="settings-hub"><header class="page-head"><p class="eyebrow">Einstellungen</p><h1>Datenschutz &amp; Einwilligungen</h1><p class="lede">Jeder freiwillige Bereich wird getrennt erklärt und geändert. Ein Nein schränkt die Kernfunktionen nicht ein.</p></header><div class="settings-sections"><article class="settings-card"><h2>Kontaktdaten</h2><p>Name, E-Mail und Telefonnummer im geschützten Klassenprofil.</p><a class="button button-secondary" href="/onboarding/schritt/5/?mode=settings">Einstellung öffnen</a></article><article class="settings-card"><h2>Fotos &amp; Galerie</h2><p>Galerieanzeige, Zuordnung des eigenen Kindes und davon getrennte lokale Erkennung.</p><a class="button button-secondary" href="/onboarding/schritt/6/?mode=settings">Einstellung öffnen</a></article><article class="settings-card"><h2>Push-Hinweise</h2><p>Neutrale Gerätehinweise, einschließlich persönlicher @Erwähnungen.</p><a class="button button-secondary" href="{% url 'ui-notifications' %}">Einstellungen öffnen</a></article><article class="settings-card"><h2>Daten, Kalender und Hausaufgaben synchronisieren</h2><p>Freigaben gelten nur für ein bestätigtes Kind und jede Datenart kann einzeln gewählt werden.</p><a class="button button-secondary" href="/onboarding/schritt/8/?mode=settings">Inhalte auswählen</a></article><article class="settings-card"><h2>Lokale Bilderkennung</h2><p>Treffervorschläge mit menschlicher Bestätigung; nur nach gesonderter Freigabe und technischer Aktivierung.</p><a class="button button-secondary" href="/onboarding/schritt/9/?mode=settings">Einstellung erklären</a></article></div><h2>Bisherige Entscheidungen</h2><div class="card-grid">{% for item in decisions %}<article class="content-card"><h3>{{ item.consent_type.label }}</h3><p>{{ item.subject_person.first_name }} {{ item.subject_person.last_name }} · {{ item.get_decision_display }} · Version {{ item.text_version.version }}</p>{% if item.decision == "granted" %}<form method="post" action="{% url 'consent-withdraw' key=item.consent_type.key subject_id=item.subject_person_id %}">{% csrf_token %}<button class="button button-secondary">Für die Zukunft widerrufen</button></form>{% endif %}</article>{% empty %}<p class="empty-state">Noch keine Entscheidung. Alle freiwilligen Funktionen sind aus.</p>{% endfor %}</div><p><a href="{% url 'tutorial-step' step=1 %}">Bebilderte Tour neu starten</a></p></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page sync-settings-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Synchronisation</p>
+      <h1>Schuldaten auswählen</h1>
+      <p class="lede">Schalte nur die Informationen ein, die du für deine Kinder sehen möchtest. Änderungen werden sofort übernommen.</p>
+    </div>
+    <a class="button button-secondary" href="{% url 'ui-more' %}">← Hauptmenü</a>
+  </header>
+  {% for row in sync_rows %}
+    <article class="settings-panel sync-child-panel">
+      <header><div><p class="eyebrow">Für dein Kind</p><h2>{{ row.student.first_name }} {{ row.student.last_name }}</h2></div><span class="status status-info">Persönlich</span></header>
+      <div class="sync-option-list">
+        {% for option in row.options %}
+          <div class="sync-option"><div><strong>{{ option.label }}</strong><small>{{ option.description }}</small></div><form method="post" class="sync-toggle-form">{% csrf_token %}<input type="hidden" name="subject" value="{{ row.student.pk }}"><input type="hidden" name="feature" value="{{ option.key }}"><label class="switch" title="{{ option.label }} {{ option.enabled|yesno:'ausschalten,anschalten' }}"><span class="sr-only">{{ option.label }} {{ option.enabled|yesno:'ausschalten,anschalten' }}</span><input type="checkbox" name="enabled" {% if option.enabled %}checked{% endif %} {% if not option.allowed %}disabled{% endif %} onchange="this.form.submit()"><span aria-hidden="true"></span></label></form></div>
+        {% endfor %}
+      </div>
+    </article>
+  {% empty %}
+    <article class="empty-state sync-empty"><h2>Noch kein bestätigtes Kind</h2><p>Die Synchronisationsoptionen werden angezeigt, sobald eine Sorgebeziehung bestätigt wurde.</p></article>
+  {% endfor %}
+  <article class="settings-panel sync-note-panel"><div class="settings-details-body"><strong>Datenschutz auf einen Blick</strong><p>Jede Auswahl gilt nur für das jeweilige Kind und deinen persönlichen Zugang. Du kannst sie jederzeit wieder ausschalten.</p></div></article>
+</section>
+{% endblock %}

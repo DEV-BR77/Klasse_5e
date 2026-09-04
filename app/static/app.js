@@ -42,6 +42,22 @@
     show(0);
   }
   document.querySelectorAll("[data-auto-submit]").forEach((form) => form.addEventListener("change", () => form.requestSubmit()));
+  document.querySelectorAll("[data-menu-sort]").forEach((list) => {
+    const syncPositions = () => list.querySelectorAll("[data-menu-row]").forEach((row, index) => {
+      const input = row.querySelector("input[type='number']");
+      if (input) input.value = index + 1;
+    });
+    list.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-menu-up], [data-menu-down]");
+      if (!button) return;
+      const row = button.closest("[data-menu-row]");
+      if (!row) return;
+      if (button.hasAttribute("data-menu-up") && row.previousElementSibling) row.parentElement.insertBefore(row, row.previousElementSibling);
+      if (button.hasAttribute("data-menu-down") && row.nextElementSibling) row.parentElement.insertBefore(row.nextElementSibling, row);
+      syncPositions();
+    });
+    syncPositions();
+  });
   document.querySelectorAll("[data-list-filter]").forEach((input) => input.addEventListener("input", () => {
     const list = document.getElementById(input.dataset.listFilter);
     const query = input.value.trim().toLocaleLowerCase("de");

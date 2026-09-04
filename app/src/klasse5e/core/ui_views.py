@@ -61,6 +61,7 @@ from .calendar_presenter import build_calendar_context
 from .models import (
     ClassMembership,
     ConsentDecision,
+    ConsentType,
     GuardianChildRelationship,
     Person,
     PilotReport,
@@ -507,16 +508,16 @@ def more(request):
     catalog = _menu_catalog()
     stored = school_class.visible_menu_items if isinstance(school_class.visible_menu_items, dict) else {}
     configured = stored.get("items") or [{"key": key, "group": item[3]} for key, item in catalog.items()]
-    labels = {"class": "Klassenleben", "communication": "Kalender & Kommunikation", "account": "Mein Konto"}
+    labels = {"class": "Klassenleben", "communication": "Kommunikation", "account": "Mein Konto"}
     labels.update(stored.get("group_labels") or {})
     groups = []
     for group_key in ("class", "communication", "account"):
         entries = []
         for row in configured:
-            if row.get("group") != group_key or row.get("key") not in catalog:
+            if row.get("group") != group_key or row.get("key") not in catalog or row.get("visible", True) is False:
                 continue
             label, url, icon, _default_group = catalog[row["key"]]
-            entries.append({"key": row["key"], "label": label, "url": url, "icon": icon})
+            entries.append({"key": row["key"], "label": row.get("label") or label, "url": url, "icon": icon})
         groups.append({"key": group_key, "label": labels[group_key], "items": entries})
     context["menu_groups"] = groups
     return render(request, "ui/more.html", context)
@@ -529,9 +530,7 @@ def _menu_catalog():
         "news": ("Aktuelles", "/mehr/aktuelles/", "news", "class"),
         "gallery": ("Fotos & Galerie", "/mehr/fotos/", "photo", "class"),
         "meals": ("Speiseplan", "/mehr/speiseplan/", "event", "class"),
-        "documents": ("PDF-Formulare", "/mehr/dokumente/", "document", "class"),
-        "calendar_subscription": ("Kalender verbinden", "/kalender/verbinden/", "calendar", "communication"),
-        "school_data": ("Daten, Kalender und Hausaufgaben synchronisieren", "/mehr/webuntis/", "calendar", "communication"),
+        "school_data": ("Kalender-Synchronisation", "/mehr/webuntis/", "calendar", "communication"),
         "profile": ("Meine Daten", "/einstellungen/profil/", "people", "account"),
         "family": ("Familie & Kinder", "/mehr/familie/", "people", "account"),
         "themes": ("Design & Themes", "/einstellungen/design/", "consent", "account"),
@@ -539,7 +538,6 @@ def _menu_catalog():
         "notifications": ("Benachrichtigungen & App", "/mehr/benachrichtigungen/", "bell", "account"),
         "security": ("Zwei-Faktor-Anmeldung", "/accounts/2fa/", "consent", "account"),
         "tutorial": ("Einführung", "/tutorial/", "home", "account"),
-        "presentation": ("Portal-Präsentation", "/praesentation/", "home", "communication"),
         "delete_account": ("Konto und Daten löschen", "/einstellungen/konto-loeschen/", "consent", "account"),
     }
 
@@ -562,12 +560,13 @@ def menu_management(request):
                 position = int(request.POST.get(f"position_{key}", "99"))
             except ValueError:
                 position = 99
-            items.append({"key": key, "group": group, "position": position})
+            label = request.POST.get(f"label_{key}", "").strip()[:80]
+            items.append({"key": key, "group": group, "position": position, "visible": request.POST.get(f"visible_{key}") == "on", "label": label})
         items.sort(key=lambda item: (item["group"], item["position"], item["key"]))
         school_class.visible_menu_items = {
             "group_labels": {
                 "class": request.POST.get("label_class", "Klassenleben")[:60],
-                "communication": request.POST.get("label_communication", "Kalender & Kommunikation")[:60],
+                "communication": request.POST.get("label_communication", "Kommunikation")[:60],
                 "account": request.POST.get("label_account", "Mein Konto")[:60],
             },
             "items": items,
@@ -578,7 +577,7 @@ def menu_management(request):
     rows = []
     for index, (key, (label, _url, _icon, default_group)) in enumerate(catalog.items(), 1):
         item = existing.get(key, {})
-        rows.append({"key": key, "label": label, "group": item.get("group", default_group), "position": item.get("position", index)})
+        rows.append({"key": key, "label": label, "label_override": item.get("label", ""), "visible": item.get("visible", True), "group": item.get("group", default_group), "position": item.get("position", index)})
     context = _shared(request, "Menü verwalten", "management")
     context.update({"rows": rows, "stored": stored})
     return render(request, "ui/menu_management.html", context)
@@ -1095,12 +1094,59 @@ def students(request):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
 def consents(request):
     _class_or_404(request.user)
-    context = _shared(request, "Einwilligungen", "more")
-    context["decisions"] = ConsentDecision.objects.filter(
-        deciding_person=request.user.person
-    ).select_related("consent_type", "subject_person", "text_version")
+    from klasse5e.webuntis.services import eligible_students
+
+    from .onboarding import active_decision, may_decide, record_decision
+
+    feature_options = (
+        ("timetable", "Stundenplan", "Unterricht und Zeiten im persönlichen Überblick."),
+        ("substitutions", "Vertretungen", "Ausfälle und Änderungen am Unterricht."),
+        ("absences", "Abwesenheiten", "Persönliche Fehlzeiten und Statusmeldungen."),
+        ("homework", "Hausaufgaben", "Aufgaben, Fälligkeiten und Fachzuordnung."),
+        ("exams", "Prüfungen", "Angekündigte Arbeiten und Prüfungstermine."),
+    )
+    subjects = list(eligible_students(request.user).order_by("first_name", "last_name"))
+    option_keys = {key for key, _label, _description in feature_options}
+    if request.method == "POST":
+        try:
+            subject = next(item for item in subjects if str(item.pk) == request.POST.get("subject"))
+        except StopIteration:
+            raise PermissionDenied
+        feature = request.POST.get("feature", "")
+        if feature not in option_keys:
+            raise Http404
+        decision = ConsentDecision.Decision.GRANTED if request.POST.get("enabled") == "on" else ConsentDecision.Decision.DENIED
+        record_decision(
+            user=request.user,
+            subject=subject,
+            key=f"webuntis_{feature}",
+            decision=decision,
+            source="settings",
+        )
+        messages.success(request, f"{dict((key, label) for key, label, _description in feature_options)[feature]} wurde {'aktiviert' if decision == ConsentDecision.Decision.GRANTED else 'ausgeschaltet'}.")
+        return redirect("ui-consents")
+
+    rows = []
+    for subject in subjects:
+        options = []
+        for feature, label, description in feature_options:
+            consent_type = ConsentType.objects.filter(key=f"webuntis_{feature}").first()
+            decision = active_decision(consent_type, subject, request.user.person) if consent_type else None
+            options.append(
+                {
+                    "key": feature,
+                    "label": label,
+                    "description": description,
+                    "allowed": bool(consent_type and may_decide(request.user, subject, consent_type)),
+                    "enabled": bool(decision and decision.decision == ConsentDecision.Decision.GRANTED),
+                }
+            )
+        rows.append({"student": subject, "options": options})
+    context = _shared(request, "Synchronisation", "more")
+    context["sync_rows"] = rows
     return render(request, "ui/consents_v2.html", context)
 
 

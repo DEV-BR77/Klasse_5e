@@ -3,7 +3,7 @@
 <section>
   <header class="page-heading calendar-heading compact-heading">
     <div><p class="eyebrow">Kalenderwoche {{ calendar_week_number }}</p><h1>Kalender</h1></div>
-    <div class="calendar-sync"><span>{% if webuntis_last_sync %}Aktualisiert {{ webuntis_last_sync|date:"H:i" }} Uhr{% else %}Noch nicht synchronisiert{% endif %}</span><a class="icon-button" href="/mehr/webuntis/" aria-label="Daten, Kalender und Hausaufgaben synchronisieren">↻</a></div>
+    <div class="calendar-sync"><span>{% if webuntis_last_sync %}Aktualisiert {{ webuntis_last_sync|date:"H:i" }} Uhr{% else %}Noch nicht synchronisiert{% endif %}</span><a class="button button-secondary" href="{% url 'webuntis-calendar-settings' %}">Kalender verbinden</a><a class="icon-button" href="/mehr/webuntis/" aria-label="Kalender-Synchronisation öffnen">↻</a></div>
   </header>
 
   <div class="calendar-toolbar card">
