@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load meal_tags %}
 {% block content %}
 <section class="dashboard-page">
   <header class="welcome-panel">
@@ -36,7 +37,7 @@
 
     <article class="feature-card meal-card">
       <header class="card-header"><div><p class="eyebrow">{% if next_meal.date == selected_day %}Heute{% else %}Nächster Essenstag{% endif %}</p><h2>Speiseplan</h2></div><a href="{% url 'meal-plans' %}">Alle Wochen</a></header>
-      {% if next_meal %}<p class="meal-date">{{ next_meal.date|date:"l, d.m." }} · KW {{ next_meal.plan.iso_week }}</p><div class="dashboard-meals">{% for option in next_meal.options.all %}<section><strong>Menü {{ option.line }}</strong><p>{{ option.components|join:", " }}</p><div class="meal-codes">{% for code in option.allergen_codes %}<span title="Allergen">{{ code }}</span>{% endfor %}{% for code in option.additive_codes %}<span title="Zusatzstoff">{{ code }}</span>{% endfor %}</div></section>{% endfor %}</div><small>Änderungen vorbehalten · Stand {{ next_meal.plan.fetched_at|date:"d.m., H:i" }} Uhr</small>{% else %}<p class="empty-compact">Noch kein veröffentlichter Speiseplan verfügbar.</p>{% endif %}
+      {% if next_meal %}<p class="meal-date">{{ next_meal.date|date:"l, d.m." }} · KW {{ next_meal.plan.iso_week }}</p><div class="dashboard-meals">{% for option in next_meal.options.all %}<section><strong>Menü {{ option.line }}</strong><p>{{ option.components|join:", " }}</p>{% if option.allergen_codes or option.additive_codes %}<div class="meal-codes meal-codes-readable">{% for code in option.allergen_codes %}<span title="Allergen: {{ next_meal.plan.legend.allergens|get_item:code }}">Allergen: {{ next_meal.plan.legend.allergens|get_item:code }}</span>{% endfor %}{% for code in option.additive_codes %}<span title="Zusatzstoff: {{ next_meal.plan.legend.additives|get_item:code }}">Zusatzstoff: {{ next_meal.plan.legend.additives|get_item:code }}</span>{% endfor %}</div>{% endif %}</section>{% endfor %}</div><small>Änderungen vorbehalten · Stand {{ next_meal.plan.fetched_at|date:"d.m., H:i" }} Uhr</small>{% else %}<p class="empty-compact">Noch kein veröffentlichter Speiseplan verfügbar.</p>{% endif %}
     </article>
   </div>
   <p class="sync-note">{% if webuntis_last_sync %}Schuldaten zuletzt aktualisiert: {{ webuntis_last_sync|date:"d.m.Y, H:i" }} Uhr{% else %}Noch keine Schuldaten synchronisiert.{% endif %}</p>
