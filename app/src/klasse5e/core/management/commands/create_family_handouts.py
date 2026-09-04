@@ -94,18 +94,13 @@ class Command(BaseCommand):
                 ("03-mensa.png", 20, 300, 52, 52, -5), ("04-buch-hausaufgaben.png", 350, 300, 52, 52, 6),
                 ("05-chat.png", 22, 205, 52, 52, -7), ("06-fotogalerie.png", 350, 205, 52, 52, 8),
                 ("07-checkliste.png", 24, 104, 52, 52, -5), ("08-ical.png", 342, 104, 52, 52, 6),
-                ("09-push-benachrichtigung.png", 76, 70, 48, 48, -7), ("10-organisation.png", 184, 72, 52, 52, 0),
-                ("11-kinder-datenschutz.png", 292, 70, 52, 52, 7),
+                ("09-push-benachrichtigung.png", 108, 70, 48, 48, -7),
+                ("11-kinder-datenschutz.png", 264, 70, 52, 52, 7),
             )
             for filename, x, y, w, h, angle in icon_layout:
                 icon_path = icon_dir / filename
                 if icon_path.is_file():
                     pdf.drawImage(ImageReader(str(icon_path)), x, y, w, h, mask="auto")
-            pdf.setFillColor(navy)
-            pdf.setFont("Helvetica-Bold", 8.5)
-            pdf.drawString(30, 68, "DSGVO-konform  ·  klare Rollen  ·  kinderfreundliche Filter")
-            pdf.drawString(30, 54, "Kalender  ·  Hausaufgaben  ·  Mensa  ·  Chat  ·  Fotos  ·  Schulweg")
-
             pdf.setFillColor(navy)
             pdf.setFont("Helvetica-Bold", 9)
             pdf.drawString(27, 27, f"Einladung {item.serial_number:02d} / {len(invitations):02d}")
