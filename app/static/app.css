@@ -184,3 +184,4 @@
 [data-theme] input,[data-theme] select,[data-theme] textarea{background:var(--color-surface)!important;color:var(--color-text)!important;border-color:var(--color-border)!important}
 [data-theme] input::placeholder,[data-theme] textarea::placeholder{color:var(--color-text-muted);opacity:1}
 [data-theme-mode=dark] .app-dialog{color-scheme:dark}
+:root{--color-on-primary:#fff}

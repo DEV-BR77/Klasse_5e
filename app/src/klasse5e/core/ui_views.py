@@ -71,6 +71,63 @@ from .models import (
 from .policies import active_roles, family_label, has_active_membership
 from .registration import sanitized_profile_photo
 
+TEMPLATE_PREVIEW_CATALOG = (
+    {
+        "key": "velora-ui",
+        "name": "Velora UI",
+        "stack": "Next.js · Tailwind · Motion",
+        "license": "MIT",
+        "repo": "https://github.com/ColorlibHQ/velora-ui",
+        "source": "Colorlib 33 Tailwind templates",
+        "style_note": "Weiche Farbflächen, große Rundungen und ruhige Verläufe",
+    },
+    {
+        "key": "hyperui",
+        "name": "HyperUI",
+        "stack": "HTML · Tailwind",
+        "license": "MIT",
+        "repo": "https://github.com/markmead/hyperui",
+        "source": "Colorlib 33 Tailwind templates",
+        "style_note": "Klar, kompakt und kontrastreich mit grünen Akzenten",
+    },
+    {
+        "key": "flowbite",
+        "name": "Flowbite",
+        "stack": "HTML/JS · Tailwind",
+        "license": "MIT",
+        "repo": "https://github.com/themesberg/flowbite",
+        "source": "Colorlib 33 Tailwind templates",
+        "style_note": "Vertraute App-Optik mit Blau, Karten und deutlichen Zuständen",
+    },
+    {
+        "key": "preline-ui",
+        "name": "Preline UI",
+        "stack": "HTML · Tailwind plugin",
+        "license": "MIT",
+        "repo": "https://github.com/htmlstreamofficial/preline",
+        "source": "Colorlib 33 Tailwind templates",
+        "style_note": "Warme Flächen, feine Linien und ein freundlicher Editorial-Stil",
+    },
+    {
+        "key": "astrowind",
+        "name": "AstroWind",
+        "stack": "Astro · Tailwind",
+        "license": "MIT",
+        "repo": "https://github.com/arthelokyo/astrowind",
+        "source": "Colorlib 33 Tailwind templates",
+        "style_note": "Luftige Typografie mit leuchtendem Verlauf und viel Weißraum",
+    },
+    {
+        "key": "cruip-open-react",
+        "name": "Cruip Open React",
+        "stack": "Next.js · React · Tailwind",
+        "license": "MIT",
+        "repo": "https://github.com/cruip/open-react-template",
+        "source": "Colorlib 33 Tailwind templates",
+        "style_note": "Dunkle Oberfläche mit leuchtenden Violett- und Cyan-Akzenten",
+    },
+)
+
 
 def _merge_adjacent_lessons(lessons):
     merged = []
@@ -907,6 +964,53 @@ def theme_settings(request):
 
 
 @login_required
+def portal_theme_preview(request, theme_id, page):
+    page_labels = {"uebersicht": "Übersicht", "kalender": "Kalender"}
+    if page not in page_labels:
+        raise Http404
+    can_manage_themes = request.user.is_superuser or request.user.roleassignment_set.filter(
+        active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+    ).exists()
+    if can_manage_themes:
+        themes = PortalTheme.objects.all()
+    else:
+        _class_or_404(request.user)
+        audience = (
+            PortalTheme.Audience.CHILDREN
+            if hasattr(request.user, "person")
+            and StudentProfile.objects.filter(person=request.user.person).exists()
+            else PortalTheme.Audience.ADULTS
+        )
+        themes = PortalTheme.objects.filter(is_active=True).filter(
+            Q(audience=PortalTheme.Audience.ALL) | Q(audience=audience)
+        )
+    preview_theme = get_object_or_404(themes, pk=theme_id)
+    back_to_management = can_manage_themes and request.GET.get("zurueck") == "verwaltung"
+    context = _shared(
+        request,
+        f"{preview_theme.name} · {page_labels[page]}",
+        "management" if back_to_management else "more",
+    )
+    context.update(
+        {
+            "preview_theme": preview_theme,
+            "preview_name": preview_theme.name,
+            "preview_description": preview_theme.description,
+            "preview_page": page,
+            "preview_page_label": page_labels[page],
+            "preview_back_url": "/verwaltung/themes/"
+            if back_to_management
+            else "/einstellungen/design/",
+            "preview_back_label": "Zurück zur Verwaltung"
+            if back_to_management
+            else "Zurück zu deinen Themes",
+            "preview_management_query": "?zurueck=verwaltung" if back_to_management else "",
+        }
+    )
+    return render(request, "ui/template_preview.html", context)
+
+
+@login_required
 @require_http_methods(["GET", "POST"])
 def theme_management(request):
     if not (
@@ -971,62 +1075,51 @@ def theme_management(request):
             )
             messages.success(request, "Das neue Theme ist sofort zur Auswahl verfügbar.")
             return redirect("theme-management")
-    # External inspirations are kept as a review catalogue. We do not copy
-    # third-party markup into the portal until an administrator has approved
-    # the license, accessibility and dependency profile.
-    template_catalog = [
-        {
-            "name": "Velora UI",
-            "stack": "Next.js · Tailwind · Motion",
-            "license": "MIT",
-            "repo": "https://github.com/ColorlibHQ/velora-ui",
-            "source": "Colorlib 33 Tailwind templates",
-        },
-        {
-            "name": "HyperUI",
-            "stack": "HTML · Tailwind",
-            "license": "MIT",
-            "repo": "https://github.com/markmead/hyperui",
-            "source": "Colorlib 33 Tailwind templates",
-        },
-        {
-            "name": "Flowbite",
-            "stack": "HTML/JS · Tailwind",
-            "license": "MIT",
-            "repo": "https://github.com/themesberg/flowbite",
-            "source": "Colorlib 33 Tailwind templates",
-        },
-        {
-            "name": "Preline UI",
-            "stack": "HTML · Tailwind plugin",
-            "license": "MIT",
-            "repo": "https://github.com/htmlstreamofficial/preline",
-            "source": "Colorlib 33 Tailwind templates",
-        },
-        {
-            "name": "AstroWind",
-            "stack": "Astro · Tailwind",
-            "license": "MIT",
-            "repo": "https://github.com/arthelokyo/astrowind",
-            "source": "Colorlib 33 Tailwind templates",
-        },
-        {
-            "name": "Cruip Open React",
-            "stack": "Next.js · React · Tailwind",
-            "license": "MIT",
-            "repo": "https://github.com/cruip/open-react-template",
-            "source": "Colorlib 33 Tailwind templates",
-        },
-    ]
     context = _shared(request, "Themes verwalten", "management")
     context.update(
         {
             "themes": PortalTheme.objects.all(),
             "audiences": PortalTheme.Audience.choices,
-            "template_catalog": template_catalog,
+            "template_catalog": TEMPLATE_PREVIEW_CATALOG,
         }
     )
     return render(request, "ui/theme_management.html", context)
+
+
+@login_required
+def template_preview(request, template_key, page):
+    if not (
+        request.user.is_superuser
+        or request.user.roleassignment_set.filter(
+            active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+        ).exists()
+    ):
+        raise Http404
+    page_labels = {"uebersicht": "Übersicht", "kalender": "Kalender"}
+    if page not in page_labels:
+        raise Http404
+    catalog_item = next(
+        (item for item in TEMPLATE_PREVIEW_CATALOG if item["key"] == template_key), None
+    )
+    if catalog_item is None:
+        raise Http404
+    context = _shared(
+        request,
+        f"{catalog_item['name']} · {page_labels[page]}",
+        "management",
+    )
+    context.update(
+        {
+            "catalog_item": catalog_item,
+            "preview_name": catalog_item["name"],
+            "preview_description": catalog_item["style_note"],
+            "preview_page": page,
+            "preview_page_label": page_labels[page],
+            "preview_back_url": "/verwaltung/themes/",
+            "preview_back_label": "Zurück zu allen Vorlagen",
+        }
+    )
+    return render(request, "ui/template_preview.html", context)
 
 
 @login_required

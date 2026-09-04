@@ -74,11 +74,32 @@ class PortalTheme(models.Model):
     class Meta:
         ordering = ["audience", "name"]
 
+    @staticmethod
+    def _readable_foreground(background):
+        value = (background or "").lstrip("#")
+        if len(value) != 6:
+            return "#FFFFFF"
+        try:
+            channels = [int(value[index : index + 2], 16) / 255 for index in (0, 2, 4)]
+        except ValueError:
+            return "#FFFFFF"
+        linear = [
+            channel / 12.92
+            if channel <= 0.04045
+            else ((channel + 0.055) / 1.055) ** 2.4
+            for channel in channels
+        ]
+        luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+        white_contrast = 1.05 / (luminance + 0.05)
+        dark_contrast = (luminance + 0.05) / 0.055
+        return "#FFFFFF" if white_contrast >= dark_contrast else "#111827"
+
     @property
     def css_variables(self):
         return ";".join(
             (
                 f"--color-primary:{self.primary}",
+                f"--color-on-primary:{self._readable_foreground(self.primary)}",
                 f"--color-primary-dark:{self.primary_dark}",
                 f"--color-primary-light:{self.primary_light}",
                 f"--color-accent:{self.accent}",

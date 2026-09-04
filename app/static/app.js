@@ -433,6 +433,10 @@
     let chunks = [];
     recordButton?.addEventListener("click", async () => {
       if (recorder?.state === "recording") { recorder.stop(); return; }
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+        status.textContent = "Sprachnachrichten werden von diesem Browser nicht unterstützt. Bitte nutze eine aktuelle Version von Chrome, Edge, Firefox oder Safari.";
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({audio:true});
         recorder = new MediaRecorder(stream); chunks = [];
@@ -445,7 +449,17 @@
           recordButton.classList.remove("is-recording"); status.textContent = "Sprachnachricht bereit zum Senden.";
         });
         recorder.start(); recordButton.classList.add("is-recording"); status.textContent = "Aufnahme läuft – zum Beenden erneut tippen.";
-      } catch (_) { status.textContent = "Mikrofonzugriff wurde nicht erteilt oder wird nicht unterstützt."; }
+      } catch (error) {
+        if (error?.name === "NotAllowedError" || error?.name === "SecurityError") {
+          status.textContent = "Mikrofon ist blockiert. Öffne links neben der Webadresse die Website-Einstellungen, erlaube das Mikrofon und lade die Seite neu.";
+        } else if (error?.name === "NotFoundError") {
+          status.textContent = "Es wurde kein Mikrofon gefunden. Bitte prüfe, ob ein Mikrofon angeschlossen und in Windows aktiviert ist.";
+        } else if (error?.name === "NotReadableError") {
+          status.textContent = "Das Mikrofon wird gerade von einer anderen Anwendung verwendet. Schließe sie und versuche es erneut.";
+        } else {
+          status.textContent = "Die Aufnahme konnte nicht gestartet werden. Bitte prüfe die Mikrofonfreigabe in den Website-Einstellungen.";
+        }
+      }
     });
   });
 

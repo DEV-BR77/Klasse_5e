@@ -1,1 +1,30 @@
-{% extends "base.html" %}{% block content %}<section class="theme-page"><header class="page-heading"><div><p class="eyebrow">Persönliche Einstellung</p><h1>Dein Design</h1><p class="lede">Die Auswahl gilt nur für deinen Login. Andere Familienmitglieder können ihr eigenes Theme wählen.</p></div></header><div class="theme-grid">{% for theme in themes %}<form method="post" class="theme-choice {% if request.user.selected_theme_id == theme.id %}is-selected{% endif %}" style="--preview-primary:{{ theme.primary }};--preview-accent:{{ theme.accent }};--preview-bg:{{ theme.background }};--preview-surface:{{ theme.surface }};--preview-text:{{ theme.text }}">{% csrf_token %}<input type="hidden" name="theme_id" value="{{ theme.id }}"><div class="theme-preview" aria-hidden="true"><div class="preview-bar"></div><div class="preview-body"><i></i><span></span><span></span><b></b></div></div><div><span class="theme-audience">{{ theme.get_audience_display }} · {% if theme.is_dark %}Dunkel{% else %}Hell{% endif %}</span><h2>{{ theme.name }}</h2><p>{{ theme.description }}</p></div><button class="button {% if request.user.selected_theme_id == theme.id %}button-secondary{% endif %}" type="submit">{% if request.user.selected_theme_id == theme.id %}Aktiv{% else %}Auswählen{% endif %}</button></form>{% endfor %}</div></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="theme-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Persönliche Einstellung</p>
+      <h1>Dein Design</h1>
+      <p class="lede">Schau dir ein Design zuerst mit derselben Beispiel-Übersicht und demselben Beispiel-Kalender an. Erst „Auswählen“ ändert das Theme für deinen Login.</p>
+    </div>
+  </header>
+  <div class="theme-grid">
+    {% for theme in themes %}
+      <form method="post" class="theme-choice {% if request.user.selected_theme_id == theme.id %}is-selected{% endif %}" style="--preview-primary:{{ theme.primary }};--preview-accent:{{ theme.accent }};--preview-bg:{{ theme.background }};--preview-surface:{{ theme.surface }};--preview-text:{{ theme.text }}">
+        {% csrf_token %}
+        <input type="hidden" name="theme_id" value="{{ theme.id }}">
+        <div class="theme-preview" aria-hidden="true"><div class="preview-bar"></div><div class="preview-body"><i></i><span></span><span></span><b></b></div></div>
+        <div>
+          <span class="theme-audience">{{ theme.get_audience_display }} · {% if theme.is_dark %}Dunkel{% else %}Hell{% endif %}</span>
+          <h2>{{ theme.name }}</h2>
+          <p>{{ theme.description }}</p>
+        </div>
+        <div class="theme-choice-actions">
+          <a class="button button-secondary" href="{% url 'portal-theme-preview' theme_id=theme.id page='uebersicht' %}">Vorschau</a>
+          <button class="button {% if request.user.selected_theme_id == theme.id %}button-secondary{% endif %}" type="submit">{% if request.user.selected_theme_id == theme.id %}Aktiv{% else %}Auswählen{% endif %}</button>
+        </div>
+      </form>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

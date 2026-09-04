@@ -63,6 +63,11 @@ urlpatterns = [
     ),
     path("einstellungen/profil/", views.personal_profile, name="personal-profile"),
     path("einstellungen/design/", ui_views.theme_settings, name="theme-settings"),
+    path(
+        "einstellungen/design/vorschau/<int:theme_id>/<slug:page>/",
+        ui_views.portal_theme_preview,
+        name="portal-theme-preview",
+    ),
     path("einstellungen/konto-loeschen/", views.delete_account, name="delete-account"),
     path("praesentation/", ui_views.presentation, name="presentation"),
     path("profile/<int:person_id>/foto/", views.profile_photo, name="profile-photo"),
@@ -95,6 +100,11 @@ urlpatterns = [
         name="family-invitations",
     ),
     path("verwaltung/themes/", ui_views.theme_management, name="theme-management"),
+    path(
+        "verwaltung/themes/vorschau/<slug:template_key>/<slug:page>/",
+        ui_views.template_preview,
+        name="template-preview",
+    ),
     path("verwaltung/menue/", ui_views.menu_management, name="menu-management"),
     path(
         "verwaltung/terminumfrage/",

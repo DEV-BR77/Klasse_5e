@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'theme-previews.css' %}?v=1">{% endblock %}
+{% block content %}
+<section class="catalog-preview-page">
+  <header class="catalog-preview-heading">
+    <div>
+      <a class="catalog-preview-back" href="{{ preview_back_url }}">← {{ preview_back_label }}</a>
+      <p class="eyebrow">Lokale Portalvorschau</p>
+      <h1>{{ preview_name }}</h1>
+      <p>{{ preview_description }}{% if preview_description %}.{% endif %} Die gezeigten Inhalte sind vollständig fiktiv.</p>
+    </div>
+    {% if catalog_item %}<a class="button button-secondary" href="{{ catalog_item.repo }}" target="_blank" rel="noreferrer">Repository öffnen ↗</a>{% endif %}
+  </header>
+
+  <nav class="catalog-preview-switcher" aria-label="Vorschauseite auswählen">
+    {% if preview_theme %}
+      <a href="{% url 'portal-theme-preview' theme_id=preview_theme.id page='uebersicht' %}{{ preview_management_query }}" {% if preview_page == 'uebersicht' %}aria-current="page"{% endif %}>Übersicht</a>
+      <a href="{% url 'portal-theme-preview' theme_id=preview_theme.id page='kalender' %}{{ preview_management_query }}" {% if preview_page == 'kalender' %}aria-current="page"{% endif %}>Kalender</a>
+    {% else %}
+      <a href="{% url 'template-preview' template_key=catalog_item.key page='uebersicht' %}" {% if preview_page == 'uebersicht' %}aria-current="page"{% endif %}>Übersicht</a>
+      <a href="{% url 'template-preview' template_key=catalog_item.key page='kalender' %}" {% if preview_page == 'kalender' %}aria-current="page"{% endif %}>Kalender</a>
+    {% endif %}
+  </nav>
+
+  <div class="template-preview {% if preview_theme %}template-portal-theme{% else %}template-{{ catalog_item.key }}{% endif %}"{% if preview_theme %} data-theme-mode="{% if preview_theme.is_dark %}dark{% else %}light{% endif %}" style="{{ preview_theme.css_variables }}"{% endif %}>
+    <div class="tp-browser-bar" aria-hidden="true"><i></i><i></i><i></i><span>klassid.de · Designvorschau</span></div>
+    <div class="tp-shell">
+      <aside class="tp-sidebar">
+        <div class="tp-brand"><span>K</span><strong>KlassID</strong></div>
+        <nav aria-label="Beispielnavigation">
+          <span class="{% if preview_page == 'uebersicht' %}is-active{% endif %}">⌂ <b>Übersicht</b></span>
+          <span class="{% if preview_page == 'kalender' %}is-active{% endif %}">□ <b>Kalender</b></span>
+          <span>◻ <b>Chat</b></span>
+          <span>♧ <b>Mobilität</b></span>
+          <span>••• <b>Menü</b></span>
+        </nav>
+        <small>Klasse 5e · Beispielschule</small>
+      </aside>
+
+      <div class="tp-workspace">
+        <header class="tp-topbar">
+          <div><span class="tp-mobile-brand">KlassID</span><small>{{ preview_page_label }}</small></div>
+          <div class="tp-profile"><span>3</span><i>AB</i><b>Alex</b></div>
+        </header>
+
+        {% if preview_page == "uebersicht" %}
+          <main class="tp-content tp-dashboard">
+            <section class="tp-hero">
+              <div><small>Guten Morgen</small><h2>Was steht heute an?</h2><p>Dienstag, 8. September · Klasse 5e</p></div>
+              <span class="tp-hero-mark">08</span>
+            </section>
+
+            <section class="tp-week" aria-label="Beispielwoche">
+              <span><small>Mo</small><b>07</b></span><span class="is-today"><small>Di</small><b>08</b></span><span><small>Mi</small><b>09</b></span><span><small>Do</small><b>10</b></span><span><small>Fr</small><b>11</b></span>
+            </section>
+
+            <nav class="tp-section-tabs" aria-label="Beispielbereiche">
+              <span class="is-active">Stundenplan &amp; Hausaufgaben</span><span>Aktuelles</span><span>Speiseplan</span>
+            </nav>
+
+            <section class="tp-dashboard-grid">
+              <article class="tp-card tp-schedule-card">
+                <header><div><small>Heute</small><h3>Stundenplan</h3></div><span>3 Einträge</span></header>
+                <ul>
+                  <li><time>07:45</time><div><b>Deutsch</b><small>Raum 30 · Frau Sommer</small></div></li>
+                  <li><time>09:40</time><div><b>Mathematik</b><small>Raum 47 · Herr Winter</small></div></li>
+                  <li><time>11:35</time><div><b>Sport</b><small>Sporthalle · Frau Becker</small></div></li>
+                </ul>
+              </article>
+              <article class="tp-card tp-homework-card">
+                <header><div><small>Demnächst</small><h3>Hausaufgaben</h3></div><span>2 offen</span></header>
+                <ul>
+                  <li><i>✓</i><div><b>Mathematik</b><p>Aufgaben 4 bis 7 im Arbeitsheft</p><small>Bis Mittwoch</small></div></li>
+                  <li><i>✓</i><div><b>Erdkunde</b><p>Steckbrief zur Nordsee fertigstellen</p><small>Bis Freitag</small></div></li>
+                </ul>
+              </article>
+              <article class="tp-card tp-compact-card"><small>Klasse</small><h3>Aktuelles</h3><p>Elternabend am Donnerstag um 18 Uhr in Raum 12.</p></article>
+              <article class="tp-card tp-compact-card"><small>Nächster Essenstag</small><h3>Speiseplan</h3><p>Gemüselasagne · Salat · Obst</p></article>
+            </section>
+          </main>
+        {% else %}
+          <main class="tp-content tp-calendar-page">
+            <header class="tp-page-title">
+              <div><small>Wochenansicht</small><h2>Kalender</h2><p>Unterricht, Termine und Aufgaben auf einen Blick.</p></div>
+              <button type="button">+ Termin</button>
+            </header>
+            <nav class="tp-calendar-toolbar" aria-label="Beispielwoche wechseln">
+              <button type="button">←</button><strong>07.–13. September 2026</strong><button type="button">→</button>
+            </nav>
+            <div class="tp-calendar-scroll">
+              <section class="tp-calendar-grid" aria-label="Fiktiver Wochenkalender">
+                <div class="tp-cal-corner">Uhrzeit</div>
+                <header><small>Mo</small><b>07</b></header><header class="is-today"><small>Di</small><b>08</b></header><header><small>Mi</small><b>09</b></header><header><small>Do</small><b>10</b></header><header><small>Fr</small><b>11</b></header>
+                <div class="tp-time-label">08:00</div>
+                <div class="tp-cal-cell"></div><div class="tp-cal-cell"><article class="tp-event tp-event-blue"><time>08:00–09:30</time><b>Deutsch</b><small>Raum 30</small></article></div><div class="tp-cal-cell"></div><div class="tp-cal-cell"></div><div class="tp-cal-cell"></div>
+                <div class="tp-time-label">10:00</div>
+                <div class="tp-cal-cell"><article class="tp-event tp-event-green"><time>10:15–11:00</time><b>Mathematik</b><small>Raum 47</small></article></div><div class="tp-cal-cell"></div><div class="tp-cal-cell"></div><div class="tp-cal-cell"><article class="tp-event tp-event-purple"><time>10:00–10:45</time><b>Klassenrat</b><small>Raum 12</small></article></div><div class="tp-cal-cell"></div>
+                <div class="tp-time-label">14:00</div>
+                <div class="tp-cal-cell"></div><div class="tp-cal-cell"></div><div class="tp-cal-cell"><article class="tp-event tp-event-orange"><time>15:30–17:00</time><b>Sportfest</b><small>Schulhof</small></article></div><div class="tp-cal-cell"></div><div class="tp-cal-cell"></div>
+              </section>
+            </div>
+            <section class="tp-calendar-footer">
+              <div><i class="tp-dot tp-dot-blue"></i><span>Unterricht</span></div><div><i class="tp-dot tp-dot-orange"></i><span>Veranstaltung</span></div><div><i class="tp-dot tp-dot-purple"></i><span>Klasse</span></div>
+            </section>
+          </main>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <p class="catalog-preview-note">Diese Vorschau ist eine auf KlassID zugeschnittene Designstudie. Sie übernimmt keine personenbezogenen Daten und aktiviert das Theme noch nicht.</p>
+</section>
+{% endblock %}
