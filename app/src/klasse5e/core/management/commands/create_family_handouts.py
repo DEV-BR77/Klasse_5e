@@ -65,7 +65,7 @@ class Command(BaseCommand):
             pdf.drawString(28, height - 88, "Kommt in unseren")
             pdf.drawString(28, height - 119, "Klassentreff")
             pdf.setFont("Helvetica", 11)
-            pdf.drawString(30, height - 144, "Alles Wichtige fuer Eltern und Kinder an einem Ort")
+            pdf.drawString(30, height - 144, "Alles Wichtige fuer Eltern und Schueler an einem Ort")
 
             qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_Q, box_size=8, border=4)
             qr.add_data(url)
@@ -84,21 +84,13 @@ class Command(BaseCommand):
             pdf.setFont("Helvetica-Bold", 12)
             pdf.drawCentredString(width / 2, qr_y - 27, "SCANNEN UND FAMILIE ANLEGEN")
 
-            cards = (("K", "Kalender"), ("H", "Hausaufgaben"), ("M", "Mensa"), ("C", "Chat"), ("F", "Fotos"), ("W", "Schulweg"))
-            start_x, card_y = 27, 118
-            for index, (icon, label) in enumerate(cards):
-                x = start_x + (index % 3) * 123
-                y = card_y - (index // 3) * 51
-                pdf.setFillColor(white)
-                pdf.roundRect(x, y, 112, 40, 10, fill=1, stroke=0)
-                pdf.setFillColor(teal if index % 2 == 0 else coral)
-                pdf.circle(x + 20, y + 20, 12, fill=1, stroke=0)
-                pdf.setFillColor(white)
-                pdf.setFont("Helvetica-Bold", 9)
-                pdf.drawCentredString(x + 20, y + 17, icon)
-                pdf.setFillColor(navy)
-                pdf.setFont("Helvetica-Bold", 8.5)
-                pdf.drawString(x + 38, y + 17, label)
+            icon_path = Path(settings.BASE_DIR) / "static" / "branding" / "flyer-icons.png"
+            if icon_path.is_file():
+                pdf.drawImage(ImageReader(str(icon_path)), 26, 82, width - 52, 78, mask="auto", preserveAspectRatio=True)
+            pdf.setFillColor(navy)
+            pdf.setFont("Helvetica-Bold", 8.5)
+            pdf.drawString(30, 68, "DSGVO-konform  ·  klare Rollen  ·  kinderfreundliche Filter")
+            pdf.drawString(30, 54, "Kalender  ·  Hausaufgaben  ·  Mensa  ·  Chat  ·  Fotos  ·  Schulweg")
 
             pdf.setFillColor(navy)
             pdf.setFont("Helvetica-Bold", 9)
