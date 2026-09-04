@@ -20,7 +20,11 @@ urlpatterns = [
     path("registrieren/", views.register, name="register"),
     path("einladung/", views.invitation_entry, name="invitation-entry"),
     path("familie/start/<str:token>/", views.family_register, name="family-register"),
-    path("registrieren/email/<str:token>/", views.verify_registration_email, name="registration-email-verify"),
+    path(
+        "registrieren/email/<str:token>/",
+        views.verify_registration_email,
+        name="registration-email-verify",
+    ),
     path("aktivieren/<str:token>/", views.activate_registration, name="registration-activate"),
     path(
         "datenschutz/",
@@ -30,7 +34,11 @@ urlpatterns = [
     path("projekt/", TemplateView.as_view(template_name="core/project.html"), name="project"),
     path("demo/", TemplateView.as_view(template_name="core/demo.html"), name="demo"),
     path("onboarding/", onboarding_experience_views.onboarding_step, name="onboarding-resume"),
-    path("onboarding/pausiert/", onboarding_experience_views.onboarding_paused, name="onboarding-paused"),
+    path(
+        "onboarding/pausiert/",
+        onboarding_experience_views.onboarding_paused,
+        name="onboarding-paused",
+    ),
     path(
         "onboarding/schritt/<int:step>/",
         onboarding_experience_views.onboarding_step,
@@ -43,7 +51,9 @@ urlpatterns = [
     ),
     path("tutorial/", onboarding_experience_views.tutorial_step, name="tutorial-resume"),
     path(
-        "tutorial/schritt/<int:step>/", onboarding_experience_views.tutorial_step, name="tutorial-step"
+        "tutorial/schritt/<int:step>/",
+        onboarding_experience_views.tutorial_step,
+        name="tutorial-step",
     ),
     path("", ui_views.dashboard, name="dashboard"),
     path("einstellungen/profil/", views.personal_profile, name="personal-profile"),
@@ -52,39 +62,96 @@ urlpatterns = [
     path("praesentation/", ui_views.presentation, name="presentation"),
     path("profile/<int:person_id>/foto/", views.profile_photo, name="profile-photo"),
     path("benachrichtigungen/", views.notification_list, name="notification-list"),
-    path("benachrichtigungen/<int:notification_id>/lesen/", views.notification_read, name="notification-read"),
-    path("benachrichtigungen/alle-lesen/", views.notifications_read_all, name="notifications-read-all"),
+    path(
+        "benachrichtigungen/<int:notification_id>/lesen/",
+        views.notification_read,
+        name="notification-read",
+    ),
+    path(
+        "benachrichtigungen/alle-lesen/",
+        views.notifications_read_all,
+        name="notifications-read-all",
+    ),
     path("kalender/", ui_views.calendar, name="ui-calendar"),
     path("kontakte/", ui_views.contacts, name="ui-contacts"),
     path("schueler/", ui_views.students, name="ui-students"),
     path("chat/", ui_views.chat_overview, name="ui-chat"),
     path("chat/<uuid:room_id>/ansicht/", ui_views.chat_room, name="ui-chat-room"),
-    path("chat/nachricht/<uuid:message_id>/anhang/", ui_views.chat_attachment, name="ui-chat-attachment"),
+    path(
+        "chat/nachricht/<uuid:message_id>/anhang/",
+        ui_views.chat_attachment,
+        name="ui-chat-attachment",
+    ),
     path("verwaltung/", ui_views.portal_management, name="portal-management"),
     path("verwaltung/anmeldung/", ui_views.registration_invitation, name="registration-invitation"),
+    path(
+        "verwaltung/familien-einladungen/",
+        ui_views.family_invitations,
+        name="family-invitations",
+    ),
     path("verwaltung/themes/", ui_views.theme_management, name="theme-management"),
     path("verwaltung/menue/", ui_views.menu_management, name="menu-management"),
-    path("verwaltung/terminumfrage/", ui_views.presentation_poll_settings, name="presentation-poll-settings"),
-    path("verwaltung/anmeldung/qr.svg", ui_views.registration_invitation_qr, name="registration-invitation-qr"),
+    path(
+        "verwaltung/terminumfrage/",
+        ui_views.presentation_poll_settings,
+        name="presentation-poll-settings",
+    ),
+    path(
+        "verwaltung/anmeldung/qr.svg",
+        ui_views.registration_invitation_qr,
+        name="registration-invitation-qr",
+    ),
     path("pilot/melden/", ui_views.pilot_report, name="pilot-report"),
     path("mehr/", ui_views.more, name="ui-more"),
     path("mehr/dokumente/", ui_views.documents, name="ui-documents"),
     path("mehr/aktuelles/", ui_views.posts, name="ui-posts"),
     path("mehr/aktuelles/<int:post_id>/", ui_views.post_detail, name="ui-post-detail"),
     path("mehr/veranstaltungen/", ui_views.events, name="ui-events"),
-    path("mehr/veranstaltungen/umfrage/neu/", ui_views.create_event_poll, name="ui-create-event-poll"),
+    path(
+        "mehr/veranstaltungen/umfrage/neu/", ui_views.create_event_poll, name="ui-create-event-poll"
+    ),
     path("mehr/veranstaltungen/umfrage/<int:poll_id>/", ui_views.event_poll, name="ui-event-poll"),
-    path("mehr/veranstaltungen/umfrage/<int:poll_id>/festlegen/", ui_views.finalize_event_poll, name="ui-finalize-event-poll"),
+    path(
+        "mehr/veranstaltungen/umfrage/<int:poll_id>/festlegen/",
+        ui_views.finalize_event_poll,
+        name="ui-finalize-event-poll",
+    ),
     path("mehr/mobilitaet/", mobility_views.overview, name="mobility-overview"),
     path("mehr/mobilitaet/<uuid:public_id>/", mobility_views.detail, name="mobility-detail"),
-    path("mehr/mobilitaet/<uuid:public_id>/treffpunkt/", mobility_views.add_meeting_point, name="mobility-meeting-point"),
-    path("mehr/mobilitaet/<uuid:public_id>/reagieren/", mobility_views.react, name="mobility-react"),
-    path("mehr/mobilitaet/<uuid:public_id>/status/", mobility_views.change_status, name="mobility-status"),
+    path(
+        "mehr/mobilitaet/<uuid:public_id>/treffpunkt/",
+        mobility_views.add_meeting_point,
+        name="mobility-meeting-point",
+    ),
+    path(
+        "mehr/mobilitaet/<uuid:public_id>/reagieren/", mobility_views.react, name="mobility-react"
+    ),
+    path(
+        "mehr/mobilitaet/<uuid:public_id>/status/",
+        mobility_views.change_status,
+        name="mobility-status",
+    ),
     path("mehr/mobilitaet/<uuid:public_id>/melden/", mobility_views.report, name="mobility-report"),
-    path("mehr/mobilitaet/<uuid:public_id>/moderieren/", mobility_views.moderate, name="mobility-moderate"),
-    path("mobility/reactions/<int:reaction_id>/decision/", mobility_views.reaction_decision, name="mobility-reaction-decision"),
-    path("mobility/reactions/<int:reaction_id>/pickup/", mobility_views.disclose_pickup, name="mobility-pickup-disclose"),
-    path("mobility/pickups/<int:disclosure_id>/revoke/", mobility_views.revoke_disclosure, name="mobility-pickup-revoke"),
+    path(
+        "mehr/mobilitaet/<uuid:public_id>/moderieren/",
+        mobility_views.moderate,
+        name="mobility-moderate",
+    ),
+    path(
+        "mobility/reactions/<int:reaction_id>/decision/",
+        mobility_views.reaction_decision,
+        name="mobility-reaction-decision",
+    ),
+    path(
+        "mobility/reactions/<int:reaction_id>/pickup/",
+        mobility_views.disclose_pickup,
+        name="mobility-pickup-disclose",
+    ),
+    path(
+        "mobility/pickups/<int:disclosure_id>/revoke/",
+        mobility_views.revoke_disclosure,
+        name="mobility-pickup-revoke",
+    ),
     path("mehr/veranstaltungen/<int:event_id>/", ui_views.event, name="ui-event"),
     path("mehr/mitbringen/<int:item_id>/reservieren/", ui_views.reserve, name="ui-reserve"),
     path(
@@ -103,14 +170,22 @@ urlpatterns = [
     path("mehr/familie/", ui_views.family, name="ui-family"),
     path("mehr/einwilligungen/", ui_views.consents, name="ui-consents"),
     path("mehr/benachrichtigungen/", ui_views.notifications, name="ui-notifications"),
-    path("mehr/benachrichtigungen/einstellung/", ui_views.notification_preference, name="ui-notification-preference"),
+    path(
+        "mehr/benachrichtigungen/einstellung/",
+        ui_views.notification_preference,
+        name="ui-notification-preference",
+    ),
     path("mehr/webuntis/", webuntis_views.connection, name="webuntis-connection"),
-    path("mehr/webuntis/synchronisierung/", webuntis_views.toggle_sync, name="webuntis-toggle-sync"),
+    path(
+        "mehr/webuntis/synchronisierung/", webuntis_views.toggle_sync, name="webuntis-toggle-sync"
+    ),
     path("mehr/webuntis/testen/", webuntis_views.test_connection, name="webuntis-test"),
     path("mehr/webuntis/entfernen/", webuntis_views.remove_connection, name="webuntis-remove"),
     path("mehr/webuntis/funktionen/", webuntis_views.update_features, name="webuntis-features"),
     path("mehr/webuntis/aktuell-pruefen/", webuntis_views.sync_now, name="webuntis-sync"),
-    path("kalender/verbinden/", webuntis_views.calendar_settings, name="webuntis-calendar-settings"),
+    path(
+        "kalender/verbinden/", webuntis_views.calendar_settings, name="webuntis-calendar-settings"
+    ),
     path(
         "mehr/webuntis/<int:connection_id>/kalender.ics",
         webuntis_views.download_calendar,
@@ -128,10 +203,22 @@ urlpatterns = [
     ),
     path("itslearning/", itslearning_views.portal, name="itslearning-portal"),
     path("itslearning/zugang/", itslearning_views.save_connection, name="itslearning-save"),
-    path("itslearning/<int:student_id>/kurse/", itslearning_views.add_course, name="itslearning-course"),
-    path("itslearning/<int:student_id>/synchronisieren/", itslearning_views.sync_now, name="itslearning-sync"),
+    path(
+        "itslearning/<int:student_id>/kurse/",
+        itslearning_views.add_course,
+        name="itslearning-course",
+    ),
+    path(
+        "itslearning/<int:student_id>/synchronisieren/",
+        itslearning_views.sync_now,
+        name="itslearning-sync",
+    ),
     path("itslearning/speicher/", itslearning_views.storage, name="itslearning-storage"),
-    path("itslearning/speicher/einrichten/", itslearning_views.save_storage, name="itslearning-storage-save"),
+    path(
+        "itslearning/speicher/einrichten/",
+        itslearning_views.save_storage,
+        name="itslearning-storage-save",
+    ),
     path("dav/<uuid:public_id>/", webdav, name="webdav-root"),
     path("dav/<uuid:public_id>/<path:resource>", webdav, name="webdav-resource"),
     path("mehr/ui-zustaende/", ui_views.demo_states, name="ui-demo-states"),
@@ -177,7 +264,11 @@ urlpatterns = [
         name="open-source-licenses",
     ),
     path("nutzung/", TemplateView.as_view(template_name="legal/terms.html"), name="terms"),
-    path("mehr/reservierungen/<int:reservation_id>/erledigt/", ui_views.fulfill_reservation, name="ui-fulfill-reservation"),
+    path(
+        "mehr/reservierungen/<int:reservation_id>/erledigt/",
+        ui_views.fulfill_reservation,
+        name="ui-fulfill-reservation",
+    ),
     path(
         "events/<int:event_id>/food/<str:source_id>/import/",
         event_views.import_food_item,
@@ -191,7 +282,9 @@ urlpatterns = [
     ),
     path("galleries/<int:gallery_id>/", media_views.gallery_detail, name="gallery-detail"),
     path("galleries/<int:gallery_id>/upload/", media_views.upload_photos, name="gallery-upload"),
-    path("photos/<uuid:photo_id>/kind-zuweisen/", media_views.assign_child, name="photo-assign-child"),
+    path(
+        "photos/<uuid:photo_id>/kind-zuweisen/", media_views.assign_child, name="photo-assign-child"
+    ),
     path(
         "photos/<uuid:photo_id>/kind/<int:person_id>/entfernen/",
         media_views.remove_child_assignment,

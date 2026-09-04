@@ -122,6 +122,8 @@ ACCOUNT_ADAPTER = "klasse5e.core.adapters.ClosedAccountAdapter"
 ACCOUNT_SESSION_REMEMBER = False
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
 MFA_PASSKEY_LOGIN_ENABLED = False
+MFA_ADAPTER = "klasse5e.core.adapters.KlassIDMFAAdapter"
+TEMPORARY_ADMIN_MFA_BYPASS = os.environ.get("TEMPORARY_ADMIN_MFA_BYPASS", "0") == "1"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 

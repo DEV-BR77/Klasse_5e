@@ -62,9 +62,7 @@ def register(request):
                 password=request.POST.get("password", ""),
             )
             if item and token:
-                link = (
-                    f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/registrieren/email/{token}/"
-                )
+                link = f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/registrieren/email/{token}/"
                 send_mail(
                     "E-Mail-Adresse für KlassID bestätigen",
                     f"Öffne diesen einmaligen Link innerhalb von 24 Stunden: {link}",
@@ -87,10 +85,20 @@ def invitation_entry(request):
     if request.method == "POST":
         token = request.POST.get("code", "").strip()
         if _rate_limit(request, "invitation-entry"):
-            return render(request, "core/invitation_entry.html", {"error": "Bitte versuche es später erneut."}, status=429)
+            return render(
+                request,
+                "core/invitation_entry.html",
+                {"error": "Bitte versuche es später erneut."},
+                status=429,
+            )
         if token and FamilyAccessCode.resolve(token):
             return redirect("family-register", token=token)
-        return render(request, "core/invitation_entry.html", {"error": "Der Einladungscode ist ungültig oder abgelaufen."}, status=400)
+        return render(
+            request,
+            "core/invitation_entry.html",
+            {"error": "Der Einladungscode ist ungültig oder abgelaufen."},
+            status=400,
+        )
     return render(request, "core/invitation_entry.html")
 
 
@@ -103,16 +111,53 @@ def family_register(request, token):
     if request.method == "POST":
         if _rate_limit(request, f"family-register:{invitation.id}", limit=8):
             return render(request, "core/family_invitation_invalid.html", status=429)
+        submitted = {
+            key: request.POST.get(key, "").strip()
+            for key in (
+                "first_name",
+                "last_name",
+                "email",
+                "adult_2_first_name",
+                "adult_2_last_name",
+                "adult_2_email",
+                "child_1_first_name",
+                "child_1_last_name",
+                "child_2_first_name",
+                "child_2_last_name",
+                "household_label",
+            )
+        }
         children = []
         for index in (1, 2):
             first = request.POST.get(f"child_{index}_first_name", "").strip()[:100]
             last = request.POST.get(f"child_{index}_last_name", "").strip()[:100]
+            if bool(first) != bool(last):
+                raise_error = f"Bitte gib für Kind {index} Vor- und Nachnamen an."
+                return render(
+                    request,
+                    "core/family_register.html",
+                    {"invitation": invitation, "error": raise_error, "submitted": submitted},
+                    status=400,
+                )
             if first and last:
                 children.append({"first_name": first, "last_name": last})
         adults = []
         second_email = request.POST.get("adult_2_email", "").strip().casefold()
         second_first = request.POST.get("adult_2_first_name", "").strip()[:100]
         second_last = request.POST.get("adult_2_last_name", "").strip()[:100]
+        if any((second_email, second_first, second_last)) and not all(
+            (second_email, second_first, second_last)
+        ):
+            return render(
+                request,
+                "core/family_register.html",
+                {
+                    "invitation": invitation,
+                    "error": "Bitte fülle für die zweite erwachsene Person alle drei Felder aus oder lasse sie vollständig leer.",
+                    "submitted": submitted,
+                },
+                status=400,
+            )
         if second_email and second_first and second_last:
             adults.append(
                 {"email": second_email, "first_name": second_first, "last_name": second_last}
@@ -131,9 +176,12 @@ def family_register(request, token):
                     first_name=request.POST.get("first_name", ""),
                     last_name=request.POST.get("last_name", ""),
                     password=request.POST.get("password", ""),
+                    refresh_unverified=True,
                 )
                 if not item or not email_token:
-                    raise ValidationError("Die Anmeldung konnte nicht angelegt werden.")
+                    raise ValidationError(
+                        "Für diese E-Mail-Adresse besteht bereits ein bestätigter Antrag oder Zugang. Bitte melde dich damit an oder verwende eine andere persönliche E-Mail-Adresse."
+                    )
                 family = FamilyRegistrationRequest.objects.create(
                     access_code=locked,
                     household_label=request.POST.get("household_label", "").strip()[:120]
@@ -160,7 +208,11 @@ def family_register(request, token):
             return render(
                 request,
                 "core/family_register.html",
-                {"invitation": invitation, "error": str(exc)},
+                {
+                    "invitation": invitation,
+                    "error": " ".join(exc.messages),
+                    "submitted": submitted,
+                },
                 status=400,
             )
     return render(request, "core/family_register.html", {"invitation": invitation})
@@ -197,13 +249,21 @@ def personal_profile(request):
         person.phone = request.POST.get("phone", "").strip()[:50]
         person.chat_display_name = request.POST.get("chat_display_name", "").strip()[:80]
         mode = request.POST.get("contribution_name_mode", "family")
-        person.contribution_name_mode = mode if mode in {"family", "child", "personal"} else "family"
-        person.email_visibility = "members" if request.POST.get("share_email") == "yes" else "hidden"
-        person.phone_visibility = "members" if request.POST.get("share_phone") == "yes" else "hidden"
+        person.contribution_name_mode = (
+            mode if mode in {"family", "child", "personal"} else "family"
+        )
+        person.email_visibility = (
+            "members" if request.POST.get("share_email") == "yes" else "hidden"
+        )
+        person.phone_visibility = (
+            "members" if request.POST.get("share_phone") == "yes" else "hidden"
+        )
         photo = request.FILES.get("profile_photo")
         if photo:
             encoded = sanitized_profile_photo(photo)
-            person.profile_photo.save(f"{secrets.token_urlsafe(18)}.webp", ContentFile(encoded), save=False)
+            person.profile_photo.save(
+                f"{secrets.token_urlsafe(18)}.webp", ContentFile(encoded), save=False
+            )
         person.full_clean()
         person.save()
         if previous != (person.email_visibility, person.phone_visibility):
@@ -212,11 +272,16 @@ def personal_profile(request):
                 action="profile.contact_sharing.changed",
                 target_type="person",
                 target_id=str(person.pk),
-                metadata={"email_shared": person.email_visibility == "members", "phone_shared": person.phone_visibility == "members"},
+                metadata={
+                    "email_shared": person.email_visibility == "members",
+                    "phone_shared": person.phone_visibility == "members",
+                },
             )
         messages.success(request, "Dein Profil wurde gespeichert.")
         return redirect("personal-profile")
-    return render(request, "ui/personal_profile.html", {"page_title": "Persönliches Profil", "person": person})
+    return render(
+        request, "ui/personal_profile.html", {"page_title": "Persönliches Profil", "person": person}
+    )
 
 
 @login_required
@@ -241,9 +306,7 @@ def delete_account(request):
         erase_account_data(deletion)
         logout(request)
         return render(request, "ui/account_deleted.html", status=200)
-    return render(
-        request, "ui/delete_account.html", {"page_title": "Konto und Daten löschen"}
-    )
+    return render(request, "ui/delete_account.html", {"page_title": "Konto und Daten löschen"})
 
 
 @login_required
@@ -252,9 +315,13 @@ def profile_photo(request, person_id):
 
     school_class = active_class_for_user(request.user)
     person = Person.objects.filter(pk=person_id, profile_photo__gt="").first()
-    if not school_class or not person or not ClassMembership.objects.filter(
-        school_class=school_class, person=person, status="active"
-    ).exists():
+    if (
+        not school_class
+        or not person
+        or not ClassMembership.objects.filter(
+            school_class=school_class, person=person, status="active"
+        ).exists()
+    ):
         raise Http404
     response = FileResponse(person.profile_photo.open("rb"), content_type="image/webp")
     response["Cache-Control"] = "private, max-age=300"
@@ -268,7 +335,15 @@ def notification_list(request):
     if not school_class:
         raise Http404
     items = UserNotification.objects.filter(user=request.user, school_class=school_class)
-    return render(request, "ui/notification_list.html", {"page_title": "Benachrichtigungen", "notifications": items, "unread_count": items.filter(read_at__isnull=True).count()})
+    return render(
+        request,
+        "ui/notification_list.html",
+        {
+            "page_title": "Benachrichtigungen",
+            "notifications": items,
+            "unread_count": items.filter(read_at__isnull=True).count(),
+        },
+    )
 
 
 @login_required
@@ -276,7 +351,11 @@ def notification_list(request):
 def notification_read(request, notification_id):
     school_class = active_class_for_user(request.user)
     with transaction.atomic():
-        item = UserNotification.objects.select_for_update().filter(pk=notification_id, user=request.user, school_class=school_class).first()
+        item = (
+            UserNotification.objects.select_for_update()
+            .filter(pk=notification_id, user=request.user, school_class=school_class)
+            .first()
+        )
         if not item:
             raise Http404
         if item.read_at is None:
@@ -291,7 +370,9 @@ def notifications_read_all(request):
     school_class = active_class_for_user(request.user)
     if not school_class:
         raise Http404
-    UserNotification.objects.filter(user=request.user, school_class=school_class, read_at__isnull=True).update(read_at=timezone.now())
+    UserNotification.objects.filter(
+        user=request.user, school_class=school_class, read_at__isnull=True
+    ).update(read_at=timezone.now())
     return redirect("notification-list")
 
 
@@ -429,7 +510,9 @@ def push_subscriptions(request):
 
 @login_required
 def push_configuration(request):
-    return JsonResponse({"supported": bool(settings.VAPID_PUBLIC_KEY), "public_key": settings.VAPID_PUBLIC_KEY})
+    return JsonResponse(
+        {"supported": bool(settings.VAPID_PUBLIC_KEY), "public_key": settings.VAPID_PUBLIC_KEY}
+    )
 
 
 @login_required
@@ -442,7 +525,9 @@ def push_self_test(request):
     if _rate_limit(request, f"push-self-test:{request.user.pk}", limit=3):
         return JsonResponse({"status": "rate_limited"}, status=429)
     subscription_id = request.POST.get("subscription_id")
-    stored = PushSubscription.objects.filter(pk=subscription_id, user=request.user, enabled=True).first()
+    stored = PushSubscription.objects.filter(
+        pk=subscription_id, user=request.user, enabled=True
+    ).first()
     sender = configured_sender()
     if not stored or sender is None:
         return JsonResponse({"status": "not_configured"}, status=409)
@@ -459,7 +544,13 @@ def push_self_test(request):
     )
     if result.status == DeliveryStatus.STALE:
         stored.delete()
-    AuditEvent.objects.create(actor=request.user, action="push.self_test", target_type="push_subscription", target_id=str(subscription_id), metadata={"result": result.status.value, "message_id": message_id})
+    AuditEvent.objects.create(
+        actor=request.user,
+        action="push.self_test",
+        target_type="push_subscription",
+        target_id=str(subscription_id),
+        metadata={"result": result.status.value, "message_id": message_id},
+    )
     return JsonResponse({"status": result.status.value, "message_id": message_id})
 
 

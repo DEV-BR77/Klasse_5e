@@ -105,6 +105,11 @@ Modell darf Treffer automatisch endgültig bestätigen.
 
 ## Bewusst zurückgestellt
 
+Die Theme-Bibliothek wird erst nach der funktionalen Stabilisierung erweitert.
+Bis dahin bleiben die sechs vorbereiteten Entwürfe der prüfbare Katalog;
+weitere Designs werden gezielt nach ausdrücklicher Freigabe umgesetzt, statt
+ungeprüft eine große Vorlagenmenge zu übernehmen.
+
 Mehrere Schulen/SaaS, native Apps, Direktnachrichten, Video, Zahlungen,
 Noten/Krankmeldungen, öffentliche Galerien, Cloud-Gesichtserkennung,
 automatische endgültige Identifikation, allgemeines IAM, Kubernetes, Event Bus,

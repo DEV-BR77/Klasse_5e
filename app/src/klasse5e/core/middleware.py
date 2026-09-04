@@ -1,6 +1,7 @@
 import hashlib
 
 from allauth.mfa.models import Authenticator
+from django.conf import settings
 from django.contrib.auth import logout
 from django.core.cache import cache
 from django.core.management import call_command
@@ -58,7 +59,14 @@ class PrivilegedMfaMiddleware:
 
     def __call__(self, request):
         if request.user.is_authenticated and not request.path.startswith(self.SAFE_PREFIXES):
-            if active_roles(request.user) & PRIVILEGED_ROLES:
+            roles = active_roles(request.user)
+            if roles & PRIVILEGED_ROLES:
+                if settings.TEMPORARY_ADMIN_MFA_BYPASS and (
+                    request.user.is_staff
+                    or request.user.is_superuser
+                    or roles & {"primary_admin", "deputy_admin"}
+                ):
+                    return self.get_response(request)
                 has_mfa = Authenticator.objects.filter(
                     user=request.user,
                     type__in=[Authenticator.Type.TOTP, Authenticator.Type.WEBAUTHN],

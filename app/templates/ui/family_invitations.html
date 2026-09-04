@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="narrow-page settings-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Portalverwaltung</p>
+      <h1>QR-Familieneinladungen</h1>
+      <p class="lede">Erzeuge eindeutige, zehnstellige Codes mit QR-Code als druckfertiges PDF.</p>
+    </div>
+    <a class="button button-secondary" href="{% url 'portal-management' %}">← Zur Verwaltung</a>
+  </header>
+  <form method="post" class="settings-panel form-stack family-invitation-form">
+    {% csrf_token %}
+    <label>
+      Schule und Klasse
+      <select name="school_class" required>
+        <option value="">Bitte auswählen</option>
+        {% for item in school_classes %}
+          <option value="{{ item.id }}">{{ item.school.name }} · {{ item.display_name|default:item.name }} · {{ item.school_year.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Anzahl der Einladungen
+      <input type="number" name="count" min="1" max="100" value="1" required>
+      <small>Pro Einladung wird ein eigener, nur einmal verwendbarer Code erzeugt.</small>
+    </label>
+    <label>
+      Familiennamen vormerken <small>optional, ein Name pro Zeile</small>
+      <textarea name="family_names" rows="6" placeholder="Familie Mustermann&#10;Familie Beispiel"></textarea>
+      <small>Der Name dient nur deiner Zuordnung. Die eindeutige Identität bleibt der Einladungscode.</small>
+    </label>
+    <div class="flow-actions">
+      <a class="button button-secondary" href="{% url 'portal-management' %}">Abbrechen</a>
+      <button class="button button-primary" type="submit">Einladungs-PDF erzeugen</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

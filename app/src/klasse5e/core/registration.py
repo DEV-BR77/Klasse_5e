@@ -1,4 +1,6 @@
 import hashlib
+import secrets
+from datetime import timedelta
 from io import BytesIO
 
 from django.conf import settings
@@ -20,6 +22,7 @@ from .models import (
     Person,
     RegistrationApplication,
     RelationshipStatus,
+    RelationshipType,
     Role,
     RoleAssignment,
     StudentProfile,
@@ -29,7 +32,7 @@ from .models import (
 from .policies import active_class_for_user
 
 
-def create_application(*, email, first_name, last_name, password):
+def create_application(*, email, first_name, last_name, password, refresh_unverified=False):
     email = email.strip().casefold()
     first_name, last_name = first_name.strip(), last_name.strip()
     if not email or not first_name or not last_name:
@@ -37,8 +40,34 @@ def create_application(*, email, first_name, last_name, password):
     validate_password(password)
     if UserAccount.objects.filter(email__iexact=email).exists():
         return None, None
-    existing = RegistrationApplication.objects.filter(email__iexact=email).first()
+    existing_query = RegistrationApplication.objects
+    if refresh_unverified:
+        existing_query = existing_query.select_for_update()
+    existing = existing_query.filter(email__iexact=email).first()
     if existing:
+        if (
+            refresh_unverified
+            and existing.status == RegistrationApplication.Status.EMAIL_PENDING
+            and existing.email_verified_at is None
+            and existing.family_request_id is None
+        ):
+            token = secrets.token_urlsafe(32)
+            existing.first_name = first_name[:100]
+            existing.last_name = last_name[:100]
+            existing.password_hash = make_password(password)
+            existing.email_token_hash = hashlib.sha256(token.encode()).hexdigest()
+            existing.email_token_expires_at = timezone.now() + timedelta(hours=24)
+            existing.save(
+                update_fields=[
+                    "first_name",
+                    "last_name",
+                    "password_hash",
+                    "email_token_hash",
+                    "email_token_expires_at",
+                    "updated_at",
+                ]
+            )
+            return existing, token
         return None, None
     return RegistrationApplication.issue(
         email=email,
@@ -51,7 +80,9 @@ def create_application(*, email, first_name, last_name, password):
 @transaction.atomic
 def verify_email(token):
     digest = hashlib.sha256(token.encode()).hexdigest()
-    item = RegistrationApplication.objects.select_for_update().filter(email_token_hash=digest).first()
+    item = (
+        RegistrationApplication.objects.select_for_update().filter(email_token_hash=digest).first()
+    )
     if not item or item.email_token_expires_at <= timezone.now():
         return None
     if item.status == RegistrationApplication.Status.EMAIL_PENDING:
@@ -73,7 +104,9 @@ def verify_email(token):
                 roleassignment__role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN],
             )
         )
-        revision = hashlib.sha256(f"registration:{item.pk}:{item.updated_at.isoformat()}".encode()).hexdigest()[:32]
+        revision = hashlib.sha256(
+            f"registration:{item.pk}:{item.updated_at.isoformat()}".encode()
+        ).hexdigest()[:32]
         for admin in admin_users:
             target_class = active_class_for_user(admin)
             if target_class is None:
@@ -120,7 +153,12 @@ def verify_email(token):
 @transaction.atomic
 def activate(token):
     digest = hashlib.sha256(token.encode()).hexdigest()
-    grant = ActivationGrant.objects.select_for_update().select_related("application").filter(token_hash=digest).first()
+    grant = (
+        ActivationGrant.objects.select_for_update()
+        .select_related("application")
+        .filter(token_hash=digest)
+        .first()
+    )
     if not grant or grant.used_at or grant.revoked_at or grant.expires_at <= timezone.now():
         return None
     app = grant.application
@@ -128,7 +166,11 @@ def activate(token):
         return None
     user, created = UserAccount.objects.get_or_create(
         email=app.email,
-        defaults={"password": app.password_hash, "email_verified_at": app.email_verified_at, "is_active": True},
+        defaults={
+            "password": app.password_hash,
+            "email_verified_at": app.email_verified_at,
+            "is_active": True,
+        },
     )
     if not created and user.is_active:
         return None
@@ -156,12 +198,38 @@ def activate(token):
     grant.save(update_fields=["used_at"])
     app.status = RegistrationApplication.Status.ACTIVATED
     app.save(update_fields=["status", "updated_at"])
-    AuditEvent.objects.create(actor=user, action="registration.activated", target_type="user", target_id=str(user.pk))
+    AuditEvent.objects.create(
+        actor=user, action="registration.activated", target_type="user", target_id=str(user.pk)
+    )
     family = app.family_request
     if family and not family.completed_at:
         household = Household.objects.create(label=family.household_label)
         household.members.add(person)
         family.household = household
+        access_code = family.access_code
+        existing_guardian = access_code.existing_guardian
+        existing_guardian_person = None
+        if existing_guardian and existing_guardian != user:
+            existing_guardian_person = getattr(existing_guardian, "person", None)
+            if existing_guardian_person is None:
+                raise ValidationError(
+                    "Der bereits zugeordnete Elternzugang besitzt kein Personenprofil."
+                )
+            household.members.add(existing_guardian_person)
+            ClassMembership.objects.get_or_create(
+                school_class=app.school_class,
+                person=existing_guardian_person,
+                defaults={"valid_from": timezone.localdate(), "status": "active"},
+            )
+            role_assignment, _ = RoleAssignment.objects.get_or_create(
+                user=existing_guardian,
+                school_class=app.school_class,
+                role=Role.GUARDIAN,
+                defaults={"school": app.school, "assigned_by": app.reviewed_by},
+            )
+            if not role_assignment.active:
+                role_assignment.active = True
+                role_assignment.save(update_fields=["active"])
         for child_data in family.children:
             child = Person.objects.create(
                 first_name=child_data["first_name"][:100],
@@ -190,6 +258,28 @@ def activate(token):
                 verified_by=app.reviewed_by,
                 verified_at=timezone.now(),
             )
+            if existing_guardian_person:
+                GuardianChildRelationship.objects.update_or_create(
+                    guardian_person=existing_guardian_person,
+                    student_person=child,
+                    defaults={
+                        "relationship_type": (
+                            access_code.existing_guardian_relationship_type
+                            or RelationshipType.GUARDIAN
+                        ),
+                        "is_legal_guardian": True,
+                        "may_view_student_profile": True,
+                        "may_manage_profile": True,
+                        "may_manage_general_consents": True,
+                        "may_manage_photo_consents": True,
+                        "may_manage_biometric_consents": True,
+                        "valid_from": timezone.localdate(),
+                        "valid_until": None,
+                        "status": RelationshipStatus.VERIFIED,
+                        "verified_by": app.reviewed_by,
+                        "verified_at": timezone.now(),
+                    },
+                )
         for adult in family.additional_adults:
             invitation, family_token = Invitation.issue(
                 adult["email"],

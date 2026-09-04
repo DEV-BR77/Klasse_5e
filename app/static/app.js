@@ -2,6 +2,36 @@
   const live = document.querySelector("#live-status");
   const announce = (text) => { if (live) live.textContent = text; };
   const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || "";
+  document.querySelectorAll("[data-dashboard-tabs]").forEach((switcher) => {
+    const tabs = [...switcher.querySelectorAll("[data-dashboard-tab]")];
+    const panels = [...switcher.querySelectorAll("[data-dashboard-panel]")];
+    const select = (key, focus = false) => {
+      const selected = tabs.find((tab) => tab.dataset.dashboardTab === key) || tabs[0];
+      if (!selected) return;
+      tabs.forEach((tab) => {
+        const active = tab === selected;
+        tab.classList.toggle("is-active", active);
+        tab.setAttribute("aria-selected", String(active));
+        tab.tabIndex = active ? 0 : -1;
+      });
+      panels.forEach((panel) => { panel.hidden = panel.dataset.dashboardPanel !== selected.dataset.dashboardTab; });
+      if (focus) selected.focus();
+    };
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => select(tab.dataset.dashboardTab));
+      tab.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        let target = index;
+        if (event.key === "ArrowLeft") target = (index - 1 + tabs.length) % tabs.length;
+        if (event.key === "ArrowRight") target = (index + 1) % tabs.length;
+        if (event.key === "Home") target = 0;
+        if (event.key === "End") target = tabs.length - 1;
+        select(tabs[target].dataset.dashboardTab, true);
+      });
+    });
+    select("day");
+  });
   const presentation = document.querySelector("[data-presentation]");
   if (presentation) {
     const slides = [...presentation.querySelectorAll("[data-slide]")];
@@ -64,7 +94,16 @@
     list?.querySelectorAll("[data-filter-text]").forEach((item) => { item.hidden = !item.dataset.filterText.includes(query); });
   }));
   document.querySelectorAll("[data-confirm]").forEach((form) => form.addEventListener("submit", (event) => { if (!window.confirm(form.dataset.confirm)) event.preventDefault(); }));
-  document.querySelectorAll("[data-dialog-open]").forEach((button) => button.addEventListener("click", () => document.getElementById(button.dataset.dialogOpen)?.showModal()));
+  document.querySelectorAll("[data-dialog-open]").forEach((button) => button.addEventListener("click", () => {
+    const dialog = document.getElementById(button.dataset.dialogOpen);
+    dialog?.showModal();
+    window.setTimeout(() => {
+      dialog?.querySelectorAll("[data-local-map]").forEach((map) => {
+        map._leafletInstance?.invalidateSize();
+        map._leafletRestoreView?.();
+      });
+    }, 80);
+  }));
   document.querySelectorAll("[data-dialog-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog")?.close()));
   document.querySelectorAll("dialog").forEach((dialog) => dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); }));
   document.querySelectorAll("[data-gallery-upload]").forEach((form) => form.addEventListener("submit", async (event) => {
@@ -92,13 +131,18 @@
     const northEast = [Number(bounds.north), Number(bounds.east)];
     const validPoints = points.filter((point) => Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude)));
     const schoolPoint = validPoints.find((point) => point.kind === "school") || validPoints[0];
-    if (validPoints.length > 1) {
-      leafletMap.fitBounds(window.L.latLngBounds(validPoints.map((point) => [Number(point.latitude), Number(point.longitude)])), {padding:[42, 42], maxZoom:15});
-    } else if (schoolPoint) {
-      leafletMap.setView([Number(schoolPoint.latitude), Number(schoolPoint.longitude)], 13);
-    } else {
-      leafletMap.fitBounds([southWest, northEast], {padding:[18, 18]});
-    }
+    const restoreView = () => {
+      if (validPoints.length > 1) {
+        leafletMap.fitBounds(window.L.latLngBounds(validPoints.map((point) => [Number(point.latitude), Number(point.longitude)])), {padding:[42, 42], maxZoom:15});
+      } else if (schoolPoint) {
+        leafletMap.setView([Number(schoolPoint.latitude), Number(schoolPoint.longitude)], 13);
+      } else {
+        leafletMap.fitBounds([southWest, northEast], {padding:[18, 18]});
+      }
+    };
+    restoreView();
+    container._leafletInstance = leafletMap;
+    container._leafletRestoreView = restoreView;
     window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a>',
@@ -137,7 +181,7 @@
         if (output) output.textContent = "Position markiert. Du kannst sie durch erneutes Tippen verschieben.";
       });
     }
-    window.setTimeout(() => leafletMap.invalidateSize(), 0);
+    window.setTimeout(() => { leafletMap.invalidateSize(); restoreView(); }, 0);
   };
   document.querySelectorAll("[data-local-map]").forEach(async (map) => {
     if (window.L) { initLeafletMap(map); return; }

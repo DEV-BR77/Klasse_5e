@@ -97,7 +97,7 @@ class Command(BaseCommand):
                 ("09-push-benachrichtigung.png", 108, 70, 48, 48, -7),
                 ("11-kinder-datenschutz.png", 264, 70, 52, 52, 7),
             )
-            for filename, x, y, w, h, angle in icon_layout:
+            for filename, x, y, w, h, _angle in icon_layout:
                 icon_path = icon_dir / filename
                 if icon_path.is_file():
                     pdf.drawImage(ImageReader(str(icon_path)), x, y, w, h, mask="auto")

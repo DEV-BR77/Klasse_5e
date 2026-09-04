@@ -106,7 +106,11 @@ class Person(models.Model):
     chat_display_name = models.CharField(max_length=80, blank=True)
     contribution_name_mode = models.CharField(
         max_length=16,
-        choices=[("family", "Familienname"), ("child", "Name des Kindes"), ("personal", "Eigener Anzeigename")],
+        choices=[
+            ("family", "Familienname"),
+            ("child", "Name des Kindes"),
+            ("personal", "Eigener Anzeigename"),
+        ],
         default="family",
     )
     profile_photo = models.ImageField(upload_to="profiles/opaque/", blank=True)
@@ -194,7 +198,11 @@ class RegistrationApplication(models.Model):
     school = models.ForeignKey("School", null=True, blank=True, on_delete=models.PROTECT)
     school_class = models.ForeignKey("SchoolClass", null=True, blank=True, on_delete=models.PROTECT)
     reviewed_by = models.ForeignKey(
-        UserAccount, null=True, blank=True, on_delete=models.SET_NULL, related_name="reviewed_registrations"
+        UserAccount,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reviewed_registrations",
     )
     review_reason = models.CharField(max_length=500, blank=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
@@ -246,9 +254,7 @@ class ActivationGrant(models.Model):
 
 
 class SchoolClass(models.Model):
-    school = models.ForeignKey(
-        School, on_delete=models.PROTECT, related_name="classes"
-    )
+    school = models.ForeignKey(School, on_delete=models.PROTECT, related_name="classes")
     name = models.CharField(max_length=64)
     code = models.CharField(max_length=64, blank=True)
     school_year = models.ForeignKey(SchoolYear, on_delete=models.PROTECT)
@@ -317,7 +323,10 @@ class BrandingAsset(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=(models.Q(school__isnull=False, school_class__isnull=True) | models.Q(school__isnull=True, school_class__isnull=False)),
+                condition=(
+                    models.Q(school__isnull=False, school_class__isnull=True)
+                    | models.Q(school__isnull=True, school_class__isnull=False)
+                ),
                 name="branding_exactly_one_scope",
             ),
             models.UniqueConstraint(
@@ -358,10 +367,16 @@ class PortalConfigurationValue(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=(models.Q(school__isnull=True, school_class__isnull=True) | models.Q(school__isnull=False, school_class__isnull=True) | models.Q(school__isnull=True, school_class__isnull=False)),
+                condition=(
+                    models.Q(school__isnull=True, school_class__isnull=True)
+                    | models.Q(school__isnull=False, school_class__isnull=True)
+                    | models.Q(school__isnull=True, school_class__isnull=False)
+                ),
                 name="configuration_at_most_one_scope",
             ),
-            models.UniqueConstraint(fields=["key", "school", "school_class"], name="unique_configuration_scope"),
+            models.UniqueConstraint(
+                fields=["key", "school", "school_class"], name="unique_configuration_scope"
+            ),
         ]
 
 
@@ -391,10 +406,16 @@ class PortalModuleOverride(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=(models.Q(school__isnull=True, school_class__isnull=True) | models.Q(school__isnull=False, school_class__isnull=True) | models.Q(school__isnull=True, school_class__isnull=False)),
+                condition=(
+                    models.Q(school__isnull=True, school_class__isnull=True)
+                    | models.Q(school__isnull=False, school_class__isnull=True)
+                    | models.Q(school__isnull=True, school_class__isnull=False)
+                ),
                 name="module_override_at_most_one_scope",
             ),
-            models.UniqueConstraint(fields=["module", "school", "school_class"], name="unique_module_override_scope"),
+            models.UniqueConstraint(
+                fields=["module", "school", "school_class"], name="unique_module_override_scope"
+            ),
         ]
 
 
@@ -428,7 +449,10 @@ class LogoRequest(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=(models.Q(school__isnull=False, school_class__isnull=True) | models.Q(school__isnull=True, school_class__isnull=False)),
+                condition=(
+                    models.Q(school__isnull=False, school_class__isnull=True)
+                    | models.Q(school__isnull=True, school_class__isnull=False)
+                ),
                 name="logo_request_exactly_one_scope",
             )
         ]
@@ -609,6 +633,20 @@ class FamilyAccessCode(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(UserAccount, on_delete=models.PROTECT)
+    existing_guardian = models.ForeignKey(
+        UserAccount,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="linked_family_access_codes",
+    )
+    existing_guardian_relationship_type = models.CharField(
+        max_length=24,
+        choices=RelationshipType,
+        blank=True,
+        default="",
+    )
+    intended_family_name = models.CharField(max_length=120, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -619,7 +657,9 @@ class FamilyAccessCode(models.Model):
         ]
 
     @classmethod
-    def issue(cls, *, batch_id, serial_number, school_class, created_by, lifetime=timedelta(days=60)):
+    def issue(
+        cls, *, batch_id, serial_number, school_class, created_by, lifetime=timedelta(days=60)
+    ):
         alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
         for _ in range(10):
             token = "".join(secrets.choice(alphabet) for _ in range(10))
@@ -657,6 +697,7 @@ class FamilyRegistrationRequest(models.Model):
     status = models.CharField(max_length=20, default="email_pending")
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+
 
 class AccountDeletionRequest(models.Model):
     class Status(models.TextChoices):

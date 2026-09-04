@@ -17,20 +17,6 @@ from django.utils.http import content_disposition_header
 from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods, require_POST
 
-
-def _merge_adjacent_lessons(lessons):
-    merged = []
-    for lesson in lessons:
-        if merged:
-            previous = merged[-1]
-            if (previous.subject == lesson.subject and previous.room == lesson.room
-                    and previous.teacher_label == lesson.teacher_label
-                    and previous.ends_at == lesson.starts_at):
-                previous.ends_at = lesson.ends_at
-                continue
-        merged.append(lesson)
-    return merged
-
 from klasse5e.chat.models import ChatReadState, ChatRetentionCategory, ChatRoom
 from klasse5e.content.models import Post, ProtectedDocument, TeacherProfile
 from klasse5e.events.models import (
@@ -58,6 +44,7 @@ from klasse5e.schedule.models import CalendarEntry, TimetableEntry
 from klasse5e.webuntis.models import WebUntisConnection, WebUntisHomework, WebUntisLesson
 
 from .calendar_presenter import build_calendar_context
+from .family_handouts import create_family_handout
 from .models import (
     ClassMembership,
     ConsentDecision,
@@ -80,15 +67,56 @@ from .policies import active_roles, family_label, has_active_membership
 from .registration import sanitized_profile_photo
 
 
+def _merge_adjacent_lessons(lessons):
+    merged = []
+    for lesson in lessons:
+        if merged:
+            previous = merged[-1]
+            if (
+                previous.subject == lesson.subject
+                and previous.room == lesson.room
+                and previous.teacher_label == lesson.teacher_label
+                and previous.ends_at == lesson.starts_at
+            ):
+                previous.ends_at = lesson.ends_at
+                continue
+        merged.append(lesson)
+    return merged
+
+
 def _require_portal_admin(user):
-    if not (
+    if not _can_manage_portal(user):
+        raise Http404
+
+
+def _can_manage_portal(user):
+    return (
         user.is_superuser
         or user.roleassignment_set.filter(
             active=True,
             role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.SCHOOL_ADMIN, Role.CLASS_ADMIN],
         ).exists()
+    )
+
+
+def _manageable_classes(user):
+    query = SchoolClass.objects.filter(status="active").select_related("school", "school_year")
+    if (
+        user.is_superuser
+        or user.roleassignment_set.filter(
+            active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+        ).exists()
     ):
-        raise Http404
+        return query.order_by("school__name", "display_name", "name")
+    school_ids = user.roleassignment_set.filter(
+        active=True, role=Role.SCHOOL_ADMIN, school__isnull=False
+    ).values("school_id")
+    class_ids = user.roleassignment_set.filter(
+        active=True, role=Role.CLASS_ADMIN, school_class__isnull=False
+    ).values("school_class_id")
+    return query.filter(Q(school_id__in=school_ids) | Q(id__in=class_ids)).order_by(
+        "school__name", "display_name", "name"
+    )
 
 
 def _membership(user):
@@ -199,8 +227,10 @@ def dashboard(request):
 
         from klasse5e.meals.source import sync_plans
 
-        if settings.MEAL_PLAN_SYNC_ENABLED and not settings.DEBUG and cache.add(
-            "meal-plan-sync", True, 12 * 60 * 60
+        if (
+            settings.MEAL_PLAN_SYNC_ENABLED
+            and not settings.DEBUG
+            and cache.add("meal-plan-sync", True, 12 * 60 * 60)
         ):
             sync_plans()
     except Exception:
@@ -222,12 +252,18 @@ def dashboard(request):
     context = _shared(request, "Start", "start")
     portal_connections = _itslearning_connections(request.user)
     webuntis_connections = _webuntis_connections(request.user)
-    webuntis_last_sync = webuntis_connections.order_by("-last_successful_sync_at").values_list(
-        "last_successful_sync_at", flat=True
-    ).first()
-    personal_lessons = _merge_adjacent_lessons(list(WebUntisLesson.objects.filter(
-        connection__in=webuntis_connections, starts_at__date=day
-    ).order_by("starts_at")))
+    webuntis_last_sync = (
+        webuntis_connections.order_by("-last_successful_sync_at")
+        .values_list("last_successful_sync_at", flat=True)
+        .first()
+    )
+    personal_lessons = _merge_adjacent_lessons(
+        list(
+            WebUntisLesson.objects.filter(connection__in=webuntis_connections, starts_at__date=day)
+            .exclude(status="cancelled")
+            .order_by("starts_at")
+        )
+    )
     manual_lessons = TimetableEntry.objects.filter(
         school_class=school_class, weekday=day.isoweekday()
     )
@@ -314,9 +350,12 @@ def calendar(request):
         [("filter", "1"), *(("kategorie", key) for key in active_keys)]
     )
     context["calendar_week_number"] = day.isocalendar().week
-    context["webuntis_last_sync"] = _webuntis_connections(request.user).order_by(
-        "-last_successful_sync_at"
-    ).values_list("last_successful_sync_at", flat=True).first()
+    context["webuntis_last_sync"] = (
+        _webuntis_connections(request.user)
+        .order_by("-last_successful_sync_at")
+        .values_list("last_successful_sync_at", flat=True)
+        .first()
+    )
     return render(request, "ui/calendar_v2.html", context)
 
 
@@ -336,7 +375,10 @@ def chat_overview(request):
                 school_year=school_class.school_year,
                 title=title,
                 is_open=True,
-                retention_category=retention or ChatRetentionCategory.objects.filter(is_active=True, intended_for_events=False).order_by("retention_days").first(),
+                retention_category=retention
+                or ChatRetentionCategory.objects.filter(is_active=True, intended_for_events=False)
+                .order_by("retention_days")
+                .first(),
             )
             messages.success(request, "Der Chatraum wurde angelegt.")
         return redirect("ui-chat")
@@ -351,12 +393,16 @@ def chat_overview(request):
             {
                 "room": room,
                 "unread": unread.count(),
-                "last_message": room.messages.select_related("author__person").order_by("-created_at").first(),
+                "last_message": room.messages.select_related("author__person")
+                .order_by("-created_at")
+                .first(),
             }
         )
     context = _shared(request, "Chat", "chat")
     context["room_rows"] = room_rows
-    context["retention_categories"] = ChatRetentionCategory.objects.filter(is_active=True, intended_for_events=False)
+    context["retention_categories"] = ChatRetentionCategory.objects.filter(
+        is_active=True, intended_for_events=False
+    )
     return render(request, "ui/chat_overview.html", context)
 
 
@@ -369,7 +415,9 @@ def chat_room(request, room_id):
     if request.method == "POST":
         from klasse5e.chat.services import create_message
 
-        create_message(room, request.user, request.POST.get("body", ""), None, request.FILES.get("attachment"))
+        create_message(
+            room, request.user, request.POST.get("body", ""), None, request.FILES.get("attachment")
+        )
         return redirect("ui-chat-room", room_id=room.public_id)
     ChatReadState.objects.update_or_create(
         room=room, user=request.user, defaults={"last_read_at": timezone.now()}
@@ -388,7 +436,10 @@ def chat_room(request, room_id):
                     classmembership__school_class=room.school_class,
                     classmembership__status="active",
                     user__isnull=False,
-                ).exclude(user=request.user).values_list("chat_display_name", "first_name").distinct()
+                )
+                .exclude(user=request.user)
+                .values_list("chat_display_name", "first_name")
+                .distinct()
             ],
         }
     )
@@ -407,9 +458,18 @@ def chat_attachment(request, message_id):
         and message.attachment_safety_status != "approved"
     ):
         raise Http404
-    response = FileResponse(message.attachment.open("rb"), content_type=message.attachment_content_type or "application/octet-stream")
-    disposition = "inline" if message.attachment_content_type.startswith(("image/", "audio/")) else "attachment"
-    response["Content-Disposition"] = content_disposition_header(disposition == "attachment", message.attachment_name)
+    response = FileResponse(
+        message.attachment.open("rb"),
+        content_type=message.attachment_content_type or "application/octet-stream",
+    )
+    disposition = (
+        "inline"
+        if message.attachment_content_type.startswith(("image/", "audio/"))
+        else "attachment"
+    )
+    response["Content-Disposition"] = content_disposition_header(
+        disposition == "attachment", message.attachment_name
+    )
     response["Cache-Control"] = "private, no-store"
     response["X-Content-Type-Options"] = "nosniff"
     return response
@@ -445,7 +505,9 @@ def presentation_poll_settings(request):
         )
         meeting_url = request.POST.get("meeting_url", "").strip()[:200]
         if meeting_url and not meeting_url.startswith(("https://", "http://")):
-            messages.error(request, "Bitte gib einen gültigen Teams- oder Meeting-Link mit https:// ein.")
+            messages.error(
+                request, "Bitte gib einen gültigen Teams- oder Meeting-Link mit https:// ein."
+            )
             return redirect("presentation-poll-settings")
         if action == "save_link":
             poll.meeting_url = meeting_url
@@ -471,7 +533,9 @@ def presentation_poll_settings(request):
             )
             EventPollOption.objects.bulk_create(
                 [
-                    EventPollOption(poll=new_poll, starts_at=option.starts_at, ends_at=option.ends_at)
+                    EventPollOption(
+                        poll=new_poll, starts_at=option.starts_at, ends_at=option.ends_at
+                    )
                     for option in poll.options.all()
                 ]
             )
@@ -506,6 +570,50 @@ def registration_invitation(request):
     context = _shared(request, "Anmeldung weitergeben", "management")
     context["registration_url"] = request.build_absolute_uri("/registrieren/")
     return render(request, "ui/registration_invitation.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def family_invitations(request):
+    _require_portal_admin(request.user)
+    classes = _manageable_classes(request.user)
+    if request.method == "POST":
+        school_class = get_object_or_404(classes, pk=request.POST.get("school_class"))
+        try:
+            count = int(request.POST.get("count", "1"))
+        except ValueError:
+            count = 0
+        family_names = [
+            line.strip()
+            for line in request.POST.get("family_names", "").splitlines()
+            if line.strip()
+        ]
+        if not 1 <= count <= 100:
+            messages.error(request, "Bitte wähle zwischen 1 und 100 Einladungen.")
+        elif len(family_names) > count:
+            messages.error(
+                request,
+                "Es wurden mehr Familiennamen als Einladungen angegeben. Bitte erhöhe die Anzahl.",
+            )
+        else:
+            output, batch_id = create_family_handout(
+                school_class=school_class,
+                count=count,
+                created_by=request.user,
+                family_names=family_names,
+            )
+            class_label = slugify(school_class.display_name or school_class.name) or "klasse"
+            response = FileResponse(
+                output,
+                as_attachment=True,
+                filename=f"KlassID-Familieneinladungen-{class_label}.pdf",
+                content_type="application/pdf",
+            )
+            response["X-KlassID-Batch"] = str(batch_id)
+            return response
+    context = _shared(request, "QR-Familieneinladungen", "management")
+    context["school_classes"] = classes
+    return render(request, "ui/family_invitations.html", context)
 
 
 @login_required
@@ -564,19 +672,68 @@ def more(request):
     context = _shared(request, "Mehr", "more")
     school_class = _class_or_404(request.user)
     catalog = _menu_catalog()
-    stored = school_class.visible_menu_items if isinstance(school_class.visible_menu_items, dict) else {}
-    configured = stored.get("items") or [{"key": key, "group": item[3]} for key, item in catalog.items()]
+    stored = (
+        school_class.visible_menu_items if isinstance(school_class.visible_menu_items, dict) else {}
+    )
+    configured = stored.get("items") or [
+        {"key": key, "group": item[3]} for key, item in catalog.items()
+    ]
     labels = {"class": "Klassenleben", "communication": "Kommunikation", "account": "Mein Konto"}
     labels.update(stored.get("group_labels") or {})
     groups = []
     for group_key in ("class", "communication", "account"):
         entries = []
         for row in configured:
-            if row.get("group") != group_key or row.get("key") not in catalog or row.get("visible", True) is False:
+            if (
+                row.get("group") != group_key
+                or row.get("key") not in catalog
+                or row.get("visible", True) is False
+            ):
                 continue
             label, url, icon, _default_group = catalog[row["key"]]
-            entries.append({"key": row["key"], "label": row.get("label") or label, "url": url, "icon": icon})
+            entries.append(
+                {"key": row["key"], "label": row.get("label") or label, "url": url, "icon": icon}
+            )
         groups.append({"key": group_key, "label": labels[group_key], "items": entries})
+    if _can_manage_portal(request.user):
+        groups.append(
+            {
+                "key": "management",
+                "label": "Portalverwaltung",
+                "items": [
+                    {
+                        "key": "management_overview",
+                        "label": "Verwaltungsübersicht",
+                        "url": "/verwaltung/",
+                        "icon": "home",
+                    },
+                    {
+                        "key": "schools",
+                        "label": "Schulen verwalten",
+                        "url": "/admin/core/school/",
+                        "icon": "teacher",
+                    },
+                    {
+                        "key": "classes",
+                        "label": "Klassen verwalten",
+                        "url": "/admin/core/schoolclass/",
+                        "icon": "people",
+                    },
+                    {
+                        "key": "family_invitations",
+                        "label": "QR-Familieneinladungen",
+                        "url": "/verwaltung/familien-einladungen/",
+                        "icon": "document",
+                    },
+                    {
+                        "key": "registrations",
+                        "label": "Neue Registrierungen",
+                        "url": "/admin/core/registrationapplication/",
+                        "icon": "consent",
+                    },
+                ],
+            }
+        )
     context["menu_groups"] = groups
     return render(request, "ui/more.html", context)
 
@@ -593,10 +750,20 @@ def _menu_catalog():
         "family": ("Familie & Kinder", "/mehr/familie/", "people", "account"),
         "themes": ("Design & Themes", "/einstellungen/design/", "consent", "account"),
         "consents": ("Datenschutz & Einwilligungen", "/mehr/einwilligungen/", "consent", "account"),
-        "notifications": ("Benachrichtigungen & App", "/mehr/benachrichtigungen/", "bell", "account"),
+        "notifications": (
+            "Benachrichtigungen & App",
+            "/mehr/benachrichtigungen/",
+            "bell",
+            "account",
+        ),
         "security": ("Zwei-Faktor-Anmeldung", "/accounts/2fa/", "consent", "account"),
         "tutorial": ("Einführung", "/tutorial/", "home", "account"),
-        "delete_account": ("Konto und Daten löschen", "/einstellungen/konto-loeschen/", "consent", "account"),
+        "delete_account": (
+            "Konto und Daten löschen",
+            "/einstellungen/konto-loeschen/",
+            "consent",
+            "account",
+        ),
     }
 
 
@@ -606,7 +773,9 @@ def menu_management(request):
     _require_portal_admin(request.user)
     school_class = _class_or_404(request.user)
     catalog = _menu_catalog()
-    stored = school_class.visible_menu_items if isinstance(school_class.visible_menu_items, dict) else {}
+    stored = (
+        school_class.visible_menu_items if isinstance(school_class.visible_menu_items, dict) else {}
+    )
     existing = {item.get("key"): item for item in stored.get("items", [])}
     if request.method == "POST":
         items = []
@@ -619,7 +788,15 @@ def menu_management(request):
             except ValueError:
                 position = 99
             label = request.POST.get(f"label_{key}", "").strip()[:80]
-            items.append({"key": key, "group": group, "position": position, "visible": request.POST.get(f"visible_{key}") == "on", "label": label})
+            items.append(
+                {
+                    "key": key,
+                    "group": group,
+                    "position": position,
+                    "visible": request.POST.get(f"visible_{key}") == "on",
+                    "label": label,
+                }
+            )
         items.sort(key=lambda item: (item["group"], item["position"], item["key"]))
         school_class.visible_menu_items = {
             "group_labels": {
@@ -635,7 +812,16 @@ def menu_management(request):
     rows = []
     for index, (key, (label, _url, _icon, default_group)) in enumerate(catalog.items(), 1):
         item = existing.get(key, {})
-        rows.append({"key": key, "label": label, "label_override": item.get("label", ""), "visible": item.get("visible", True), "group": item.get("group", default_group), "position": item.get("position", index)})
+        rows.append(
+            {
+                "key": key,
+                "label": label,
+                "label_override": item.get("label", ""),
+                "visible": item.get("visible", True),
+                "group": item.get("group", default_group),
+                "position": item.get("position", index),
+            }
+        )
     context = _shared(request, "Menü verwalten", "management")
     context.update({"rows": rows, "stored": stored})
     return render(request, "ui/menu_management.html", context)
@@ -681,13 +867,24 @@ def theme_management(request):
             item = get_object_or_404(PortalTheme, pk=request.POST.get("theme_id"))
             item.is_active = not item.is_active
             item.save(update_fields=["is_active", "updated_at"])
-            messages.success(request, f"„{item.name}“ wurde {'aktiviert' if item.is_active else 'deaktiviert'}.")
+            messages.success(
+                request, f"„{item.name}“ wurde {'aktiviert' if item.is_active else 'deaktiviert'}."
+            )
             return redirect("theme-management")
         import re
 
         colors = {
             field: request.POST.get(field, "").strip().upper()
-            for field in ("primary", "primary_dark", "primary_light", "accent", "background", "surface", "text", "text_muted")
+            for field in (
+                "primary",
+                "primary_dark",
+                "primary_light",
+                "accent",
+                "background",
+                "surface",
+                "text",
+                "text_muted",
+            )
         }
         if not all(re.fullmatch(r"#[0-9A-F]{6}", value) for value in colors.values()):
             messages.error(request, "Bitte für jede Farbe einen vollständigen HEX-Wert angeben.")
@@ -698,16 +895,22 @@ def theme_management(request):
             while PortalTheme.objects.filter(key=key).exists():
                 key, suffix = f"{base_key}-{suffix}", suffix + 1
             try:
-                shadow_strength = min(30, max(0, int(request.POST.get("shadow_strength", "10") or 10)))
+                shadow_strength = min(
+                    30, max(0, int(request.POST.get("shadow_strength", "10") or 10))
+                )
             except ValueError:
                 shadow_strength = 10
             PortalTheme.objects.create(
                 key=key,
                 name=request.POST.get("name", "Neues Theme").strip()[:80],
                 description=request.POST.get("description", "").strip()[:180],
-                audience=request.POST.get("audience") if request.POST.get("audience") in PortalTheme.Audience.values else PortalTheme.Audience.ALL,
+                audience=request.POST.get("audience")
+                if request.POST.get("audience") in PortalTheme.Audience.values
+                else PortalTheme.Audience.ALL,
                 is_dark=request.POST.get("is_dark") == "on",
-                radius=request.POST.get("radius") if request.POST.get("radius") in {".7rem", "1rem", "1.35rem", "1.7rem"} else "1rem",
+                radius=request.POST.get("radius")
+                if request.POST.get("radius") in {".7rem", "1rem", "1.35rem", "1.7rem"}
+                else "1rem",
                 shadow_strength=shadow_strength,
                 **colors,
             )
@@ -717,15 +920,57 @@ def theme_management(request):
     # third-party markup into the portal until an administrator has approved
     # the license, accessibility and dependency profile.
     template_catalog = [
-        {"name": "Velora UI", "stack": "Next.js · Tailwind · Motion", "license": "MIT", "repo": "https://github.com/ColorlibHQ/velora-ui", "source": "Colorlib 33 Tailwind templates"},
-        {"name": "HyperUI", "stack": "HTML · Tailwind", "license": "MIT", "repo": "https://github.com/markmead/hyperui", "source": "Colorlib 33 Tailwind templates"},
-        {"name": "Flowbite", "stack": "HTML/JS · Tailwind", "license": "MIT", "repo": "https://github.com/themesberg/flowbite", "source": "Colorlib 33 Tailwind templates"},
-        {"name": "Preline UI", "stack": "HTML · Tailwind plugin", "license": "MIT", "repo": "https://github.com/htmlstreamofficial/preline", "source": "Colorlib 33 Tailwind templates"},
-        {"name": "AstroWind", "stack": "Astro · Tailwind", "license": "MIT", "repo": "https://github.com/arthelokyo/astrowind", "source": "Colorlib 33 Tailwind templates"},
-        {"name": "Cruip Open React", "stack": "Next.js · React · Tailwind", "license": "MIT", "repo": "https://github.com/cruip/open-react-template", "source": "Colorlib 33 Tailwind templates"},
+        {
+            "name": "Velora UI",
+            "stack": "Next.js · Tailwind · Motion",
+            "license": "MIT",
+            "repo": "https://github.com/ColorlibHQ/velora-ui",
+            "source": "Colorlib 33 Tailwind templates",
+        },
+        {
+            "name": "HyperUI",
+            "stack": "HTML · Tailwind",
+            "license": "MIT",
+            "repo": "https://github.com/markmead/hyperui",
+            "source": "Colorlib 33 Tailwind templates",
+        },
+        {
+            "name": "Flowbite",
+            "stack": "HTML/JS · Tailwind",
+            "license": "MIT",
+            "repo": "https://github.com/themesberg/flowbite",
+            "source": "Colorlib 33 Tailwind templates",
+        },
+        {
+            "name": "Preline UI",
+            "stack": "HTML · Tailwind plugin",
+            "license": "MIT",
+            "repo": "https://github.com/htmlstreamofficial/preline",
+            "source": "Colorlib 33 Tailwind templates",
+        },
+        {
+            "name": "AstroWind",
+            "stack": "Astro · Tailwind",
+            "license": "MIT",
+            "repo": "https://github.com/arthelokyo/astrowind",
+            "source": "Colorlib 33 Tailwind templates",
+        },
+        {
+            "name": "Cruip Open React",
+            "stack": "Next.js · React · Tailwind",
+            "license": "MIT",
+            "repo": "https://github.com/cruip/open-react-template",
+            "source": "Colorlib 33 Tailwind templates",
+        },
     ]
     context = _shared(request, "Themes verwalten", "management")
-    context.update({"themes": PortalTheme.objects.all(), "audiences": PortalTheme.Audience.choices, "template_catalog": template_catalog})
+    context.update(
+        {
+            "themes": PortalTheme.objects.all(),
+            "audiences": PortalTheme.Audience.choices,
+            "template_catalog": template_catalog,
+        }
+    )
     return render(request, "ui/theme_management.html", context)
 
 
@@ -796,7 +1041,11 @@ def events(request):
             school_year=school_class.school_year,
             event=item,
             title=item.title,
-            retention_category=ChatRetentionCategory.objects.filter(is_active=True, intended_for_events=True).order_by("-retention_days").first(),
+            retention_category=ChatRetentionCategory.objects.filter(
+                is_active=True, intended_for_events=True
+            )
+            .order_by("-retention_days")
+            .first(),
         )
         requested_items = []
         for line in request.POST.get("bring_items", "").splitlines()[:30]:
@@ -809,7 +1058,9 @@ def events(request):
                     raise ValueError
             except (InvalidOperation, ValueError):
                 amount = Decimal("1")
-            requested_items.append((parts[0][:160], amount, (parts[2] if len(parts) > 2 else "Stück")[:40]))
+            requested_items.append(
+                (parts[0][:160], amount, (parts[2] if len(parts) > 2 else "Stück")[:40])
+            )
         if requested_items:
             category = ContributionCategory.objects.create(event=item, name="Mitbringliste")
             ContributionItem.objects.bulk_create(
@@ -826,9 +1077,11 @@ def events(request):
     context["events"] = Event.objects.filter(
         school_class=school_class, status=Event.Status.PUBLISHED
     ).order_by("starts_at")
-    context["event_polls"] = EventPoll.objects.filter(
-        school_class=school_class, finalized_event__isnull=True
-    ).prefetch_related("options__votes").order_by("closes_at")
+    context["event_polls"] = (
+        EventPoll.objects.filter(school_class=school_class, finalized_event__isnull=True)
+        .prefetch_related("options__votes")
+        .order_by("closes_at")
+    )
     return render(request, "ui/events.html", context)
 
 
@@ -855,7 +1108,9 @@ def create_event_poll(request):
         if len(options) < 2:
             raise ValueError
     except (TypeError, ValueError):
-        messages.error(request, "Bitte gib mindestens zwei gültige Termine und ein Schlussdatum an.")
+        messages.error(
+            request, "Bitte gib mindestens zwei gültige Termine und ein Schlussdatum an."
+        )
         return redirect("ui-events")
     poll = EventPoll.objects.create(
         school_class=school_class,
@@ -865,7 +1120,10 @@ def create_event_poll(request):
         created_by=request.user,
     )
     EventPollOption.objects.bulk_create(
-        [EventPollOption(poll=poll, starts_at=start, ends_at=start + timedelta(hours=1)) for start in options]
+        [
+            EventPollOption(poll=poll, starts_at=start, ends_at=start + timedelta(hours=1))
+            for start in options
+        ]
     )
     return redirect("ui-event-poll", poll_id=poll.id)
 
@@ -890,7 +1148,11 @@ def event_poll(request, poll_id):
         {
             "poll": poll,
             "poll_options": options,
-            "my_votes": set(EventPollVote.objects.filter(option__poll=poll, user=request.user).values_list("option_id", flat=True)),
+            "my_votes": set(
+                EventPollVote.objects.filter(option__poll=poll, user=request.user).values_list(
+                    "option_id", flat=True
+                )
+            ),
             "is_organizer": poll.created_by_id == request.user.id or request.user.is_superuser,
         }
     )
@@ -902,7 +1164,9 @@ def event_poll(request, poll_id):
 def finalize_event_poll(request, poll_id):
     school_class = _class_or_404(request.user)
     _require_portal_admin(request.user)
-    poll = get_object_or_404(EventPoll, id=poll_id, school_class=school_class, finalized_event__isnull=True)
+    poll = get_object_or_404(
+        EventPoll, id=poll_id, school_class=school_class, finalized_event__isnull=True
+    )
     option = get_object_or_404(EventPollOption, id=request.POST.get("option_id"), poll=poll)
     meeting_url = request.POST.get("meeting_url", "").strip()[:200]
     poll.meeting_url = meeting_url
@@ -927,7 +1191,11 @@ def finalize_event_poll(request, poll_id):
         school_year=school_class.school_year,
         event=event_item,
         title=event_item.title,
-        retention_category=ChatRetentionCategory.objects.filter(is_active=True, intended_for_events=True).order_by("-retention_days").first(),
+        retention_category=ChatRetentionCategory.objects.filter(
+            is_active=True, intended_for_events=True
+        )
+        .order_by("-retention_days")
+        .first(),
     )
     return redirect("ui-event", event_id=event_item.id)
 
@@ -946,10 +1214,18 @@ def event(request, event_id):
     is_organizer = item.organizers.filter(id=request.user.id).exists()
     contribution_items = [entry for category in categories for entry in category.items.all()]
     for entry in contribution_items:
-        entry.active_reservations = [reservation for reservation in entry.reservations.all() if reservation.status == "active"]
+        entry.active_reservations = [
+            reservation
+            for reservation in entry.reservations.all()
+            if reservation.status == "active"
+        ]
         for reservation in entry.active_reservations:
             person = reservation.user.person
-            child = person.guardian_relationships.filter(status="verified").select_related("student_person").first()
+            child = (
+                person.guardian_relationships.filter(status="verified")
+                .select_related("student_person")
+                .first()
+            )
             reservation.display_name = (
                 child.student_person.first_name
                 if person.contribution_name_mode == "child" and child
@@ -1049,9 +1325,16 @@ def cancel_reservation(request, reservation_id):
 @login_required
 @require_POST
 def fulfill_reservation(request, reservation_id):
-    reservation = get_object_or_404(Reservation.objects.select_related("item__category__event"), id=reservation_id, status=Reservation.Status.ACTIVE)
+    reservation = get_object_or_404(
+        Reservation.objects.select_related("item__category__event"),
+        id=reservation_id,
+        status=Reservation.Status.ACTIVE,
+    )
     event_item = reservation.item.category.event
-    if reservation.user_id != request.user.id and not event_item.organizers.filter(id=request.user.id).exists():
+    if (
+        reservation.user_id != request.user.id
+        and not event_item.organizers.filter(id=request.user.id).exists()
+    ):
         raise Http404
     reservation.fulfilled_at = timezone.now() if not reservation.fulfilled_at else None
     reservation.save(update_fields=["fulfilled_at"])
@@ -1075,8 +1358,7 @@ def galleries(request):
     roles = active_roles(request.user, school_class)
     can_create = bool(
         request.user.is_superuser
-        or roles
-        & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.CLASS_ADMIN, Role.EDITOR}
+        or roles & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.CLASS_ADMIN, Role.EDITOR}
     )
     if request.method == "POST":
         if not can_create:
@@ -1185,11 +1467,15 @@ def consents(request):
         try:
             subject = next(item for item in subjects if str(item.pk) == request.POST.get("subject"))
         except StopIteration:
-            raise PermissionDenied
+            raise PermissionDenied from None
         feature = request.POST.get("feature", "")
         if feature not in option_keys:
             raise Http404
-        decision = ConsentDecision.Decision.GRANTED if request.POST.get("enabled") == "on" else ConsentDecision.Decision.DENIED
+        decision = (
+            ConsentDecision.Decision.GRANTED
+            if request.POST.get("enabled") == "on"
+            else ConsentDecision.Decision.DENIED
+        )
         record_decision(
             user=request.user,
             subject=subject,
@@ -1197,7 +1483,10 @@ def consents(request):
             decision=decision,
             source="settings",
         )
-        messages.success(request, f"{dict((key, label) for key, label, _description in feature_options)[feature]} wurde {'aktiviert' if decision == ConsentDecision.Decision.GRANTED else 'ausgeschaltet'}.")
+        messages.success(
+            request,
+            f"{dict((key, label) for key, label, _description in feature_options)[feature]} wurde {'aktiviert' if decision == ConsentDecision.Decision.GRANTED else 'ausgeschaltet'}.",
+        )
         return redirect("ui-consents")
 
     rows = []
@@ -1205,14 +1494,22 @@ def consents(request):
         options = []
         for feature, label, description in feature_options:
             consent_type = ConsentType.objects.filter(key=f"webuntis_{feature}").first()
-            decision = active_decision(consent_type, subject, request.user.person) if consent_type else None
+            decision = (
+                active_decision(consent_type, subject, request.user.person)
+                if consent_type
+                else None
+            )
             options.append(
                 {
                     "key": feature,
                     "label": label,
                     "description": description,
-                    "allowed": bool(consent_type and may_decide(request.user, subject, consent_type)),
-                    "enabled": bool(decision and decision.decision == ConsentDecision.Decision.GRANTED),
+                    "allowed": bool(
+                        consent_type and may_decide(request.user, subject, consent_type)
+                    ),
+                    "enabled": bool(
+                        decision and decision.decision == ConsentDecision.Decision.GRANTED
+                    ),
                 }
             )
         rows.append({"student": subject, "options": options})

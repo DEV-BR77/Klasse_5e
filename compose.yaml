@@ -11,7 +11,7 @@ services:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Provide Django secret}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,klassid.de,5e.klassid.de}
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-https://klassid.de,https://5e.klassid.de}
-      APP_BASE_URL: ${APP_BASE_URL:-https://klassid.de}
+      APP_BASE_URL: ${APP_BASE_URL:-https://5e.klassid.de}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-KlassID <noreply@klassid.de>}
       MEDIA_ROOT: /data/media
       VISION_BASE_URL: http://klasse-5e-vision:8000
@@ -25,6 +25,8 @@ services:
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:kontakt@klassid.de}
       SPOONACULAR_API_KEY: ${SPOONACULAR_API_KEY:-}
       MOBILITY_DATA_ENCRYPTION_KEY: ${MOBILITY_DATA_ENCRYPTION_KEY:?Provide mobility encryption secret}
+      # Temporary pilot convenience. Set to 0 and recreate the app to restore admin MFA.
+      TEMPORARY_ADMIN_MFA_BYPASS: ${TEMPORARY_ADMIN_MFA_BYPASS:-1}
     depends_on:
       klasse-5e-db:
         condition: service_healthy

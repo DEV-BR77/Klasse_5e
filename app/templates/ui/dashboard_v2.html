@@ -3,7 +3,7 @@
 {% block content %}
 <section class="dashboard-page">
   <header class="welcome-panel">
-    <div><p class="eyebrow">Guten Tag, {{ request.user.person.first_name|default:request.user.email }}</p><h1>Was steht heute an?</h1><p>{{ family_name }} · {{ membership.school_class.display_name|default:membership.school_class.name }}</p></div>
+    <div><p class="eyebrow">Guten Tag, {{ request.user.person.first_name|default:request.user.email }}</p><h1>Was steht heute an?</h1>{% if membership %}<p>{{ family_name }} · {{ membership.school_class.display_name|default:membership.school_class.name }}</p>{% endif %}</div>
     <button class="icon-button refresh-button" type="button" onclick="window.location.reload()" aria-label="Startseite aktualisieren">↻</button>
   </header>
 
@@ -14,32 +14,51 @@
     <div class="mini-week">{% for item in dashboard_week %}<a href="/kalender/?tag={{ item.date|date:'Y-m-d' }}&amp;ansicht=day" {% if item.selected %}aria-current="date"{% endif %}><span>{{ item.date|date:"D" }}</span><strong>{{ item.date|date:"d" }}</strong></a>{% endfor %}</div>
   </section>
 
-  <div class="dashboard-modern-grid">
-    <article class="feature-card schedule-card">
-      <header class="card-header"><div><p class="eyebrow">Heute</p><h2>Stundenplan</h2></div><span class="soft-badge">{{ lessons|length }} Einträge</span></header>
-      <ol class="timeline-list">{% for lesson in lessons %}<li><time>{{ lesson.starts_at|date:"H:i" }}</time><div><strong>{{ lesson.subject|default:"Unterricht" }}</strong>{% if lesson.room or lesson.teacher_label %}<small class="lesson-meta">{% if lesson.room %}Raum {{ lesson.room }}{% endif %}{% if lesson.teacher_label %} · {{ lesson.teacher_label }}{% endif %}</small>{% endif %}</div></li>{% empty %}<li class="empty-compact">Heute ist kein Unterricht eingetragen.</li>{% endfor %}</ol>
-    </article>
+  <section class="dashboard-switcher" data-dashboard-tabs>
+    <div class="dashboard-tabs" role="tablist" aria-label="Bereich der Startseite auswählen">
+      <button id="dashboard-tab-day" class="dashboard-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="dashboard-panel-day" data-dashboard-tab="day">Stundenplan &amp; Hausaufgaben</button>
+      <button id="dashboard-tab-news" class="dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="dashboard-panel-news" data-dashboard-tab="news">Aktuelles{% if notification_counts.news %}<span>{{ notification_counts.news }}</span>{% endif %}</button>
+      {% if events %}<button id="dashboard-tab-events" class="dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="dashboard-panel-events" data-dashboard-tab="events">Veranstaltungen</button>{% endif %}
+      <button id="dashboard-tab-meals" class="dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="dashboard-panel-meals" data-dashboard-tab="meals">Speiseplan</button>
+    </div>
 
-    <article id="homework" class="feature-card">
-      <header class="card-header"><div><p class="eyebrow">Demnächst</p><h2>Hausaufgaben</h2></div>{% if notification_counts.homework %}<span class="new-label">{{ notification_counts.homework }} neu</span>{% endif %}</header>
-      <ul class="task-list">{% for item in homework %}<li><span class="task-icon">{% include "ui/_icon.html" with name="document" %}</span><div><strong>{{ item.subject|default:"Aufgabe" }}</strong><p>{{ item.text|truncatechars:120 }}</p>{% if item.due_on %}<small>Bis {{ item.due_on|date:"d.m.Y" }}</small>{% endif %}</div></li>{% empty %}<li class="empty-compact">Keine offenen Hausaufgaben.</li>{% endfor %}</ul>
-    </article>
+    <div id="dashboard-panel-day" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboard-tab-day" data-dashboard-panel="day">
+      <div class="dashboard-summary-grid">
+        <article class="dashboard-subsection schedule-card">
+          <header class="card-header"><div><p class="eyebrow">Heute</p><h2>Stundenplan</h2></div><span class="soft-badge">{{ lessons|length }} Einträge</span></header>
+          <ol class="timeline-list compact-timeline">{% for lesson in lessons|slice:":4" %}<li><time>{{ lesson.starts_at|date:"H:i" }}</time><div><strong>{{ lesson.subject|default:"Unterricht" }}</strong>{% if lesson.room or lesson.teacher_label %}<small class="lesson-meta">{% if lesson.room %}Raum {{ lesson.room }}{% endif %}{% if lesson.teacher_label %} · {{ lesson.teacher_label }}{% endif %}</small>{% endif %}</div></li>{% empty %}<li class="empty-compact">Heute ist kein Unterricht eingetragen.</li>{% endfor %}</ol>
+          {% if lessons|length > 4 %}<a class="dashboard-more-link" href="/kalender/?tag={{ selected_day|date:'Y-m-d' }}&amp;ansicht=day">Alle {{ lessons|length }} Einträge anzeigen →</a>{% endif %}
+        </article>
 
-    <article class="feature-card">
-      <header class="card-header"><div><p class="eyebrow">Klasse</p><h2>Aktuelles</h2></div>{% if notification_counts.news %}<span class="new-label">{{ notification_counts.news }} neu</span>{% endif %}</header>
-      <ul class="news-list">{% for item in posts %}<li><a href="/mehr/aktuelles/{{ item.id }}/"><span>{% include "ui/_icon.html" with name="news" %}</span><strong>{{ item.title }}</strong><small>Mehr lesen →</small></a></li>{% empty %}<li class="empty-compact">Keine neuen Beiträge.</li>{% endfor %}</ul>
-    </article>
+        <article id="homework" class="dashboard-subsection">
+          <header class="card-header"><div><p class="eyebrow">Demnächst</p><h2>Hausaufgaben</h2></div>{% if notification_counts.homework %}<span class="new-label">{{ notification_counts.homework }} neu</span>{% endif %}</header>
+          <ul class="task-list compact-tasks">{% for item in homework|slice:":3" %}<li><span class="task-icon">{% include "ui/_icon.html" with name="document" %}</span><div><strong>{{ item.subject|default:"Aufgabe" }}</strong><p>{{ item.text|truncatechars:100 }}</p>{% if item.due_on %}<small>Bis {{ item.due_on|date:"d.m.Y" }}</small>{% endif %}</div></li>{% empty %}<li class="empty-compact">Keine offenen Hausaufgaben.</li>{% endfor %}</ul>
+          {% if homework|length > 3 %}<a class="dashboard-more-link" href="/kalender/">Alle Hausaufgaben anzeigen →</a>{% endif %}
+        </article>
+      </div>
+    </div>
 
-    <article class="feature-card events-card">
-      <header class="card-header"><div><p class="eyebrow">Vormerken</p><h2>Nächste Veranstaltungen</h2></div><a href="/mehr/veranstaltungen/">Alle</a></header>
-      <ul class="event-preview-list">{% for item in events %}<li><time><strong>{{ item.starts_at|date:"d" }}</strong><span>{{ item.starts_at|date:"M" }}</span></time><div><a href="/mehr/veranstaltungen/{{ item.id }}/"><strong>{{ item.title }}</strong></a><small>{{ item.starts_at|date:"H:i" }} Uhr · {{ item.location }}</small></div></li>{% empty %}<li class="empty-compact">Keine Veranstaltung geplant.</li>{% endfor %}</ul>
-    </article>
+    <div id="dashboard-panel-news" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboard-tab-news" data-dashboard-panel="news" hidden>
+      <article class="dashboard-subsection">
+        <header class="card-header"><div><p class="eyebrow">Klasse</p><h2>Aktuelles</h2></div>{% if notification_counts.news %}<span class="new-label">{{ notification_counts.news }} neu</span>{% endif %}</header>
+        <ul class="news-list">{% for item in posts %}<li><a href="/mehr/aktuelles/{{ item.id }}/"><span>{% include "ui/_icon.html" with name="news" %}</span><strong>{{ item.title }}</strong><small>Mehr lesen →</small></a></li>{% empty %}<li class="empty-compact">Keine neuen Beiträge.</li>{% endfor %}</ul>
+      </article>
+    </div>
 
-    <article class="feature-card meal-card">
-      <header class="card-header"><div><p class="eyebrow">{% if next_meal.date == selected_day %}Heute{% else %}Nächster Essenstag{% endif %}</p><h2>Speiseplan</h2></div><a href="{% url 'meal-plans' %}">Alle Wochen</a></header>
-      {% if next_meal %}<p class="meal-date">{{ next_meal.date|date:"l, d.m." }} · KW {{ next_meal.plan.iso_week }}</p><div class="dashboard-meals">{% for option in next_meal.options.all %}<section><strong>Menü {{ option.line }}</strong><p>{{ option.components|join:", " }}</p>{% if option.allergen_codes or option.additive_codes %}<div class="meal-codes meal-codes-readable">{% for code in option.allergen_codes %}<span title="Allergen: {{ next_meal.plan.legend.allergens|get_item:code }}">Allergen: {{ next_meal.plan.legend.allergens|get_item:code }}</span>{% endfor %}{% for code in option.additive_codes %}<span title="Zusatzstoff: {{ next_meal.plan.legend.additives|get_item:code }}">Zusatzstoff: {{ next_meal.plan.legend.additives|get_item:code }}</span>{% endfor %}</div>{% endif %}</section>{% endfor %}</div><small>Änderungen vorbehalten · Stand {{ next_meal.plan.fetched_at|date:"d.m., H:i" }} Uhr</small>{% else %}<p class="empty-compact">Noch kein veröffentlichter Speiseplan verfügbar.</p>{% endif %}
-    </article>
-  </div>
+    {% if events %}<div id="dashboard-panel-events" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboard-tab-events" data-dashboard-panel="events" hidden>
+      <article class="dashboard-subsection events-card">
+        <header class="card-header"><div><p class="eyebrow">Vormerken</p><h2>Nächste Veranstaltungen</h2></div><a href="/mehr/veranstaltungen/">Alle</a></header>
+        <ul class="event-preview-list">{% for item in events %}<li><time><strong>{{ item.starts_at|date:"d" }}</strong><span>{{ item.starts_at|date:"M" }}</span></time><div><a href="/mehr/veranstaltungen/{{ item.id }}/"><strong>{{ item.title }}</strong></a><small>{{ item.starts_at|date:"H:i" }} Uhr · {{ item.location }}</small></div></li>{% endfor %}</ul>
+      </article>
+    </div>{% endif %}
+
+    <div id="dashboard-panel-meals" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboard-tab-meals" data-dashboard-panel="meals" hidden>
+      <article class="dashboard-subsection meal-card">
+        <header class="card-header"><div><p class="eyebrow">{% if next_meal.date == selected_day %}Heute{% else %}Nächster Essenstag{% endif %}</p><h2>Speiseplan</h2></div><a href="{% url 'meal-plans' %}">Alle Wochen</a></header>
+        {% if next_meal %}<p class="meal-date">{{ next_meal.date|date:"l, d.m." }} · KW {{ next_meal.plan.iso_week }}</p><div class="dashboard-meals">{% for option in next_meal.options.all %}<section><strong>Menü {{ option.line }}</strong><p>{{ option.components|join:", " }}</p>{% if option.allergen_codes or option.additive_codes %}<div class="meal-codes meal-codes-readable">{% for code in option.allergen_codes %}<span title="Allergen: {{ next_meal.plan.legend.allergens|get_item:code }}">Allergen: {{ next_meal.plan.legend.allergens|get_item:code }}</span>{% endfor %}{% for code in option.additive_codes %}<span title="Zusatzstoff: {{ next_meal.plan.legend.additives|get_item:code }}">Zusatzstoff: {{ next_meal.plan.legend.additives|get_item:code }}</span>{% endfor %}</div>{% endif %}</section>{% endfor %}</div><small>Änderungen vorbehalten · Stand {{ next_meal.plan.fetched_at|date:"d.m., H:i" }} Uhr</small>{% else %}<p class="empty-compact">Noch kein veröffentlichter Speiseplan verfügbar.</p>{% endif %}
+      </article>
+    </div>
+  </section>
   <p class="sync-note">{% if webuntis_last_sync %}Schuldaten zuletzt aktualisiert: {{ webuntis_last_sync|date:"d.m.Y, H:i" }} Uhr{% else %}Noch keine Schuldaten synchronisiert.{% endif %}</p>
 </section>
 {% endblock %}

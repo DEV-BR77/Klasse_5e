@@ -22,9 +22,12 @@ def _merge_adjacent_lessons(lessons):
     for lesson in lessons:
         if merged:
             previous = merged[-1]
-            if (previous.subject == lesson.subject and previous.room == lesson.room
-                    and previous.teacher_label == lesson.teacher_label
-                    and previous.ends_at == lesson.starts_at):
+            if (
+                previous.subject == lesson.subject
+                and previous.room == lesson.room
+                and previous.teacher_label == lesson.teacher_label
+                and previous.ends_at == lesson.starts_at
+            ):
                 previous.ends_at = lesson.ends_at
                 continue
         merged.append(lesson)
@@ -96,7 +99,9 @@ def build_calendar_context(
 ):
     if view not in {"month", "week", "day"}:
         view = "month"
-    active_categories = set(dict(CALENDAR_CATEGORIES) if active_categories is None else active_categories)
+    active_categories = set(
+        dict(CALENDAR_CATEGORIES) if active_categories is None else active_categories
+    )
     month_start = selected_day.replace(day=1)
     next_month = (month_start + timedelta(days=32)).replace(day=1)
     previous_month = (month_start - timedelta(days=1)).replace(day=1)
@@ -112,17 +117,24 @@ def build_calendar_context(
         period_title = f"{week_start:%d.%m.}–{(grid_end - timedelta(days=1)):%d.%m.%Y}"
     else:
         grid_start, grid_end = selected_day, selected_day + timedelta(days=1)
-        previous_date, next_date = selected_day - timedelta(days=1), selected_day + timedelta(days=1)
+        previous_date, next_date = (
+            selected_day - timedelta(days=1),
+            selected_day + timedelta(days=1),
+        )
         period_title = selected_day.strftime("%d.%m.%Y")
     items = defaultdict(list)
 
-    lessons = _merge_adjacent_lessons(list(
-        WebUntisLesson.objects.filter(
-            connection__in=webuntis_connections,
-            starts_at__date__gte=grid_start,
-            starts_at__date__lt=grid_end,
-        ).order_by("starts_at")
-    ))
+    lessons = _merge_adjacent_lessons(
+        list(
+            WebUntisLesson.objects.filter(
+                connection__in=webuntis_connections,
+                starts_at__date__gte=grid_start,
+                starts_at__date__lt=grid_end,
+            )
+            .exclude(status="cancelled")
+            .order_by("starts_at")
+        )
+    )
     personal_days = {timezone.localtime(lesson.starts_at).date() for lesson in lessons}
     for lesson in lessons:
         starts_at = timezone.localtime(lesson.starts_at)
@@ -248,7 +260,11 @@ def build_calendar_context(
         )
 
     for day in list(items):
-        items[day] = [item for item in _merge_consecutive_lessons(items[day]) if item["kind"] in active_categories]
+        items[day] = [
+            item
+            for item in _merge_consecutive_lessons(items[day])
+            if item["kind"] in active_categories
+        ]
 
     days = []
     for offset in range(42):
@@ -290,7 +306,9 @@ def build_calendar_context(
 
 
 def _timeline_context(*, school_class, selected_day, week_start, view, items):
-    visible_dates = [selected_day] if view == "day" else [week_start + timedelta(days=i) for i in range(7)]
+    visible_dates = (
+        [selected_day] if view == "day" else [week_start + timedelta(days=i) for i in range(7)]
+    )
     timed_items = [item for day in visible_dates for item in items[day] if item["starts_at"]]
     grid = (
         TimeGrid.objects.filter(school=school_class.school, valid_from__lte=selected_day)
@@ -302,7 +320,10 @@ def _timeline_context(*, school_class, selected_day, week_start, view, items):
     starts = [_minutes(period.starts_at) for period in periods]
     starts.extend(_minutes(item["starts_at"].time()) for item in timed_items)
     ends = [_minutes(period.ends_at) for period in periods]
-    ends.extend(_minutes((item["ends_at"] or item["starts_at"] + timedelta(minutes=45)).time()) for item in timed_items)
+    ends.extend(
+        _minutes((item["ends_at"] or item["starts_at"] + timedelta(minutes=45)).time())
+        for item in timed_items
+    )
     timeline_start = min(starts or [7 * 60 + 30])
     timeline_end = max(ends or [16 * 60])
     timeline_start = (timeline_start // 15) * 15
@@ -331,7 +352,9 @@ def _timeline_context(*, school_class, selected_day, week_start, view, items):
         # Lay overlapping lessons out in side-by-side lanes instead of stacking
         # them on top of each other. Consecutive double lessons keep one lane.
         lanes = []
-        for item in sorted(positioned, key=lambda value: (value["top_percent"], value["height_percent"])):
+        for item in sorted(
+            positioned, key=lambda value: (value["top_percent"], value["height_percent"])
+        ):
             start = item["top_percent"]
             end = start + item["height_percent"]
             lane = next((index for index, lane_end in enumerate(lanes) if lane_end <= start), None)
@@ -353,7 +376,10 @@ def _timeline_context(*, school_class, selected_day, week_start, view, items):
                 "start": period.starts_at.strftime("%H:%M"),
                 "end": period.ends_at.strftime("%H:%M"),
                 "duration": int(
-                    (datetime.combine(selected_day, period.ends_at) - datetime.combine(selected_day, period.starts_at)).total_seconds()
+                    (
+                        datetime.combine(selected_day, period.ends_at)
+                        - datetime.combine(selected_day, period.starts_at)
+                    ).total_seconds()
                     // 60
                 ),
                 "top_percent": round((_minutes(period.starts_at) - timeline_start) * 100 / span, 3),
