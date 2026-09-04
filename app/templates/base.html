@@ -18,11 +18,6 @@
 <a class="skip-link" href="#main-content">Zum Inhalt springen</a>
 <div class="app-shell{% if not request.user.is_authenticated %} app-shell-public{% endif %}">
   <header class="topbar">
-    <a class="brand" href="/" aria-label="KlassID Home">
-      {% if membership %}<img class="brand-logo brand-logo-class" src="{% static 'branding/thg-5e.png' %}" alt="THG Klasse 5e">
-      {% else %}<img class="brand-logo" src="{% static 'branding/klassid-main.png' %}" alt="KlassID">
-      {% endif %}
-    </a>
     {% if request.user.is_authenticated %}
     <div class="topbar-actions">
       {% if active_section != "start" and active_section != "more" %}<a class="topbar-back" href="{% url 'ui-more' %}">← <span>Hauptmenü</span></a>{% endif %}

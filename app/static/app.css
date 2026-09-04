@@ -79,3 +79,5 @@
 .meal-codes-readable{display:flex;flex-wrap:wrap;gap:.35rem}.meal-codes-readable span{font-size:.7rem;line-height:1.25;padding:.25rem .45rem;border-radius:.45rem;white-space:normal}
 .lesson-meta{display:inline;margin-left:.45rem;color:var(--color-text-muted)}
 .calendar-time-item{left:calc(var(--item-lane,0) * (100% / var(--item-lanes,1)) + .2rem);width:calc(100% / var(--item-lanes,1) - .4rem)}
+.topbar-actions{margin-left:auto}
+.app-shell-public>.topbar{display:none}
