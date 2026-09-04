@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 import pytest
+from django.contrib.auth.hashers import make_password
 from django.core import mail
 from django.test import override_settings
 from django.utils import timezone
@@ -9,6 +10,7 @@ from klasse5e.core.models import (
     ActivationGrant,
     ClassMembership,
     FamilyAccessCode,
+    FamilyChildAccount,
     FamilyRegistrationRequest,
     GuardianChildRelationship,
     Household,
@@ -57,6 +59,8 @@ def test_family_code_refreshes_unverified_application_and_allows_empty_second_ad
             "adult_2_email": "",
             "child_1_first_name": "Kim",
             "child_1_last_name": "Beispiel",
+            "child_1_email": "kim@example.test",
+            "child_1_password": "Child-Safe-Password-123!",
             "child_2_first_name": "",
             "child_2_last_name": "",
             "household_label": "Familie Beispiel",
@@ -74,6 +78,9 @@ def test_family_code_refreshes_unverified_application_and_allows_empty_second_ad
     family = FamilyRegistrationRequest.objects.get(pk=existing.family_request_id)
     assert family.additional_adults == []
     assert family.children == [{"first_name": "Kim", "last_name": "Beispiel"}]
+    assert FamilyChildAccount.objects.filter(
+        family_request=family, email="kim@example.test"
+    ).exists()
     assert len(mail.outbox) == 1
     assert old_email_token not in mail.outbox[0].body
 
@@ -96,12 +103,14 @@ def test_family_form_keeps_safe_fields_after_validation_error(client, school_cla
             "password": "New-Safe-Password-123!",
             "child_1_first_name": "Kim",
             "child_1_last_name": "",
+            "child_1_email": "kim@example.test",
+            "child_1_password": "Child-Safe-Password-123!",
             "privacy_ack": "yes",
         },
     )
     html = response.content.decode()
     assert response.status_code == 400
-    assert "Bitte gib für Kind 1 Vor- und Nachnamen an." in html
+    assert "Bitte gib für Kind 1 Vorname, Nachname, E-Mail-Adresse" in html
     assert 'value="Erika"' in html
     assert 'value="family@example.test"' in html
     assert 'value="New-Safe-Password-123!"' not in html
@@ -132,6 +141,13 @@ def test_activation_links_existing_father_without_duplicate_account(
         household_label="Familie Beispiel",
         additional_adults=[],
         children=[{"first_name": "Kim", "last_name": "Beispiel"}],
+    )
+    FamilyChildAccount.objects.create(
+        family_request=family,
+        first_name="Kim",
+        last_name="Beispiel",
+        email="kim@example.test",
+        password_hash=make_password("Child-Safe-Password-123!"),
     )
     application, _email_token = create_application(
         email="mother@example.test",
@@ -177,3 +193,39 @@ def test_activation_links_existing_father_without_duplicate_account(
     assert relationship.status == RelationshipStatus.VERIFIED
     assert relationship.is_legal_guardian
     assert Invitation.objects.filter(email="father@example.test").count() == 0
+    child_user = UserAccount.objects.get(email="kim@example.test")
+    assert child.user == child_user
+    assert child_user.check_password("Child-Safe-Password-123!")
+    assert not RoleAssignment.objects.filter(user=child_user, role=Role.GUARDIAN).exists()
+
+
+@pytest.mark.django_db
+def test_reusable_family_code_accepts_configured_number_of_submissions(school_class, admin_user):
+    access_code, token = FamilyAccessCode.issue(
+        batch_id=uuid4(),
+        serial_number=1,
+        school_class=school_class,
+        created_by=admin_user,
+        max_uses=2,
+    )
+
+    assert FamilyAccessCode.resolve(token) == access_code
+    access_code.use_count = 1
+    access_code.submitted_at = timezone.now()
+    access_code.save(update_fields=["use_count", "submitted_at"])
+    assert FamilyAccessCode.resolve(token) == access_code
+    access_code.use_count = 2
+    access_code.save(update_fields=["use_count"])
+    assert FamilyAccessCode.resolve(token) is None
+
+
+@pytest.mark.django_db
+def test_googlemail_alias_is_normalized_to_gmail_for_login():
+    application, _token = create_application(
+        email="Example.User@googlemail.com",
+        first_name="Erika",
+        last_name="Beispiel",
+        password="Safe-Test-Password-123!",
+    )
+
+    assert application.email == "example.user@gmail.com"

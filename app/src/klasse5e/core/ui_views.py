@@ -631,8 +631,10 @@ def family_invitations(request):
         school_class = get_object_or_404(classes, pk=request.POST.get("school_class"))
         try:
             count = int(request.POST.get("count", "1"))
+            max_uses = int(request.POST.get("max_uses", "1"))
         except ValueError:
             count = 0
+            max_uses = 0
         family_names = [
             line.strip()
             for line in request.POST.get("family_names", "").splitlines()
@@ -640,6 +642,8 @@ def family_invitations(request):
         ]
         if not 1 <= count <= 100:
             messages.error(request, "Bitte wähle zwischen 1 und 100 Einladungen.")
+        elif not 1 <= max_uses <= 100:
+            messages.error(request, "Bitte wähle zwischen 1 und 100 Verwendungen pro Code.")
         elif len(family_names) > count:
             messages.error(
                 request,
@@ -651,6 +655,7 @@ def family_invitations(request):
                 count=count,
                 created_by=request.user,
                 family_names=family_names,
+                max_uses=max_uses,
             )
             class_label = slugify(school_class.display_name or school_class.name) or "klasse"
             response = FileResponse(

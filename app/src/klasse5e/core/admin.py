@@ -17,6 +17,7 @@ from .models import (
     ConsentType,
     DepartureRetentionCase,
     FamilyAccessCode,
+    FamilyChildAccount,
     FamilyRegistrationRequest,
     GuardianChildRelationship,
     Household,
@@ -114,6 +115,8 @@ class FamilyAccessCodeAdmin(admin.ModelAdmin):
         "school_class",
         "intended_family_name",
         "existing_guardian",
+        "use_count",
+        "max_uses",
         "submitted_at",
         "completed_at",
         "expires_at",
@@ -130,6 +133,13 @@ class FamilyAccessCodeAdmin(admin.ModelAdmin):
 
 
 admin.site.register([FamilyRegistrationRequest, AccountDeletionRequest, DepartureRetentionCase])
+
+
+@admin.register(FamilyChildAccount)
+class FamilyChildAccountAdmin(admin.ModelAdmin):
+    list_display = ("first_name", "last_name", "email", "family_request", "activated_user")
+    search_fields = ("first_name", "last_name", "email")
+    readonly_fields = ("password_hash", "created_at", "activated_user")
 
 
 @admin.register(UserAccount)

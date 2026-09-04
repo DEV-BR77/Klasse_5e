@@ -1,17 +1,20 @@
 import hashlib
 import json
+import logging
 import secrets
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.sessions.models import Session
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.mail import send_mail
+from django.core.validators import validate_email
 from django.db import transaction
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
@@ -24,18 +27,24 @@ from .models import (
     AuditEvent,
     ClassMembership,
     FamilyAccessCode,
+    FamilyChildAccount,
     FamilyRegistrationRequest,
     GuardianChildRelationship,
     Invitation,
     Person,
     PushSubscription,
+    RegistrationApplication,
     Role,
     RoleAssignment,
+    UserAccount,
     UserNotification,
+    normalize_login_email,
 )
 from .policies import active_class_for_user
 from .privacy_services import erase_account_data
 from .registration import activate, create_application, sanitized_profile_photo, verify_email
+
+logger = logging.getLogger(__name__)
 
 
 def health(request):
@@ -122,8 +131,10 @@ def family_register(request, token):
                 "adult_2_email",
                 "child_1_first_name",
                 "child_1_last_name",
+                "child_1_email",
                 "child_2_first_name",
                 "child_2_last_name",
+                "child_2_email",
                 "household_label",
             )
         }
@@ -131,8 +142,13 @@ def family_register(request, token):
         for index in (1, 2):
             first = request.POST.get(f"child_{index}_first_name", "").strip()[:100]
             last = request.POST.get(f"child_{index}_last_name", "").strip()[:100]
-            if bool(first) != bool(last):
-                raise_error = f"Bitte gib für Kind {index} Vor- und Nachnamen an."
+            email = normalize_login_email(request.POST.get(f"child_{index}_email", ""))
+            password = request.POST.get(f"child_{index}_password", "")
+            if any((first, last, email, password)) and not all((first, last, email, password)):
+                raise_error = (
+                    f"Bitte gib für Kind {index} Vorname, Nachname, E-Mail-Adresse "
+                    "und ein eigenes Passwort an."
+                )
                 return render(
                     request,
                     "core/family_register.html",
@@ -140,9 +156,30 @@ def family_register(request, token):
                     status=400,
                 )
             if first and last:
-                children.append({"first_name": first, "last_name": last})
+                try:
+                    validate_email(email)
+                    validate_password(password)
+                except ValidationError as exc:
+                    return render(
+                        request,
+                        "core/family_register.html",
+                        {
+                            "invitation": invitation,
+                            "error": f"Kind {index}: {' '.join(exc.messages)}",
+                            "submitted": submitted,
+                        },
+                        status=400,
+                    )
+                children.append(
+                    {
+                        "first_name": first,
+                        "last_name": last,
+                        "email": email,
+                        "password": password,
+                    }
+                )
         adults = []
-        second_email = request.POST.get("adult_2_email", "").strip().casefold()
+        second_email = normalize_login_email(request.POST.get("adult_2_email", ""))
         second_first = request.POST.get("adult_2_first_name", "").strip()[:100]
         second_last = request.POST.get("adult_2_last_name", "").strip()[:100]
         if any((second_email, second_first, second_last)) and not all(
@@ -167,6 +204,20 @@ def family_register(request, token):
                 raise ValidationError("Bitte bestätige die Datenschutzinformationen.")
             if not children:
                 raise ValidationError("Bitte gib mindestens ein Kind an.")
+            first_email = normalize_login_email(request.POST.get("email", ""))
+            all_emails = [first_email, second_email] + [child["email"] for child in children]
+            all_emails = [email for email in all_emails if email]
+            if len(all_emails) != len(set(all_emails)):
+                raise ValidationError("Jede Person benötigt eine eigene E-Mail-Adresse.")
+            child_emails = [child["email"] for child in children]
+            if UserAccount.objects.filter(email__in=child_emails).exists():
+                raise ValidationError(
+                    "Für mindestens ein Kind besteht bereits ein aktiver Zugang. Bitte verwende dessen vorhandenen Login."
+                )
+            if RegistrationApplication.objects.filter(email__in=child_emails).exists():
+                raise ValidationError(
+                    "Für mindestens ein Kind läuft bereits eine Anmeldung. Bitte schließe diese zuerst ab oder lasse sie in der Verwaltung zurücksetzen."
+                )
             with transaction.atomic():
                 locked = FamilyAccessCode.resolve(token, for_update=True)
                 if locked is None:
@@ -187,22 +238,36 @@ def family_register(request, token):
                     household_label=request.POST.get("household_label", "").strip()[:120]
                     or f"Familie {item.last_name}",
                     additional_adults=adults,
-                    children=children,
+                    children=[
+                        {"first_name": child["first_name"], "last_name": child["last_name"]}
+                        for child in children
+                    ],
                 )
+                for child in children:
+                    FamilyChildAccount.objects.create(
+                        family_request=family,
+                        first_name=child["first_name"],
+                        last_name=child["last_name"],
+                        email=child["email"],
+                        password_hash=make_password(child["password"]),
+                    )
                 item.school = locked.school_class.school
                 item.school_class = locked.school_class
                 item.family_request = family
                 item.save(update_fields=["school", "school_class", "family_request", "updated_at"])
                 locked.submitted_at = timezone.now()
-                locked.save(update_fields=["submitted_at"])
-            link = f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/registrieren/email/{email_token}/"
-            send_mail(
-                "E-Mail-Adresse für KlassID bestätigen",
-                f"Öffne diesen einmaligen Link innerhalb von 24 Stunden: {link}",
-                settings.DEFAULT_FROM_EMAIL,
-                [item.email],
-                fail_silently=False,
-            )
+                locked.use_count += 1
+                locked.save(update_fields=["submitted_at", "use_count"])
+                link = (
+                    f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/registrieren/email/{email_token}/"
+                )
+                send_mail(
+                    "E-Mail-Adresse für KlassID bestätigen",
+                    f"Öffne diesen einmaligen Link innerhalb von 24 Stunden: {link}",
+                    settings.DEFAULT_FROM_EMAIL,
+                    [item.email],
+                    fail_silently=False,
+                )
             return render(request, "core/family_registration_received.html", status=202)
         except ValidationError as exc:
             return render(
@@ -214,6 +279,18 @@ def family_register(request, token):
                     "submitted": submitted,
                 },
                 status=400,
+            )
+        except Exception:
+            logger.exception("Family registration email could not be sent")
+            return render(
+                request,
+                "core/family_register.html",
+                {
+                    "invitation": invitation,
+                    "error": "Die Bestätigungs-E-Mail konnte gerade nicht versendet werden. Der Einladungscode bleibt gültig; bitte versuche es später erneut.",
+                    "submitted": submitted,
+                },
+                status=503,
             )
     return render(request, "core/family_register.html", {"invitation": invitation})
 

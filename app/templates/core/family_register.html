@@ -1,16 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="family-registration">
-  <header><p class="eyebrow">Einladung {{ invitation.serial_number|stringformat:"02d" }}</p><h1>Kommt in unseren Klassentreff</h1><p>Legt eure Familie einmal gemeinsam an. Jede erwachsene Person erhält anschließend einen eigenen persönlichen Zugang.</p></header>
+  <header><p class="eyebrow">Einladung {{ invitation.serial_number|stringformat:"02d" }}</p><h1>Kommt in unseren Klassentreff</h1><p>Legt eure Familie gemeinsam an. Erwachsene und Kinder erhalten jeweils einen eigenen persönlichen Login und ein eigenes Passwort.</p></header>
   {% if error %}<div class="notice notice-error">{{ error }}</div>{% endif %}
   <form method="post" class="card form-stack">
     {% csrf_token %}
     <fieldset><legend>Erste erwachsene Person</legend><div class="field-pair"><label>Vorname<input name="first_name" value="{{ submitted.first_name|default:'' }}" required maxlength="100" autocomplete="given-name"></label><label>Nachname<input name="last_name" value="{{ submitted.last_name|default:'' }}" required maxlength="100" autocomplete="family-name"></label></div><label>E-Mail<input type="email" name="email" value="{{ submitted.email|default:'' }}" required autocomplete="email"></label><label>Persönliches Passwort<input type="password" name="password" required autocomplete="new-password"></label></fieldset>
     <details{% if submitted.adult_2_first_name or submitted.adult_2_last_name or submitted.adult_2_email %} open{% endif %}><summary>Zweite erwachsene Person hinzufügen</summary><div class="field-pair"><label>Vorname<input name="adult_2_first_name" value="{{ submitted.adult_2_first_name|default:'' }}" maxlength="100"></label><label>Nachname<input name="adult_2_last_name" value="{{ submitted.adult_2_last_name|default:'' }}" maxlength="100"></label></div><label>E-Mail<input type="email" name="adult_2_email" value="{{ submitted.adult_2_email|default:'' }}"></label><p class="help-text">Diese Person ist optional. Wenn sie bereits einen eigenen Zugang hat, lässt du diesen Bereich vollständig leer.</p></details>
-    <fieldset><legend>Kinder</legend><div class="field-pair"><label>Vorname Kind 1<input name="child_1_first_name" value="{{ submitted.child_1_first_name|default:'' }}" required maxlength="100"></label><label>Nachname Kind 1<input name="child_1_last_name" value="{{ submitted.child_1_last_name|default:'' }}" required maxlength="100"></label><label>Vorname Kind 2 (optional)<input name="child_2_first_name" value="{{ submitted.child_2_first_name|default:'' }}" maxlength="100"></label><label>Nachname Kind 2 (optional)<input name="child_2_last_name" value="{{ submitted.child_2_last_name|default:'' }}" maxlength="100"></label></div></fieldset>
+    <fieldset>
+      <legend>Erstes Kind</legend>
+      <p class="help-text">Das Kind meldet sich später selbst mit dieser E-Mail-Adresse und seinem eigenen Passwort an.</p>
+      <div class="field-pair"><label>Vorname<input name="child_1_first_name" value="{{ submitted.child_1_first_name|default:'' }}" required maxlength="100" autocomplete="off"></label><label>Nachname<input name="child_1_last_name" value="{{ submitted.child_1_last_name|default:'' }}" required maxlength="100" autocomplete="off"></label></div>
+      <label>E-Mail des Kindes<input type="email" name="child_1_email" value="{{ submitted.child_1_email|default:'' }}" required autocomplete="off"></label>
+      <label>Eigenes Passwort des Kindes<input type="password" name="child_1_password" required autocomplete="new-password"></label>
+    </fieldset>
+    <details{% if submitted.child_2_first_name or submitted.child_2_last_name or submitted.child_2_email %} open{% endif %}>
+      <summary>Zweites Kind hinzufügen</summary>
+      <div class="field-pair"><label>Vorname<input name="child_2_first_name" value="{{ submitted.child_2_first_name|default:'' }}" maxlength="100" autocomplete="off"></label><label>Nachname<input name="child_2_last_name" value="{{ submitted.child_2_last_name|default:'' }}" maxlength="100" autocomplete="off"></label></div>
+      <label>E-Mail des Kindes<input type="email" name="child_2_email" value="{{ submitted.child_2_email|default:'' }}" autocomplete="off"></label>
+      <label>Eigenes Passwort des Kindes<input type="password" name="child_2_password" autocomplete="new-password"></label>
+    </details>
     <label>Familienbezeichnung (optional)<input name="household_label" value="{{ submitted.household_label|default:'' }}" maxlength="120" placeholder="z. B. Familie Radke"></label>
     <label class="consent-line"><input type="checkbox" name="privacy_ack" value="yes" required> Ich habe die <a href="{% url 'privacy-information' %}" target="_blank" rel="noopener">Datenschutzinformationen</a> gelesen und darf die angegebenen Personen zur Prüfung anmelden.</label>
-    <button class="button button-primary">Familie zur Prüfung einreichen</button><small>Danach ist der QR-Code dauerhaft verbraucht. Die Zuordnung wird erst nach Prüfung freigeschaltet.</small>
+    <button class="button button-primary">Familie zur Prüfung einreichen</button>
+    <small>Nach dem Absenden bestätigt die erste erwachsene Person ihre E-Mail-Adresse. Erst nach der Freigabe und Aktivierung funktionieren die persönlichen Logins.{% if invitation.max_uses > 1 %} Dieser Einladungscode kann insgesamt {{ invitation.max_uses }}-mal verwendet werden; {{ invitation.remaining_uses }} Verwendung(en) sind noch frei.{% else %} Dieser Einladungscode ist einmal verwendbar.{% endif %}</small>
   </form>
 </section>
 {% endblock %}

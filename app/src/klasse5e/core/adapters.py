@@ -2,10 +2,15 @@ from allauth.account.adapter import DefaultAccountAdapter
 from allauth.mfa.adapter import DefaultMFAAdapter
 from django.conf import settings
 
+from .models import normalize_login_email
+
 
 class ClosedAccountAdapter(DefaultAccountAdapter):
     def is_open_for_signup(self, request):
         return False
+
+    def clean_email(self, email):
+        return normalize_login_email(super().clean_email(email))
 
 
 class KlassIDMFAAdapter(DefaultMFAAdapter):

@@ -14,8 +14,9 @@ from .models import FamilyAccessCode
 
 
 @transaction.atomic
-def create_family_handout(*, school_class, count, created_by, family_names=None):
+def create_family_handout(*, school_class, count, created_by, family_names=None, max_uses=1):
     count = max(1, min(100, int(count)))
+    max_uses = max(1, min(100, int(max_uses)))
     names = [name.strip()[:120] for name in (family_names or []) if name.strip()]
     batch_id = uuid.uuid4()
     invitations = []
@@ -26,6 +27,7 @@ def create_family_handout(*, school_class, count, created_by, family_names=None)
             serial_number=serial,
             school_class=school_class,
             created_by=created_by,
+            max_uses=max_uses,
         )
         if intended_name:
             item.intended_family_name = intended_name
@@ -116,11 +118,12 @@ def _build_pdf(output, school_class, invitations):
         pdf.setFont("Helvetica-Bold", 9)
         pdf.drawString(27, 27, f"Einladung {item.serial_number:02d} / {len(invitations):02d}")
         pdf.setFont("Helvetica", 6.5)
-        pdf.drawRightString(
-            width - 27,
-            28,
-            "Einmalig gueltig - Familie einrichten - weitere Zugaenge persoenlich",
+        validity_label = (
+            "Einmalig gueltig"
+            if item.max_uses == 1
+            else f"Mehrfach gueltig - bis zu {item.max_uses} Familien"
         )
+        pdf.drawRightString(width - 27, 28, f"{validity_label} - persoenliche Zugaenge")
         pdf.setStrokeColor(teal)
         pdf.setLineWidth(1.2)
         pdf.line(27, 43, width - 27, 43)

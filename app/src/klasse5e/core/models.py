@@ -9,13 +9,21 @@ from django.db import models
 from django.utils import timezone
 
 
+def normalize_login_email(value):
+    email = (value or "").strip().casefold()
+    local_part, separator, domain = email.partition("@")
+    if separator and domain == "googlemail.com":
+        domain = "gmail.com"
+    return f"{local_part}@{domain}" if separator else email
+
+
 class UserAccountManager(BaseUserManager):
     use_in_migrations = True
 
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError("email_required")
-        user = self.model(email=self.normalize_email(email), **extra_fields)
+        user = self.model(email=normalize_login_email(self.normalize_email(email)), **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -220,7 +228,7 @@ class RegistrationApplication(models.Model):
     def issue(cls, *, email, first_name, last_name, password_hash, lifetime=timedelta(hours=24)):
         token = secrets.token_urlsafe(32)
         item = cls.objects.create(
-            email=email.casefold(),
+            email=normalize_login_email(email),
             first_name=first_name,
             last_name=last_name,
             password_hash=password_hash,
@@ -604,7 +612,7 @@ class Invitation(models.Model):
     def issue(cls, email, invited_by, lifetime=timedelta(days=7), **extra):
         token = secrets.token_urlsafe(32)
         invitation = cls.objects.create(
-            email=email.casefold(),
+            email=normalize_login_email(email),
             token_hash=hashlib.sha256(token.encode()).hexdigest(),
             expires_at=timezone.now() + lifetime,
             invited_by=invited_by,
@@ -647,6 +655,8 @@ class FamilyAccessCode(models.Model):
         default="",
     )
     intended_family_name = models.CharField(max_length=120, blank=True, default="")
+    max_uses = models.PositiveSmallIntegerField(default=1)
+    use_count = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -658,7 +668,14 @@ class FamilyAccessCode(models.Model):
 
     @classmethod
     def issue(
-        cls, *, batch_id, serial_number, school_class, created_by, lifetime=timedelta(days=60)
+        cls,
+        *,
+        batch_id,
+        serial_number,
+        school_class,
+        created_by,
+        lifetime=timedelta(days=60),
+        max_uses=1,
     ):
         alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
         for _ in range(10):
@@ -672,6 +689,7 @@ class FamilyAccessCode(models.Model):
                     school_class=school_class,
                     created_by=created_by,
                     expires_at=timezone.now() + lifetime,
+                    max_uses=max(1, min(100, int(max_uses))),
                 )
                 return item, token
         raise RuntimeError("Konnte keinen eindeutigen Einladungscode erzeugen.")
@@ -681,14 +699,23 @@ class FamilyAccessCode(models.Model):
         token = (token or "").strip().upper()
         query = cls.objects.select_for_update() if for_update else cls.objects
         item = query.filter(token_hash=hashlib.sha256(token.encode()).hexdigest()).first()
-        if not item or item.submitted_at or item.revoked_at or item.expires_at <= timezone.now():
+        if (
+            not item
+            or item.revoked_at
+            or item.expires_at <= timezone.now()
+            or item.use_count >= item.max_uses
+        ):
             return None
         return item
 
+    @property
+    def remaining_uses(self):
+        return max(0, self.max_uses - self.use_count)
+
 
 class FamilyRegistrationRequest(models.Model):
-    access_code = models.OneToOneField(
-        FamilyAccessCode, on_delete=models.PROTECT, related_name="family_request"
+    access_code = models.ForeignKey(
+        FamilyAccessCode, on_delete=models.PROTECT, related_name="family_requests"
     )
     household_label = models.CharField(max_length=120)
     additional_adults = models.JSONField(default=list, blank=True)
@@ -697,6 +724,32 @@ class FamilyRegistrationRequest(models.Model):
     status = models.CharField(max_length=20, default="email_pending")
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+
+
+class FamilyChildAccount(models.Model):
+    family_request = models.ForeignKey(
+        FamilyRegistrationRequest, on_delete=models.CASCADE, related_name="child_accounts"
+    )
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+    password_hash = models.CharField(max_length=256)
+    activated_user = models.OneToOneField(
+        UserAccount,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="family_child_setup",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["family_request", "first_name", "last_name"],
+                name="unique_child_account_per_family",
+            )
+        ]
 
 
 class AccountDeletionRequest(models.Model):

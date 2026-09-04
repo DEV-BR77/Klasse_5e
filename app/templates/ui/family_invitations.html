@@ -23,7 +23,12 @@
     <label>
       Anzahl der Einladungen
       <input type="number" name="count" min="1" max="100" value="1" required>
-      <small>Pro Einladung wird ein eigener, nur einmal verwendbarer Code erzeugt.</small>
+      <small>So viele unterschiedliche QR-Codes und PDFs werden erzeugt.</small>
+    </label>
+    <label>
+      Verwendungen pro Einladungscode
+      <input type="number" name="max_uses" min="1" max="100" value="1" required>
+      <small>1 bedeutet einmalig. Für einen Testcode, den mehrere Familien nutzen dürfen, trägst du zum Beispiel 10 ein.</small>
     </label>
     <label>
       Familiennamen vormerken <small>optional, ein Name pro Zeile</small>

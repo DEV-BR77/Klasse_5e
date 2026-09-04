@@ -28,12 +28,13 @@ from .models import (
     StudentProfile,
     UserAccount,
     UserNotification,
+    normalize_login_email,
 )
 from .policies import active_class_for_user
 
 
 def create_application(*, email, first_name, last_name, password, refresh_unverified=False):
-    email = email.strip().casefold()
+    email = normalize_login_email(email)
     first_name, last_name = first_name.strip(), last_name.strip()
     if not email or not first_name or not last_name:
         raise ValidationError("Bitte fülle alle Pflichtfelder aus.")
@@ -230,8 +231,39 @@ def activate(token):
             if not role_assignment.active:
                 role_assignment.active = True
                 role_assignment.save(update_fields=["active"])
+        child_account_setups = {
+            (setup.first_name.casefold(), setup.last_name.casefold()): setup
+            for setup in family.child_accounts.select_for_update().all()
+        }
         for child_data in family.children:
+            child_key = (
+                child_data["first_name"].casefold(),
+                child_data["last_name"].casefold(),
+            )
+            child_setup = child_account_setups.get(child_key)
+            child_user = None
+            if child_setup:
+                child_user, child_user_created = UserAccount.objects.get_or_create(
+                    email=child_setup.email,
+                    defaults={
+                        "password": child_setup.password_hash,
+                        "email_verified_at": app.email_verified_at or timezone.now(),
+                        "is_active": True,
+                    },
+                )
+                if not child_user_created and child_user.is_active:
+                    raise ValidationError(
+                        f"Für {child_setup.first_name} besteht bereits ein aktiver Zugang."
+                    )
+                if not child_user_created:
+                    child_user.password = child_setup.password_hash
+                    child_user.email_verified_at = app.email_verified_at or timezone.now()
+                    child_user.is_active = True
+                    child_user.save(
+                        update_fields=["password", "email_verified_at", "is_active"]
+                    )
             child = Person.objects.create(
+                user=child_user,
                 first_name=child_data["first_name"][:100],
                 last_name=child_data["last_name"][:100],
             )
@@ -243,6 +275,24 @@ def activate(token):
                 status="active",
             )
             StudentProfile.objects.create(person=child)
+            if child_setup:
+                child_setup.activated_user = child_user
+                child_setup.save(update_fields=["activated_user"])
+                RegistrationApplication.objects.filter(
+                    email__iexact=child_setup.email,
+                    status=RegistrationApplication.Status.EMAIL_PENDING,
+                    family_request__isnull=True,
+                ).update(
+                    family_request=family,
+                    status=RegistrationApplication.Status.ACTIVATED,
+                    email_verified_at=app.email_verified_at or timezone.now(),
+                )
+                AuditEvent.objects.create(
+                    actor=user,
+                    action="family.child_account.activated",
+                    target_type="user",
+                    target_id=str(child_user.pk),
+                )
             GuardianChildRelationship.objects.create(
                 guardian_person=person,
                 student_person=child,
@@ -300,8 +350,9 @@ def activate(token):
         family.status = "completed"
         family.completed_at = timezone.now()
         family.save(update_fields=["household", "status", "completed_at"])
-        family.access_code.completed_at = timezone.now()
-        family.access_code.save(update_fields=["completed_at"])
+        if family.access_code.use_count >= family.access_code.max_uses:
+            family.access_code.completed_at = timezone.now()
+            family.access_code.save(update_fields=["completed_at"])
     return user
 
 
