@@ -53,14 +53,21 @@ class Command(BaseCommand):
         school_class.status = "active"
         school_class.save(update_fields=["name", "display_name", "grade_level", "status"])
 
-        domain, _ = ClassDomain.objects.get_or_create(
-            school_class=school_class,
-            defaults={"hostname": "5e.klassid.de", "is_reserved_exception": True, "is_active": True},
-        )
-        if domain.hostname != "5e.klassid.de":
+        domain = ClassDomain.objects.filter(school_class=school_class).first()
+        if domain is None:
+            domain = ClassDomain.objects.filter(hostname="5e.klassid.de").first()
+        if domain is None:
+            domain = ClassDomain.objects.create(
+                school_class=school_class,
+                hostname="5e.klassid.de",
+                is_reserved_exception=True,
+                is_active=True,
+            )
+        else:
+            domain.school_class = school_class
             domain.hostname = "5e.klassid.de"
             domain.is_reserved_exception = True
             domain.is_active = True
-            domain.save(update_fields=["hostname", "is_reserved_exception", "is_active"])
+            domain.save(update_fields=["school_class", "hostname", "is_reserved_exception", "is_active"])
 
         self.stdout.write(self.style.SUCCESS("THG / Klasse 5e / 5e.klassid.de ist bereit."))
