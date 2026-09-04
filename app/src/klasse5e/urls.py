@@ -57,6 +57,16 @@ urlpatterns = [
     ),
     path("", ui_views.dashboard, name="dashboard"),
     path(
+        "familie/ansicht/",
+        ui_views.select_active_child,
+        name="family-overview-select",
+    ),
+    path(
+        "familie/ansicht/<int:student_id>/",
+        ui_views.select_active_child,
+        name="family-child-select",
+    ),
+    path(
         "hausaufgaben/<int:homework_id>/erledigt/",
         ui_views.homework_progress,
         name="homework-progress",

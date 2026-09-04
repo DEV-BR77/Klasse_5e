@@ -31,7 +31,7 @@ def _connection_for(user, student_id):
 
 @login_required
 def portal(request):
-    _class_or_404(request.user)
+    _class_or_404(request.user, request)
     students = list(_students(request.user))
     connections = (
         ItslearningConnection.objects.filter(owner=request.user, student__in=students)
@@ -117,7 +117,7 @@ def sync_now(request, student_id):
 
 @login_required
 def storage(request):
-    _class_or_404(request.user)
+    _class_or_404(request.user, request)
     students = list(_students(request.user, manage=True))
     spaces = {space.student_id: space for space in WebDavSpace.objects.filter(student__in=students)}
     rows = []

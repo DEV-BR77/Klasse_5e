@@ -55,6 +55,7 @@ from klasse5e.webuntis.models import (
 )
 
 from .calendar_presenter import build_calendar_context
+from .family_context import active_child_context
 from .family_handouts import create_family_handout
 from .models import (
     AuditEvent,
@@ -201,7 +202,11 @@ def _manageable_schools(user):
     )
 
 
-def _membership(user):
+def _membership(user, request=None):
+    if request is not None:
+        _children, selected_child = active_child_context(request)
+        if selected_child and selected_child.membership:
+            return selected_child.membership
     today = timezone.localdate()
     return (
         ClassMembership.objects.filter(
@@ -217,8 +222,8 @@ def _membership(user):
     )
 
 
-def _class_or_404(user):
-    membership = _membership(user)
+def _class_or_404(user, request=None):
+    membership = _membership(user, request)
     if membership:
         return membership.school_class
     if user.is_superuser or active_roles(user) & {
@@ -250,7 +255,7 @@ def _day_from_request(request):
 
 
 def _shared(request, title, section):
-    school_class = _membership(request.user)
+    school_class = _membership(request.user, request)
     return {
         "page_title": title,
         "active_section": section,
@@ -258,6 +263,102 @@ def _shared(request, title, section):
         "roles": active_roles(request.user, school_class.school_class if school_class else None),
         "family_name": family_label(request.user),
     }
+
+
+def _connections_for_active_child(connections, child):
+    """Keep personal school data in the child area, never mixed by accident."""
+
+    return connections.filter(student_id=child.student.id) if child else connections.none()
+
+
+def _family_overview_items(children, *, now):
+    """Create a compact family timeline from class information and changes."""
+
+    children_by_class = {
+        child.school_class.id: child for child in children if child.school_class is not None
+    }
+    class_ids = list(children_by_class)
+    if not class_ids:
+        return []
+    rows = []
+    for entry in (
+        CalendarEntry.objects.filter(school_class_id__in=class_ids, ends_at__gte=now)
+        .select_related("school_class")
+        .order_by("starts_at")[:18]
+    ):
+        child = children_by_class.get(entry.school_class_id)
+        if child:
+            rows.append(
+                {
+                    "child": child,
+                    "tone": child.tone,
+                    "kind": entry.get_kind_display(),
+                    "title": entry.title,
+                    "when": entry.starts_at,
+                    "detail": entry.room or entry.details,
+                    "url": "/kalender/",
+                }
+            )
+    for event in (
+        Event.objects.filter(
+            school_class_id__in=class_ids,
+            status=Event.Status.PUBLISHED,
+            ends_at__gte=now,
+        )
+        .select_related("school_class")
+        .order_by("starts_at")[:12]
+    ):
+        child = children_by_class.get(event.school_class_id)
+        if child:
+            rows.append(
+                {
+                    "child": child,
+                    "tone": child.tone,
+                    "kind": "Veranstaltung",
+                    "title": event.title,
+                    "when": event.starts_at,
+                    "detail": event.location,
+                    "url": f"/mehr/veranstaltungen/{event.pk}/",
+                }
+            )
+    for post in (
+        Post.objects.filter(school_class_id__in=class_ids, status=Post.Status.PUBLISHED)
+        .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now))
+        .select_related("school_class")
+        .order_by("-important", "-pinned", "-published_at", "-updated_at")[:12]
+    ):
+        child = children_by_class.get(post.school_class_id)
+        if child:
+            rows.append(
+                {
+                    "child": child,
+                    "tone": child.tone,
+                    "kind": "Wichtige Information" if post.important else "Aktuelles",
+                    "title": post.title,
+                    "when": post.published_at or post.updated_at,
+                    "detail": post.category,
+                    "url": f"/mehr/aktuelles/{post.pk}/",
+                }
+            )
+    rows.sort(key=lambda item: (item["when"], item["title"]))
+    return rows[:8]
+
+
+@login_required
+def select_active_child(request, student_id=None):
+    """Persist the selected child in the browser session after access validation."""
+
+    children, _selected = active_child_context(request)
+    if student_id is None:
+        request.session.pop("active_child_person_id", None)
+    elif any(item.student.id == student_id for item in children):
+        request.session["active_child_person_id"] = student_id
+    else:
+        raise Http404
+    target = request.GET.get("next", "")
+    if not target.startswith("/") or target.startswith("//"):
+        target = "/"
+    return redirect(target)
 
 
 def _itslearning_connections(user):
@@ -284,7 +385,11 @@ def _webuntis_connections(user):
 
 @login_required
 def dashboard(request):
-    school_class = _class_or_404(request.user)
+    family_children, active_child = active_child_context(request)
+    dashboard_child = active_child or (family_children[0] if len(family_children) == 1 else None)
+    school_class = dashboard_child.school_class if dashboard_child else None
+    if school_class is None and not family_children:
+        school_class = _class_or_404(request.user, request)
     # The due scheduler is deliberately request-assisted: after a login the first
     # dashboard request claims at most one due schedule transactionally. This keeps
     # homework current without requiring a separate worker or a hidden manual click.
@@ -332,8 +437,12 @@ def dashboard(request):
         .first()
     )
     context = _shared(request, "Start", "start")
-    portal_connections = _itslearning_connections(request.user)
-    webuntis_connections = _webuntis_connections(request.user)
+    portal_connections = _connections_for_active_child(
+        _itslearning_connections(request.user), dashboard_child
+    )
+    webuntis_connections = _connections_for_active_child(
+        _webuntis_connections(request.user), dashboard_child
+    )
     webuntis_last_sync = (
         webuntis_connections.order_by("-last_successful_sync_at")
         .values_list("last_successful_sync_at", flat=True)
@@ -346,8 +455,10 @@ def dashboard(request):
             .order_by("starts_at")
         )
     )
-    manual_lessons = TimetableEntry.objects.filter(
-        school_class=school_class, weekday=day.isoweekday()
+    manual_lessons = (
+        TimetableEntry.objects.filter(school_class=school_class, weekday=day.isoweekday())
+        if school_class
+        else TimetableEntry.objects.none()
     )
     homework = list(
         WebUntisHomework.objects.filter(
@@ -382,26 +493,45 @@ def dashboard(request):
             "webuntis_last_sync": webuntis_last_sync,
             "lessons": personal_lessons if personal_lessons else manual_lessons,
             "homework": homework,
-            "calendar_entries": CalendarEntry.objects.filter(
-                school_class=school_class, starts_at__date=day
-            ).order_by("starts_at")[:5],
-            "events": Event.objects.filter(
-                school_class=school_class,
-                status=Event.Status.PUBLISHED,
-                ends_at__gte=timezone.now(),
-            ).order_by("starts_at")[:2],
+            "family_children": family_children,
+            "active_child": active_child,
+            "family_overview": _family_overview_items(family_children, now=timezone.now()),
+            "calendar_entries": (
+                CalendarEntry.objects.filter(school_class=school_class, starts_at__date=day)
+                .order_by("starts_at")[:5]
+                if school_class
+                else CalendarEntry.objects.none()
+            ),
+            "events": (
+                Event.objects.filter(
+                    school_class=school_class,
+                    status=Event.Status.PUBLISHED,
+                    ends_at__gte=timezone.now(),
+                ).order_by("starts_at")[:2]
+                if school_class
+                else Event.objects.none()
+            ),
             "next_meal": next_meal,
-            "posts": Post.objects.filter(
-                school_class=school_class, status=Post.Status.PUBLISHED
-            ).order_by("-important", "-pinned", "-updated_at")[:3],
-            "documents": ProtectedDocument.objects.filter(
-                school_class=school_class, status=ProtectedDocument.Status.PUBLISHED
-            ).order_by("-is_updated", "-created_at")[:2],
+            "posts": (
+                Post.objects.filter(school_class=school_class, status=Post.Status.PUBLISHED)
+                .order_by("-important", "-pinned", "-updated_at")[:3]
+                if school_class
+                else Post.objects.none()
+            ),
+            "documents": (
+                ProtectedDocument.objects.filter(
+                    school_class=school_class, status=ProtectedDocument.Status.PUBLISHED
+                ).order_by("-is_updated", "-created_at")[:2]
+                if school_class
+                else ProtectedDocument.objects.none()
+            ),
             "chat_unread": _unread_count(request.user, school_class),
             "notification_counts": {
                 row["category"]: row["total"]
                 for row in UserNotification.objects.filter(
-                    user=request.user, school_class=school_class, read_at__isnull=True
+                    user=request.user,
+                    school_class=school_class,
+                    read_at__isnull=True,
                 )
                 .values("category")
                 .annotate(total=Count("id"))
@@ -457,7 +587,13 @@ def _unread_count(user, school_class):
 
 @login_required
 def calendar(request):
-    school_class = _class_or_404(request.user)
+    family_children, active_child = active_child_context(request)
+    calendar_child = active_child or (family_children[0] if family_children else None)
+    school_class = (
+        calendar_child.school_class
+        if calendar_child and calendar_child.school_class
+        else _class_or_404(request.user, request)
+    )
     day = _day_from_request(request)
     view = request.GET.get("ansicht", "week")
     categories = request.GET.getlist("kategorie") if "filter" in request.GET else None
@@ -466,8 +602,12 @@ def calendar(request):
         build_calendar_context(
             school_class=school_class,
             selected_day=day,
-            webuntis_connections=_webuntis_connections(request.user),
-            itslearning_connections=_itslearning_connections(request.user),
+            webuntis_connections=_connections_for_active_child(
+                _webuntis_connections(request.user), calendar_child
+            ),
+            itslearning_connections=_connections_for_active_child(
+                _itslearning_connections(request.user), calendar_child
+            ),
             view=view,
             active_categories=categories,
         )
@@ -477,8 +617,9 @@ def calendar(request):
         [("filter", "1"), *(("kategorie", key) for key in active_keys)]
     )
     context["calendar_week_number"] = day.isocalendar().week
+    context["calendar_child"] = calendar_child
     context["webuntis_last_sync"] = (
-        _webuntis_connections(request.user)
+        _connections_for_active_child(_webuntis_connections(request.user), calendar_child)
         .order_by("-last_successful_sync_at")
         .values_list("last_successful_sync_at", flat=True)
         .first()
@@ -489,7 +630,7 @@ def calendar(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def chat_overview(request):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     if request.method == "POST":
         _require_portal_admin(request.user)
         title = request.POST.get("title", "").strip()[:120]
@@ -741,7 +882,7 @@ def portal_adapter_detail(request, adapter_id):
 def presentation_poll_settings(request):
     """Admin-only storage and restart screen for the presentation poll."""
     _require_portal_admin(request.user)
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     if request.method == "POST":
         action = request.POST.get("action")
         poll = get_object_or_404(
@@ -800,7 +941,7 @@ def presentation_poll_settings(request):
 
 @login_required
 def presentation(request):
-    _class_or_404(request.user)
+    _class_or_404(request.user, request)
     return render(
         request,
         "ui/presentation.html",
@@ -887,7 +1028,7 @@ def registration_invitation_qr(request):
 @login_required
 @require_POST
 def pilot_report(request):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     kind = request.POST.get("kind", "note")
     if kind not in PilotReport.Kind.values:
         kind = PilotReport.Kind.NOTE
@@ -919,7 +1060,7 @@ def pilot_report(request):
 @login_required
 def more(request):
     context = _shared(request, "Mehr", "more")
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     catalog = _menu_catalog()
     stored = (
         school_class.visible_menu_items if isinstance(school_class.visible_menu_items, dict) else {}
@@ -1020,7 +1161,7 @@ def _menu_catalog():
 @require_http_methods(["GET", "POST"])
 def menu_management(request):
     _require_portal_admin(request.user)
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     catalog = _menu_catalog()
     stored = (
         school_class.visible_menu_items if isinstance(school_class.visible_menu_items, dict) else {}
@@ -1079,7 +1220,7 @@ def menu_management(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def theme_settings(request):
-    _class_or_404(request.user)
+    _class_or_404(request.user, request)
     audience = (
         PortalTheme.Audience.CHILDREN
         if hasattr(request.user, "person")
@@ -1111,7 +1252,7 @@ def portal_theme_preview(request, theme_id, page):
     if can_manage_themes:
         themes = PortalTheme.objects.all()
     else:
-        _class_or_404(request.user)
+        _class_or_404(request.user, request)
         audience = (
             PortalTheme.Audience.CHILDREN
             if hasattr(request.user, "person")
@@ -1261,7 +1402,7 @@ def template_preview(request, template_key, page):
 
 @login_required
 def documents(request):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     query = ProtectedDocument.objects.filter(
         school_class=school_class, status=ProtectedDocument.Status.PUBLISHED
     )
@@ -1275,7 +1416,7 @@ def documents(request):
 
 @login_required
 def posts(request):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     context = _shared(request, "Aktuelles", "more")
     context["posts"] = Post.objects.filter(
         school_class=school_class, status=Post.Status.PUBLISHED
@@ -1285,7 +1426,7 @@ def posts(request):
 
 @login_required
 def post_detail(request, post_id):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     post = get_object_or_404(Post, id=post_id, school_class=school_class, status="published")
     context = _shared(request, post.title, "more")
     context.update({"post": post, "comments": post.comments.select_related("author__person")})
@@ -1295,7 +1436,7 @@ def post_detail(request, post_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def events(request):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     if request.method == "POST":
         _require_portal_admin(request.user)
         try:
@@ -1373,7 +1514,7 @@ def events(request):
 @login_required
 @require_POST
 def create_event_poll(request):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     _require_portal_admin(request.user)
     try:
         closes_at = timezone.datetime.fromisoformat(request.POST.get("closes_at", ""))
@@ -1416,7 +1557,7 @@ def create_event_poll(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def event_poll(request, poll_id):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     poll = get_object_or_404(EventPoll, id=poll_id, school_class=school_class)
     options = poll.options.annotate(vote_count=Count("votes")).order_by("starts_at")
     if request.method == "POST" and poll.is_open:
@@ -1447,7 +1588,7 @@ def event_poll(request, poll_id):
 @login_required
 @require_POST
 def finalize_event_poll(request, poll_id):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     _require_portal_admin(request.user)
     poll = get_object_or_404(
         EventPoll, id=poll_id, school_class=school_class, finalized_event__isnull=True
@@ -1487,7 +1628,7 @@ def finalize_event_poll(request, poll_id):
 
 @login_required
 def event(request, event_id):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     item = get_object_or_404(Event, id=event_id, school_class=school_class, status="published")
     categories = item.categories.prefetch_related("items__reservations__user__person")
     reservations = Reservation.objects.filter(
@@ -1563,7 +1704,7 @@ def reserve(request, item_id):
 @login_required
 @require_POST
 def free_contribution(request, event_id):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     item_event = get_object_or_404(Event, id=event_id, school_class=school_class)
     if timezone.now() > item_event.change_deadline:
         return redirect(f"/mehr/veranstaltungen/{event_id}/?status=deadline")
@@ -1628,7 +1769,7 @@ def fulfill_reservation(request, reservation_id):
 
 @login_required
 def teachers(request):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     context = _shared(request, "Lehrkräfte", "more")
     context["teachers"] = TeacherProfile.objects.filter(school_class=school_class).select_related(
         "person"
@@ -1639,7 +1780,7 @@ def teachers(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def galleries(request):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     roles = active_roles(request.user, school_class)
     can_create = bool(
         request.user.is_superuser
@@ -1677,7 +1818,7 @@ def galleries(request):
 
 @login_required
 def family(request):
-    _class_or_404(request.user)
+    _class_or_404(request.user, request)
     relationships = GuardianChildRelationship.objects.filter(
         guardian_person=request.user.person
     ).select_related("student_person")
@@ -1688,7 +1829,7 @@ def family(request):
 
 @login_required
 def contacts(request):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     memberships = ClassMembership.objects.filter(
         school_class=school_class, status="active", person__user__isnull=False
     ).select_related("person__user")
@@ -1716,7 +1857,7 @@ def contacts(request):
 
 @login_required
 def students(request):
-    school_class = _class_or_404(request.user)
+    school_class = _class_or_404(request.user, request)
     students = (
         Person.objects.filter(
             studentprofile__isnull=False,
@@ -1734,7 +1875,7 @@ def students(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def consents(request):
-    _class_or_404(request.user)
+    _class_or_404(request.user, request)
     from klasse5e.webuntis.services import eligible_students
 
     from .onboarding import active_decision, may_decide, record_decision
@@ -1805,7 +1946,7 @@ def consents(request):
 
 @login_required
 def notifications(request):
-    _class_or_404(request.user)
+    _class_or_404(request.user, request)
     context = _shared(request, "Benachrichtigungen", "more")
     context["push_active"] = PushSubscription.objects.filter(
         user=request.user, enabled=True

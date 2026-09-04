@@ -52,7 +52,7 @@ def has_active_membership(user, school_class):
     ):
         return False
     today = timezone.localdate()
-    return (
+    own_membership = (
         ClassMembership.objects.filter(
             person=user.person,
             school_class=school_class,
@@ -62,6 +62,30 @@ def has_active_membership(user, school_class):
             school_class__school_year__ends_on__gte=today,
         )
         .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=today))
+        .exists()
+    )
+    if own_membership:
+        return True
+    # Guardians may enter exactly the active class areas of verified children
+    # they may view. This keeps siblings at separate schools isolated.
+    return (
+        GuardianChildRelationship.objects.filter(
+            guardian_person=user.person,
+            student_person__classmembership__school_class=school_class,
+            student_person__classmembership__status="active",
+            student_person__classmembership__valid_from__lte=today,
+            student_person__classmembership__school_class__school_year__starts_on__lte=today,
+            student_person__classmembership__school_class__school_year__ends_on__gte=today,
+            status="verified",
+            verified_at__isnull=False,
+            may_view_student_profile=True,
+            valid_from__lte=today,
+        )
+        .filter(
+            models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=today),
+            models.Q(student_person__classmembership__valid_until__isnull=True)
+            | models.Q(student_person__classmembership__valid_until__gte=today),
+        )
         .exists()
     )
 

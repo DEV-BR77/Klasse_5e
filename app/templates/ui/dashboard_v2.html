@@ -3,7 +3,7 @@
 {% block content %}
 <section class="dashboard-page">
   <header class="welcome-panel">
-    <div><p class="eyebrow">Guten Tag, {{ request.user.person.first_name|default:request.user.email }}</p><h1>Was steht heute an?</h1>{% if membership %}<p>{{ family_name }} · {{ membership.school_class.display_name|default:membership.school_class.name }}</p>{% endif %}</div>
+    <div><p class="eyebrow">Guten Tag, {{ request.user.person.first_name|default:request.user.email }}</p><h1>Was steht heute an?</h1>{% if active_child %}<p>{{ family_name }} · {{ active_child.school_name }}{% if active_child.class_name %} · {{ active_child.class_name }}{% endif %}</p>{% elif family_children %}<p>Wichtige Termine und Informationen für alle Kinder.</p>{% elif membership %}<p>{{ family_name }} · {{ membership.school_class.display_name|default:membership.school_class.name }}</p>{% endif %}</div>
     <button class="icon-button refresh-button" type="button" onclick="window.location.reload()" aria-label="Startseite aktualisieren">↻</button>
   </header>
 
@@ -16,13 +16,23 @@
 
   <section class="dashboard-switcher" data-dashboard-tabs>
     <div class="dashboard-tabs" role="tablist" aria-label="Bereich der Startseite auswählen">
-      <button id="dashboard-tab-day" class="dashboard-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="dashboard-panel-day" data-dashboard-tab="day">Stundenplan &amp; Hausaufgaben</button>
+      {% if family_children %}<button id="dashboard-tab-family" class="dashboard-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="dashboard-panel-family" data-dashboard-tab="family">Familie im Blick</button>{% endif %}
+      <button id="dashboard-tab-day" class="dashboard-tab{% if not family_children %} is-active{% endif %}" type="button" role="tab" aria-selected="{% if family_children %}false{% else %}true{% endif %}" aria-controls="dashboard-panel-day" data-dashboard-tab="day">Stundenplan &amp; Hausaufgaben</button>
       <button id="dashboard-tab-news" class="dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="dashboard-panel-news" data-dashboard-tab="news">Aktuelles{% if notification_counts.news %}<span>{{ notification_counts.news }}</span>{% endif %}</button>
       {% if events %}<button id="dashboard-tab-events" class="dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="dashboard-panel-events" data-dashboard-tab="events">Veranstaltungen</button>{% endif %}
       <button id="dashboard-tab-meals" class="dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="dashboard-panel-meals" data-dashboard-tab="meals">Speiseplan</button>
     </div>
 
-    <div id="dashboard-panel-day" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboard-tab-day" data-dashboard-panel="day">
+    {% if family_children %}<div id="dashboard-panel-family" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboard-tab-family" data-dashboard-panel="family">
+      <article class="family-overview-card">
+        <header><div><p class="eyebrow">Familienübersicht</p><h2>Wichtig für euch</h2></div><span class="soft-badge">{{ family_children|length }} Kind{% if family_children|length != 1 %}er{% endif %}</span></header>
+        <ul class="family-overview-list">
+          {% for item in family_overview %}<li><a href="{{ item.url }}"><span class="family-child-badge family-child-tone-{{ item.tone }}">{{ item.child.name }}</span><span class="family-overview-copy"><small>{{ item.kind }} · {{ item.when|date:"d.m. H:i" }} Uhr{% if item.detail %} · {{ item.detail }}{% endif %}</small><strong>{{ item.title }}</strong></span></a></li>{% empty %}<li><p class="family-overview-empty">Für die Kinder sind aktuell keine wichtigen Termine oder Informationen veröffentlicht.</p></li>{% endfor %}
+        </ul>
+      </article>
+    </div>{% endif %}
+
+    <div id="dashboard-panel-day" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboard-tab-day" data-dashboard-panel="day"{% if family_children %} hidden{% endif %}>
       <div class="dashboard-summary-grid">
         <article class="dashboard-subsection schedule-card">
           <header class="card-header"><div><p class="eyebrow">Heute</p><h2>Stundenplan</h2></div><span class="soft-badge">{{ lessons|length }} Einträge</span></header>

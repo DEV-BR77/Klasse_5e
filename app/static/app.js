@@ -30,7 +30,7 @@
         select(tabs[target].dataset.dashboardTab, true);
       });
     });
-    select("day");
+    select(tabs.find((tab) => tab.classList.contains("is-active"))?.dataset.dashboardTab || "day");
   });
   const presentation = document.querySelector("[data-presentation]");
   if (presentation) {

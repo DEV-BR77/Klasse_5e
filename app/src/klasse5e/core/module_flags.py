@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import Http404
 
+from .family_context import active_child_context, active_child_school_class
 from .models import AuditEvent, PortalModule, PortalModuleOverride, Role, UserNotification
 from .policies import active_class_for_user
 
@@ -53,8 +54,15 @@ def module_enabled(key, school_class=None):
 
 def module_context(request):
     if not request.user.is_authenticated:
-        return {"enabled_modules": {}, "personal_display_name": "", "current_theme": None}
-    school_class = active_class_for_user(request.user) if request.user.is_authenticated else None
+        return {
+            "enabled_modules": {},
+            "personal_display_name": "",
+            "current_theme": None,
+            "family_children": (),
+            "active_child": None,
+        }
+    family_children, active_child = active_child_context(request)
+    school_class = active_child_school_class(request) or active_class_for_user(request.user)
     keys = PortalModule.objects.values_list("key", flat=True)
     unread_count = 0
     if school_class:
@@ -69,6 +77,8 @@ def module_context(request):
             else ""
         ),
         "notification_unread_count": unread_count,
+        "family_children": family_children,
+        "active_child": active_child,
         "current_theme": request.user.selected_theme if request.user.selected_theme_id and request.user.selected_theme.is_active else None,
         "can_manage_portal": request.user.is_superuser
         or request.user.roleassignment_set.filter(
@@ -113,7 +123,11 @@ class ModuleGateMiddleware:
     def __call__(self, request):
         for prefix, key in MODULE_PATHS.items():
             if request.path.startswith(prefix):
-                school_class = active_class_for_user(request.user) if request.user.is_authenticated else None
+                school_class = (
+                    active_child_school_class(request) or active_class_for_user(request.user)
+                    if request.user.is_authenticated
+                    else None
+                )
                 if not module_enabled(key, school_class):
                     raise Http404
                 break
