@@ -17,6 +17,20 @@ CALENDAR_CATEGORIES = (
 )
 
 
+def _merge_adjacent_lessons(lessons):
+    merged = []
+    for lesson in lessons:
+        if merged:
+            previous = merged[-1]
+            if (previous.subject == lesson.subject and previous.room == lesson.room
+                    and previous.teacher_label == lesson.teacher_label
+                    and previous.ends_at == lesson.starts_at):
+                previous.ends_at = lesson.ends_at
+                continue
+        merged.append(lesson)
+    return merged
+
+
 def _item(kind, label, title, *, starts_at=None, ends_at=None, meta="", url=""):
     local_start = timezone.localtime(starts_at) if starts_at else None
     local_end = timezone.localtime(ends_at) if ends_at else None
@@ -102,7 +116,7 @@ def build_calendar_context(
         period_title = selected_day.strftime("%d.%m.%Y")
     items = defaultdict(list)
 
-    lessons = list(
+    lessons = _merge_adjacent_lessons(list(
         WebUntisLesson.objects.filter(
             connection__in=webuntis_connections,
             starts_at__date__gte=grid_start,
@@ -283,7 +297,7 @@ def _timeline_context(*, school_class, selected_day, week_start, view, items):
         .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=selected_day))
         .order_by("-valid_from")
         .first()
-    )
+    )))
     periods = list(grid.periods.all()) if grid else []
     starts = [_minutes(period.starts_at) for period in periods]
     starts.extend(_minutes(item["starts_at"].time()) for item in timed_items)

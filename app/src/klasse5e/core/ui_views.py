@@ -17,6 +17,20 @@ from django.utils.http import content_disposition_header
 from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods, require_POST
 
+
+def _merge_adjacent_lessons(lessons):
+    merged = []
+    for lesson in lessons:
+        if merged:
+            previous = merged[-1]
+            if (previous.subject == lesson.subject and previous.room == lesson.room
+                    and previous.teacher_label == lesson.teacher_label
+                    and previous.ends_at == lesson.starts_at):
+                previous.ends_at = lesson.ends_at
+                continue
+        merged.append(lesson)
+    return merged
+
 from klasse5e.chat.models import ChatReadState, ChatRetentionCategory, ChatRoom
 from klasse5e.content.models import Post, ProtectedDocument, TeacherProfile
 from klasse5e.events.models import (
@@ -210,9 +224,9 @@ def dashboard(request):
     webuntis_last_sync = webuntis_connections.order_by("-last_successful_sync_at").values_list(
         "last_successful_sync_at", flat=True
     ).first()
-    personal_lessons = WebUntisLesson.objects.filter(
+    personal_lessons = _merge_adjacent_lessons(list(WebUntisLesson.objects.filter(
         connection__in=webuntis_connections, starts_at__date=day
-    ).order_by("starts_at")
+    ).order_by("starts_at")))
     manual_lessons = TimetableEntry.objects.filter(
         school_class=school_class, weekday=day.isoweekday()
     )
