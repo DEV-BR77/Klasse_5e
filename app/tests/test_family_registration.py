@@ -132,6 +132,7 @@ def test_activation_links_existing_father_without_duplicate_account(
         serial_number=1,
         school_class=school_class,
         created_by=admin_user,
+        max_uses=2,
     )
     access_code.existing_guardian = father
     access_code.existing_guardian_relationship_type = RelationshipType.FATHER
@@ -193,6 +194,8 @@ def test_activation_links_existing_father_without_duplicate_account(
     assert relationship.status == RelationshipStatus.VERIFIED
     assert relationship.is_legal_guardian
     assert Invitation.objects.filter(email="father@example.test").count() == 0
+    access_code.refresh_from_db()
+    assert access_code.existing_guardian is None
     child_user = UserAccount.objects.get(email="kim@example.test")
     assert child.user == child_user
     assert child_user.check_password("Child-Safe-Password-123!")

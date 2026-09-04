@@ -350,6 +350,12 @@ def activate(token):
         family.status = "completed"
         family.completed_at = timezone.now()
         family.save(update_fields=["household", "status", "completed_at"])
+        if family.access_code.max_uses > 1 and existing_guardian:
+            family.access_code.existing_guardian = None
+            family.access_code.existing_guardian_relationship_type = ""
+            family.access_code.save(
+                update_fields=["existing_guardian", "existing_guardian_relationship_type"]
+            )
         if family.access_code.use_count >= family.access_code.max_uses:
             family.access_code.completed_at = timezone.now()
             family.access_code.save(update_fields=["completed_at"])
