@@ -17,7 +17,7 @@
   <div class="dashboard-modern-grid">
     <article class="feature-card schedule-card">
       <header class="card-header"><div><p class="eyebrow">Heute</p><h2>Stundenplan</h2></div><span class="soft-badge">{{ lessons|length }} Einträge</span></header>
-      <ol class="timeline-list">{% for lesson in lessons %}<li><time>{{ lesson.starts_at|date:"H:i" }}</time><div><strong>{{ lesson.subject|default:"Unterricht" }}</strong><small>{% if lesson.room %}Raum {{ lesson.room }}{% endif %}{% if lesson.teacher_label %} · {{ lesson.teacher_label }}{% endif %}</small></div></li>{% empty %}<li class="empty-compact">Heute ist kein Unterricht eingetragen.</li>{% endfor %}</ol>
+      <ol class="timeline-list">{% for lesson in lessons %}<li><time>{{ lesson.starts_at|date:"H:i" }}</time><div><strong>{{ lesson.subject|default:"Unterricht" }}</strong>{% if lesson.room or lesson.teacher_label %}<small class="lesson-meta">{% if lesson.room %}Raum {{ lesson.room }}{% endif %}{% if lesson.teacher_label %} · {{ lesson.teacher_label }}{% endif %}</small>{% endif %}</div></li>{% empty %}<li class="empty-compact">Heute ist kein Unterricht eingetragen.</li>{% endfor %}</ol>
     </article>
 
     <article id="homework" class="feature-card">

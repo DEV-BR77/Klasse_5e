@@ -45,7 +45,7 @@
   {% endif %}
 
   <main id="main-content" class="main-content" tabindex="-1">
-    {% if messages %}<div class="toast-stack" aria-live="polite">{% for message in messages %}<p class="status-banner">{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% if messages %}<div class="toast-stack" aria-live="polite">{% for message in messages %}{% if 'success' not in message.tags %}<p class="status-banner">{{ message }}</p>{% endif %}{% endfor %}</div>{% endif %}
     {% block content %}{% endblock %}
   </main>
   {% include "includes/site_footer.html" %}
