@@ -120,8 +120,8 @@ ACCOUNT_SIGNUP_ENABLED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_ADAPTER = "klasse5e.core.adapters.ClosedAccountAdapter"
 ACCOUNT_SESSION_REMEMBER = False
-MFA_SUPPORTED_TYPES = ["totp", "webauthn", "recovery_codes"]
-MFA_PASSKEY_LOGIN_ENABLED = True
+MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
+MFA_PASSKEY_LOGIN_ENABLED = False
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 

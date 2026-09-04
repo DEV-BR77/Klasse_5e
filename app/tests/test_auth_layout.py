@@ -17,6 +17,8 @@ def test_login_uses_branded_invitation_layout(client):
     assert "Projekt kennenlernen" in content
     assert "Demo ansehen" not in content
     assert "Mehr erfahren" not in content
+    assert "Passkey" not in content
+    assert "Sicherheitsschlüssel" not in content
     assert "Willkommen zurück" not in content
     assert "Melde dich mit deinem bestätigten KlassID-Konto an" not in content
     assert "/accounts/signup/" not in content

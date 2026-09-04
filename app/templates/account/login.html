@@ -20,18 +20,9 @@
 
     <p class="auth-forgot"><a href="{% url 'account_reset_password' %}">Passwort vergessen?</a></p>
 
-    {% if PASSKEY_LOGIN_ENABLED %}
-        <div class="auth-divider"><span>oder</span></div>
-        {% element button type="submit" form="mfa_login" id="passkey_login" tags="prominent,login,outline,primary" %}
-            Mit einem Passkey anmelden
-        {% endelement %}
-    {% endif %}
     <p class="auth-intro auth-invitation">Du hast einen Einladungscode erhalten? <a href="{% url 'invitation-entry' %}">Code eingeben</a></p>
 {% endblock content %}
 
 {% block extra_body %}
     {{ block.super }}
-    {% if PASSKEY_LOGIN_ENABLED %}
-        {% include "mfa/webauthn/snippets/login_script.html" with button_id="passkey_login" %}
-    {% endif %}
 {% endblock extra_body %}
