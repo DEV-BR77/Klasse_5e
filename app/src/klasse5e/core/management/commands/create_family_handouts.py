@@ -88,9 +88,19 @@ class Command(BaseCommand):
             pdf.setFont("Courier-Bold", 8)
             pdf.drawCentredString(width / 2, qr_y - 56, token)
 
-            icon_path = Path(settings.BASE_DIR) / "static" / "branding" / "flyer-icons.png"
-            if icon_path.is_file():
-                pdf.drawImage(ImageReader(str(icon_path)), 26, 82, width - 52, 78, mask="auto", preserveAspectRatio=True)
+            icon_dir = Path(settings.BASE_DIR) / "static" / "branding" / "icons" / "processed"
+            icon_layout = (
+                ("01-fahrradroute.png", 24, 382, 55, 55, -8), ("02-kalender.png", 342, 382, 50, 50, 7),
+                ("03-mensa.png", 20, 300, 52, 52, -5), ("04-buch-hausaufgaben.png", 350, 300, 52, 52, 6),
+                ("05-chat.png", 22, 205, 52, 52, -7), ("06-fotogalerie.png", 350, 205, 52, 52, 8),
+                ("07-checkliste.png", 24, 104, 52, 52, -5), ("08-ical.png", 342, 104, 52, 52, 6),
+                ("09-push-benachrichtigung.png", 76, 70, 48, 48, -7), ("10-organisation.png", 184, 72, 52, 52, 0),
+                ("11-kinder-datenschutz.png", 292, 70, 52, 52, 7),
+            )
+            for filename, x, y, w, h, angle in icon_layout:
+                icon_path = icon_dir / filename
+                if icon_path.is_file():
+                    pdf.drawImage(ImageReader(str(icon_path)), x, y, w, h, mask="auto")
             pdf.setFillColor(navy)
             pdf.setFont("Helvetica-Bold", 8.5)
             pdf.drawString(30, 68, "DSGVO-konform  ·  klare Rollen  ·  kinderfreundliche Filter")
