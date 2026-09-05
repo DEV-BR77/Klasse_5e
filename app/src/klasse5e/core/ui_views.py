@@ -137,6 +137,121 @@ TEMPLATE_PREVIEW_CATALOG = (
 )
 
 
+# These are the color and layout tokens derived from the six local design studies
+# above.  They deliberately stay inactive until an administrator releases them.
+TEMPLATE_THEME_DEFAULTS = {
+    "velora-ui": {
+        "name": "Velora UI",
+        "description": "Weiche Farbflächen, große Rundungen und ruhige Verläufe",
+        "audience": PortalTheme.Audience.ADULTS,
+        "primary": "#6D4AFF",
+        "primary_dark": "#4F2EE8",
+        "primary_light": "#EEEAFF",
+        "accent": "#EC6FB3",
+        "background": "#F3F1FF",
+        "surface": "#FFFFFF",
+        "text": "#251F46",
+        "text_muted": "#736D91",
+        "radius": "1.35rem",
+        "shadow_strength": 18,
+    },
+    "hyperui": {
+        "name": "HyperUI",
+        "description": "Klar, kompakt und kontrastreich mit grünen Akzenten",
+        "audience": PortalTheme.Audience.ADULTS,
+        "primary": "#087F5B",
+        "primary_dark": "#065F46",
+        "primary_light": "#EEF7F2",
+        "accent": "#12A779",
+        "background": "#F8FAF9",
+        "surface": "#FFFFFF",
+        "text": "#101814",
+        "text_muted": "#58655F",
+        "radius": ".7rem",
+        "shadow_strength": 5,
+    },
+    "flowbite": {
+        "name": "Flowbite",
+        "description": "Vertraute App-Optik mit Blau, Karten und deutlichen Zuständen",
+        "audience": PortalTheme.Audience.ADULTS,
+        "primary": "#2563EB",
+        "primary_dark": "#1D4ED8",
+        "primary_light": "#EFF6FF",
+        "accent": "#06B6D4",
+        "background": "#F9FAFB",
+        "surface": "#FFFFFF",
+        "text": "#111827",
+        "text_muted": "#6B7280",
+        "radius": "1rem",
+        "shadow_strength": 3,
+    },
+    "preline-ui": {
+        "name": "Preline UI",
+        "description": "Warme Flächen, feine Linien und ein freundlicher Editorial-Stil",
+        "audience": PortalTheme.Audience.ADULTS,
+        "primary": "#7C3AED",
+        "primary_dark": "#6D28D9",
+        "primary_light": "#FFF1E7",
+        "accent": "#F97316",
+        "background": "#FFFAF5",
+        "surface": "#FFFFFF",
+        "text": "#30231E",
+        "text_muted": "#816F65",
+        "radius": "1rem",
+        "shadow_strength": 12,
+    },
+    "astrowind": {
+        "name": "AstroWind",
+        "description": "Luftige Typografie mit leuchtendem Verlauf und viel Weißraum",
+        "audience": PortalTheme.Audience.ADULTS,
+        "primary": "#0284C7",
+        "primary_dark": "#0369A1",
+        "primary_light": "#E9F7FF",
+        "accent": "#7C3AED",
+        "background": "#F5F9FF",
+        "surface": "#FFFFFF",
+        "text": "#0F172A",
+        "text_muted": "#64748B",
+        "radius": "1.35rem",
+        "shadow_strength": 18,
+    },
+    "cruip-open-react": {
+        "name": "Cruip Open React",
+        "description": "Dunkle Oberfläche mit leuchtenden Violett- und Cyan-Akzenten",
+        "audience": PortalTheme.Audience.ADULTS,
+        "is_dark": True,
+        "primary": "#6D28D9",
+        "primary_dark": "#4F46E5",
+        "primary_light": "#22263A",
+        "accent": "#22D3EE",
+        "background": "#0B0D17",
+        "surface": "#151824",
+        "text": "#F5F7FF",
+        "text_muted": "#A3ACC2",
+        "radius": "1rem",
+        "shadow_strength": 20,
+    },
+}
+
+
+def _template_theme_key(template_key):
+    return f"template-{template_key}"
+
+
+def _template_catalog_with_release_state():
+    themes = PortalTheme.objects.filter(
+        key__in=[_template_theme_key(item["key"]) for item in TEMPLATE_PREVIEW_CATALOG]
+    )
+    themes_by_key = {theme.key: theme for theme in themes}
+    return tuple(
+        {
+            **item,
+            "released_theme": themes_by_key.get(_template_theme_key(item["key"])),
+        }
+        for item in TEMPLATE_PREVIEW_CATALOG
+    )
+
+
 def _merge_adjacent_lessons(lessons):
     merged = []
     for lesson in lessons:
@@ -1318,6 +1433,30 @@ def theme_management(request):
                 request, f"„{item.name}“ wurde {'aktiviert' if item.is_active else 'deaktiviert'}."
             )
             return redirect("theme-management")
+        if action == "release_template":
+            template_key = request.POST.get("template_key", "")
+            defaults = TEMPLATE_THEME_DEFAULTS.get(template_key)
+            if defaults is None:
+                raise Http404
+            theme, _created = PortalTheme.objects.get_or_create(
+                key=_template_theme_key(template_key),
+                defaults={**defaults, "is_active": True},
+            )
+            if not theme.is_active:
+                theme.is_active = True
+                theme.save(update_fields=["is_active", "updated_at"])
+            messages.success(
+                request,
+                f"„{theme.name}“ ist freigegeben und kann jetzt als persönliches Theme ausgewählt werden.",
+            )
+            return redirect("theme-management")
+        if action == "withdraw_template":
+            template_key = request.POST.get("template_key", "")
+            theme = get_object_or_404(PortalTheme, key=_template_theme_key(template_key))
+            theme.is_active = False
+            theme.save(update_fields=["is_active", "updated_at"])
+            messages.success(request, f"Die Freigabe für „{theme.name}“ wurde zurückgenommen.")
+            return redirect("theme-management")
         import re
 
         colors = {
@@ -1359,16 +1498,20 @@ def theme_management(request):
                 if request.POST.get("radius") in {".7rem", "1rem", "1.35rem", "1.7rem"}
                 else "1rem",
                 shadow_strength=shadow_strength,
+                is_active=False,
                 **colors,
             )
-            messages.success(request, "Das neue Theme ist sofort zur Auswahl verfügbar.")
+            messages.success(
+                request,
+                "Das neue Theme wurde angelegt. Gib es in der Liste erst frei, wenn du es geprüft hast.",
+            )
             return redirect("theme-management")
     context = _shared(request, "Themes verwalten", "management")
     context.update(
         {
             "themes": PortalTheme.objects.all(),
             "audiences": PortalTheme.Audience.choices,
-            "template_catalog": TEMPLATE_PREVIEW_CATALOG,
+            "template_catalog": _template_catalog_with_release_state(),
         }
     )
     return render(request, "ui/theme_management.html", context)

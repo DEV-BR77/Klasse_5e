@@ -107,6 +107,29 @@ def test_theme_settings_links_administrators_to_the_css_template_catalog(
 
 
 @pytest.mark.django_db
+def test_administrator_can_release_a_preview_template_as_a_portal_theme(
+    client, admin_user, guardian
+):
+    client.force_login(admin_user)
+
+    response = client.post(
+        "/verwaltung/themes/",
+        {"action": "release_template", "template_key": "velora-ui"},
+        secure=True,
+    )
+
+    assert response.status_code == 302
+    released = PortalTheme.objects.get(key="template-velora-ui")
+    assert released.is_active is True
+    assert released.name == "Velora UI"
+
+    client.force_login(guardian)
+    personal_themes = client.get("/einstellungen/design/", secure=True)
+
+    assert b"Velora UI" in personal_themes.content
+
+
+@pytest.mark.django_db
 def test_unknown_preview_page_or_template_returns_404(client, admin_user):
     client.force_login(admin_user)
 

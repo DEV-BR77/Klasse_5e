@@ -1,16 +1,18 @@
 {% extends "base.html" %}
 {% load static %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'theme-previews.css' %}?v=1">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'theme-previews.css' %}?v=2">{% endblock %}
 {% block content %}
 <section class="catalog-preview-page">
   <header class="catalog-preview-heading">
     <div>
-      <a class="catalog-preview-back" href="{{ preview_back_url }}">← {{ preview_back_label }}</a>
       <p class="eyebrow">Lokale Portalvorschau</p>
       <h1>{{ preview_name }}</h1>
       <p>{{ preview_description }}{% if preview_description %}.{% endif %} Die gezeigten Inhalte sind vollständig fiktiv.</p>
     </div>
-    {% if catalog_item %}<a class="button button-secondary" href="{{ catalog_item.repo }}" target="_blank" rel="noreferrer">Repository öffnen ↗</a>{% endif %}
+    <div class="catalog-preview-actions">
+      <a class="button button-secondary" href="{{ preview_back_url }}">← {{ preview_back_label }}</a>
+      {% if catalog_item %}<a class="button button-secondary" href="{{ catalog_item.repo }}" target="_blank" rel="noreferrer">Repository öffnen ↗</a>{% endif %}
+    </div>
   </header>
 
   <nav class="catalog-preview-switcher" aria-label="Vorschauseite auswählen">

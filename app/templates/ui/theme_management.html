@@ -24,7 +24,7 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="toggle">
             <input type="hidden" name="theme_id" value="{{ theme.id }}">
-            <button class="button button-secondary">{% if theme.is_active %}Deaktivieren{% else %}Aktivieren{% endif %}</button>
+            <button class="button button-secondary">{% if theme.is_active %}Freigabe zurücknehmen{% else %}Freigeben{% endif %}</button>
           </form>
         </div>
       </article>
@@ -48,9 +48,15 @@
             <p>{{ item.style_note }}</p>
             <small>{{ item.stack }}</small>
           </div>
-          <span class="license-chip">{{ item.license }}</span>
+          <span class="license-chip">{% if item.released_theme and item.released_theme.is_active %}Freigegeben{% else %}{{ item.license }}{% endif %}</span>
           <div class="template-review-actions">
             <a class="button button-primary" href="{% url 'template-preview' template_key=item.key page='uebersicht' %}">Vorschau</a>
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="{% if item.released_theme and item.released_theme.is_active %}withdraw_template{% else %}release_template{% endif %}">
+              <input type="hidden" name="template_key" value="{{ item.key }}">
+              <button class="button button-secondary" type="submit">{% if item.released_theme and item.released_theme.is_active %}Freigabe zurücknehmen{% else %}Freigeben{% endif %}</button>
+            </form>
             <a class="button button-secondary" href="{{ item.repo }}" target="_blank" rel="noreferrer">Repository öffnen ↗</a>
           </div>
         </article>
@@ -85,7 +91,7 @@
         <label>Schatten<input type="range" min="0" max="30" name="shadow_strength" value="10"></label>
       </div>
       <label class="compact-consent"><input type="checkbox" name="is_dark"><span>Dunkles Theme</span></label>
-      <button class="button button-primary">Theme veröffentlichen</button>
+      <button class="button button-primary">Theme anlegen</button>
     </form>
   </dialog>
 </section>
