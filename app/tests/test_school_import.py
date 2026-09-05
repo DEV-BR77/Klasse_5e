@@ -58,6 +58,17 @@ def test_import_can_be_restricted_to_region(tmp_path: Path):
     assert set(School.objects.values_list("city", flat=True)) == {"Wolfsburg", "Gifhorn"}
 
 
+@pytest.mark.django_db
+def test_import_reuses_seeded_school_without_source_id(tmp_path: Path):
+    path = tmp_path / "schools.csv"
+    path.write_bytes(csv_bytes().replace(b'1,MÃ¼ller-Schule', b'NI-1,MÃ¼ller-Schule'))
+    School.objects.create(name="Müller-Schule", postal_code="01234", city="Köln")
+    _, stats = import_schools(path, batch_size=10)
+    assert stats.created == 0
+    assert School.objects.filter(name="Müller-Schule").count() == 1
+    assert School.objects.get(name="Müller-Schule").source_id == "NI-1"
+
+
 def test_hostname_rules():
     assert propose_class_hostname("5.1", "THG") == "5-1-thg.klassid.de"
     assert validate_class_hostname("5e.klassid.de", reserved_exception=True)

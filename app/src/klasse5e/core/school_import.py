@@ -174,6 +174,24 @@ def _write_batch(rows, stats, dry_run):
         return
     with transaction.atomic():
         for source_id, defaults in rows:
-            _, created = School.objects.update_or_create(source_id=source_id, defaults=defaults)
+            school = School.objects.filter(source_id=source_id).first()
+            if school is None:
+                # Reuse an existing manually maintained school when the source
+                # feed later supplies its stable identifier. This prevents a
+                # second THG/HNG record after an initial local seed.
+                school = School.objects.filter(
+                    source_id__isnull=True,
+                    name=defaults["name"],
+                    postal_code=defaults["postal_code"],
+                    city=defaults["city"],
+                ).first()
+            created = school is None
+            if created:
+                school = School(source_id=source_id, **defaults)
+            else:
+                school.source_id = source_id
+                for field, value in defaults.items():
+                    setattr(school, field, value)
+            school.save()
             stats.created += int(created)
             stats.updated += int(not created)
