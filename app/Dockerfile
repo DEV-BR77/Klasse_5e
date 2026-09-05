@@ -10,6 +10,7 @@ RUN sed -i 's/\r$//' /srv/app/docker/entrypoint.sh \
     && python -m playwright install --with-deps chromium \
     && chmod 0555 /srv/app/docker/entrypoint.sh \
     && mkdir -p /srv/app/staticfiles /data/media /tmp/app \
+    && DJANGO_DEBUG=0 python manage.py tailwind build \
     && DJANGO_DEBUG=0 python manage.py collectstatic --noinput --verbosity 0 \
     && chown -R 10001:10001 /srv/app/staticfiles /data/media /tmp/app
 USER 10001:10001

@@ -232,9 +232,10 @@ def test_push_subscribe_and_idempotent_unsubscribe(client, guardian):
     )
 
 
+@pytest.mark.django_db
 def test_pwa_service_worker_caches_only_public_shell(client):
     script = client.get("/service-worker.js").content.decode()
-    assert "/offline/" in script and "/static/app.css" in script
+    assert "/offline/" in script and "/static/css/dist/styles.css" in script
     assert "dashboard" not in script and "profile" not in script
 
 

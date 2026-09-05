@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.mfa",
+    "tailwind",
+    "theme",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -134,6 +136,9 @@ USE_I18N = True
 USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# App-local static folders (core/static and theme/static) are discovered by
+# Django's AppDirectoriesFinder. Listing them here as well duplicates every
+# Open-Peeps asset and the generated Tailwind file during collectstatic.
 STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "runtime-media"))
 MEDIA_URL = None
@@ -210,3 +215,5 @@ MOBILITY_DATA_ENCRYPTION_KEY = os.environ.get(
     "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=" if DEBUG else "",
 )
 DATA_UPLOAD_MAX_MEMORY_SIZE = max(DATA_UPLOAD_MAX_MEMORY_SIZE, 100 * 1024 * 1024)
+# django-tailwind compiles the single browser-facing stylesheet from theme/.
+TAILWIND_APP_NAME = "theme"

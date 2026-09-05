@@ -1,4 +1,5 @@
 {% load static %}
+{% load avatar_tags %}
 <!doctype html>
 <html lang="de"{% if current_theme %} data-theme="{{ current_theme.key }}" data-theme-mode="{% if current_theme.is_dark %}dark{% else %}light{% endif %}" style="{{ current_theme.css_variables }}"{% endif %}>
 <head>
@@ -6,41 +7,72 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#5558a6">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="{% static 'app.css' %}?v=8">
-  <link rel="stylesheet" href="{% static 'enhancements.css' %}?v=4">
-  <link rel="stylesheet" href="{% static 'mentions.css' %}?v=1">
-  <link rel="stylesheet" href="{% static 'onboarding.css' %}">
-  <link rel="stylesheet" href="{% static 'onboarding-v2.css' %}">
-  <link rel="stylesheet" href="{% static 'itslearning.css' %}">
   <link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}?v=tailwind-v1">
   {% block extra_head %}{% endblock %}
   <title>{{ page_title|default:"Home" }} · KlassID</title>
 </head>
 <body>
+
 <a class="skip-link" href="#main-content">Zum Inhalt springen</a>
-<div class="app-shell{% if not request.user.is_authenticated %} app-shell-public{% endif %}">
-  <header class="topbar">
+<div class="tailwind-shell{% if not request.user.is_authenticated %} app-shell-public{% endif %}">
+  <header class="app-topbar">
     {% if request.user.is_authenticated %}
-    {% if active_section != "start" and request.path != "/mehr/" %}<a class="topbar-back" href="{% url 'ui-more' %}">← <span>Zum Menü</span></a>{% endif %}
-    <div class="topbar-actions">
-      <a class="icon-link {% if notification_unread_count %}has-unread{% endif %}" href="/benachrichtigungen/" aria-label="Benachrichtigungen öffnen, {{ notification_unread_count }} ungelesen">
-        {% include "ui/_icon.html" with name="bell" %}{% if notification_unread_count %}<span class="notification-badge">{{ notification_unread_count }}</span>{% endif %}
+    <div class="app-topbar__leading">
+      {% if active_section != "start" and request.path != "/mehr/" %}
+        <a class="app-topbar__back" href="{% url 'ui-more' %}">← <span>Zum Menü</span></a>
+      {% endif %}
+    </div>
+    <div class="app-topbar__actions">
+      <a class="app-icon-button" href="/benachrichtigungen/" aria-label="Benachrichtigungen öffnen, {{ notification_unread_count }} ungelesen">
+        {% include "ui/_icon.html" with name="bell" %}
+        {% if notification_unread_count %}
+          <span class="app-notification-badge" aria-hidden="true">{{ notification_unread_count }}</span>
+        {% endif %}
       </a>
-      <details class="profile-menu"><summary class="profile-link" aria-label="Profilmenü öffnen"><span class="avatar" aria-hidden="true">{{ personal_display_name|first|default:"K" }}</span><span class="desktop-only">{{ personal_display_name|default:request.user.email }}</span></summary><nav aria-label="Profilmenü"><a href="/einstellungen/profil/">Mein Profil</a><a href="/accounts/logout/">Abmelden</a></nav></details>
+      <details class="app-profile-menu">
+        <summary aria-label="Profilmenü öffnen">
+          <span class="app-avatar" aria-hidden="true">{% local_peeps_avatar personal_display_name %}</span>
+          <span class="app-profile-menu__name">{{ personal_display_name|default:request.user.email }}</span>
+        </summary>
+        <nav class="app-profile-menu__panel" aria-label="Profilmenü">
+          <a href="/einstellungen/profil/">Mein Profil</a>
+          <a href="/accounts/logout/">Abmelden</a>
+        </nav>
+      </details>
     </div>
     {% endif %}
   </header>
-
   {% if request.user.is_authenticated %}
-  <nav class="primary-nav" aria-label="Hauptnavigation">
-    <a href="/" {% if active_section == "start" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="home" %}<span>Home</span></a>
-    {% if enabled_modules.calendar %}<a href="/kalender/" {% if active_section == "calendar" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="calendar" %}<span>Kalender</span></a>{% endif %}
-    {% if enabled_modules.chat %}<a href="/chat/" {% if active_section == "chat" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="chat" %}<span>Chat</span></a>{% endif %}
-    {% if enabled_modules.mobility %}<a href="/mehr/mobilitaet/" {% if active_section == "mobility" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="people" %}<span>Mobilität</span></a>{% endif %}
-    <a href="/mehr/" {% if active_section == "more" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="more" %}<span>Menü</span></a>
+  <nav class="app-bottom-nav" aria-label="Hauptnavigation">
+    <a href="/" class="app-bottom-nav__item" {% if active_section == "start" %}aria-current="page"{% endif %}>
+      {% include "ui/_icon.html" with name="home" %}
+      <span class="app-bottom-nav__label">Home</span>
+    </a>
+    {% if enabled_modules.calendar %}
+    <a href="/kalender/" class="app-bottom-nav__item" {% if active_section == "calendar" %}aria-current="page"{% endif %}>
+      {% include "ui/_icon.html" with name="calendar" %}
+      <span class="app-bottom-nav__label">Kalender</span>
+    </a>
+    {% endif %}
+    {% if enabled_modules.chat %}
+    <a href="/chat/" class="app-bottom-nav__item" {% if active_section == "chat" %}aria-current="page"{% endif %}>
+      {% include "ui/_icon.html" with name="chat" %}
+      <span class="app-bottom-nav__label">Chat</span>
+    </a>
+    {% endif %}
+    {% if enabled_modules.mobility %}
+    <a href="/mehr/mobilitaet/" class="app-bottom-nav__item" {% if active_section == "mobility" %}aria-current="page"{% endif %}>
+      {% include "ui/_icon.html" with name="people" %}
+      <span class="app-bottom-nav__label">Mobilität</span>
+    </a>
+    {% endif %}
+    <a href="/mehr/" class="app-bottom-nav__item" {% if active_section == "more" %}aria-current="page"{% endif %}>
+      {% include "ui/_icon.html" with name="more" %}
+      <span class="app-bottom-nav__label">Menü</span>
+    </a>
   </nav>
   {% endif %}
-
   <main id="main-content" class="main-content" tabindex="-1">
     {% if messages %}<div class="toast-stack" aria-live="polite">{% for message in messages %}{% if 'success' not in message.tags %}<p class="status-banner">{{ message }}</p>{% endif %}{% endfor %}</div>{% endif %}
     {% block content %}{% endblock %}

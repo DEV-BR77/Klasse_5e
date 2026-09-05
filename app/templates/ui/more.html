@@ -1,1 +1,68 @@
-{% extends "base.html" %}{% block content %}<section class="more-page"><header class="page-heading"><div><p class="eyebrow">Alle Bereiche</p><h1>Menü</h1><p class="lede">Öffne nur die Gruppe, die du gerade brauchst.</p></div>{% if can_manage_portal %}<a class="button button-secondary" href="{% url 'menu-management' %}">Menü anpassen</a>{% endif %}</header><div class="menu-accordion">{% for group in menu_groups %}<details {% if forloop.first %}open{% endif %}><summary>{{ group.label }} <span>{{ group.items|length }}</span></summary><nav class="settings-grid">{% for item in group.items %}<a class="content-card" href="{{ item.url }}"><span class="settings-icon">{% include "ui/_icon.html" with name=item.icon %}</span><div><h3>{{ item.label }}</h3></div><span class="card-arrow">›</span></a>{% endfor %}</nav></details>{% endfor %}</div><div class="menu-secondary"><button class="button button-quiet" type="button" data-dialog-open="pilot-report">Feedback senden</button>{% if can_manage_portal %}<a class="button button-quiet" href="{% url 'portal-management' %}">Portal verwalten</a>{% endif %}</div></section>{% endblock %}
+{% extends "base.html" %}
+
+{% block content %}
+<section class="mx-auto w-full max-w-4xl px-4 py-6 pb-28 sm:px-6">
+  <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div>
+      <p class="mb-1 text-xs font-bold uppercase tracking-wider text-app-primary">Alle Bereiche</p>
+      <h1 class="text-2xl font-extrabold tracking-tight text-app-main md:text-3xl">Menü</h1>
+    </div>
+    {% if can_manage_portal %}
+      <a class="inline-flex items-center justify-center rounded-xl border border-app-border bg-app-surface px-4 py-2 text-sm font-semibold text-app-main shadow-sm transition-all hover:bg-app-primary-soft hover:text-app-primary-dark active:scale-[0.99]" href="{% url 'menu-management' %}">
+        Menü anpassen
+      </a>
+    {% endif %}
+  </header>
+
+  <div class="space-y-4">
+    {% for group in menu_groups %}
+      <details {% if forloop.first %}open{% endif %} class="group overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-sm transition-all duration-200 open:shadow-md">
+        <summary class="flex cursor-pointer list-none items-center justify-between p-4 font-bold text-app-main transition-colors select-none hover:bg-app-primary-soft [&::-webkit-details-marker]:hidden">
+          <div class="flex items-center gap-2.5">
+            <span class="text-base tracking-tight">{{ group.label }}</span>
+            <span class="inline-flex items-center justify-center rounded-full border border-app-border bg-app-primary-soft px-2 py-0.5 text-xs font-semibold text-app-primary-dark">
+              {{ group.items|length }}
+            </span>
+          </div>
+          <svg class="size-4 text-app-muted transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </summary>
+
+        <div class="border-t border-app-border bg-app-background p-4 pt-0">
+          <nav class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+            {% for item in group.items %}
+              <a class="group/card relative flex items-center justify-between overflow-hidden rounded-xl border border-app-border bg-app-surface p-4 shadow-xs transition-all hover:border-app-primary hover:shadow-sm active:scale-[0.99]" href="{{ item.url }}">
+                <div class="flex items-center gap-3.5">
+                  <span class="inline-flex size-10 items-center justify-center rounded-lg bg-app-primary-soft text-app-primary transition-colors group-hover/card:bg-app-primary group-hover/card:text-app-on-primary">
+                    {% include "ui/_icon.html" with name=item.icon %}
+                  </span>
+                  <div>
+                    <h3 class="text-sm font-semibold tracking-tight text-app-main transition-colors group-hover/card:text-app-primary">
+                      {{ item.label }}
+                    </h3>
+                  </div>
+                </div>
+                <span class="text-xl font-light text-app-muted transition-transform select-none group-hover/card:translate-x-0.5">›</span>
+              </a>
+            {% endfor %}
+          </nav>
+        </div>
+
+      </details>
+    {% endfor %}
+  </div>
+
+  <div class="mt-12 flex flex-wrap items-center justify-center gap-2 border-t border-app-border pt-6">
+    <button class="rounded-xl px-4 py-2 text-xs font-semibold text-app-muted transition-colors hover:bg-app-primary-soft hover:text-app-primary-dark" type="button" data-dialog-open="pilot-report">
+      Feedback senden
+    </button>
+    {% if can_manage_portal %}
+      <a class="rounded-xl px-4 py-2 text-xs font-semibold text-app-muted transition-colors hover:bg-app-primary-soft hover:text-app-primary-dark" href="{% url 'portal-management' %}">
+        Portal verwalten
+      </a>
+    {% endif %}
+  </div>
+
+</section>
+{% endblock %}

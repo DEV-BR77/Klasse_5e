@@ -8,7 +8,8 @@ def test_login_uses_branded_invitation_layout(client):
 
     assert response.status_code == 200
     assert 'class="auth-page"' in content
-    assert "/static/auth." in content and ".css" in content
+    assert "/static/css/dist/styles.css" in content
+    assert "/static/auth.css" not in content
     assert "Termine und Stundenplan im Blick" in content
     assert "Speiseplan und Mitbringlisten gemeinsam planen" in content
     assert "Du hast einen Einladungscode erhalten?" in content

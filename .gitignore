@@ -38,6 +38,7 @@ secrets*
 # Runtime data and logs
 data/
 /media/
+/app/staticfiles/
 app/.test-media/
 **/.test-media/
 uploads/
