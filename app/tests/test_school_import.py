@@ -45,6 +45,13 @@ def test_import_is_idempotent_preserves_zero_zip_and_updates(tmp_path: Path):
 
 
 @pytest.mark.django_db
+def test_school_string_representation_uses_the_full_official_name():
+    school = School.objects.create(name="Theodor-Heuss-Gymnasium Wolfsburg", short_name="THG")
+
+    assert str(school) == "Theodor-Heuss-Gymnasium Wolfsburg"
+
+
+@pytest.mark.django_db
 def test_import_can_be_restricted_to_region(tmp_path: Path):
     path = tmp_path / "schools.csv"
     rows = (
@@ -61,7 +68,9 @@ def test_import_can_be_restricted_to_region(tmp_path: Path):
 @pytest.mark.django_db
 def test_import_reuses_seeded_school_without_source_id(tmp_path: Path):
     path = tmp_path / "schools.csv"
-    path.write_bytes(csv_bytes().replace(b'1,MÃ¼ller-Schule', b'NI-1,MÃ¼ller-Schule'))
+    path.write_bytes(
+        csv_bytes().replace("1,Müller-Schule".encode(), "NI-1,Müller-Schule".encode())
+    )
     School.objects.create(name="Müller-Schule", postal_code="01234", city="Köln")
     _, stats = import_schools(path, batch_size=10)
     assert stats.created == 0

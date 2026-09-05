@@ -205,7 +205,10 @@ class School(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.short_name or self.name
+        # A school choice must always be unambiguous. Abbreviations such as
+        # “THG” remain available for compact labels, but must not replace the
+        # official school name in admin forms or assignment lists.
+        return self.name
 
 
 class RegistrationApplication(models.Model):
