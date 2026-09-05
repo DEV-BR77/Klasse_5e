@@ -59,6 +59,13 @@ def available_child_contexts(user):
         .select_related("student_person")
         .order_by("student_person__first_name", "student_person__last_name")
     )
+    # A child can be linked through more than one verified relationship record
+    # (for example after an import retry).  The portal must still show one child
+    # only; the relationship itself remains auditable in the data model.
+    unique_relationships = {}
+    for relationship in relationships:
+        unique_relationships.setdefault(relationship.student_person_id, relationship)
+    relationships = list(unique_relationships.values())
     memberships = (
         ClassMembership.objects.filter(
             person_id__in=[item.student_person_id for item in relationships],

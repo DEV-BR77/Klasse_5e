@@ -106,6 +106,11 @@
   }));
   document.querySelectorAll("[data-dialog-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog")?.close()));
   document.querySelectorAll("dialog").forEach((dialog) => dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); }));
+  document.addEventListener("click", (event) => {
+    document.querySelectorAll("details[open]").forEach((details) => {
+      if (!details.contains(event.target)) details.removeAttribute("open");
+    });
+  });
 
   const applyHomeworkState = (homeworkId, completed) => {
     document.querySelectorAll(`[data-homework-id="${homeworkId}"]`).forEach((toggle) => {

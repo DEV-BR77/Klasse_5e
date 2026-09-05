@@ -1,41 +1,35 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="event-page">
-  <a class="icon-button back-link" href="{% url 'ui-events' %}" aria-label="Zurück zu den Veranstaltungen" title="Zurück zu den Veranstaltungen">←</a>
-  <header class="event-hero">
-    <div>
-      <p class="eyebrow">Veranstaltung</p>
-      <h1>{{ event.title }}</h1>
-      <p>{{ event.starts_at|date:"D, d.m.Y · H:i" }}–{{ event.ends_at|date:"H:i" }} Uhr{% if not event.meeting_url and event.location %} · {{ event.location }}{% endif %}</p>
-    </div>
-  </header>
-
+  <a class="icon-button back-link" href="{% url 'ui-events' %}" aria-label="Zurück">←</a>
+  <header class="event-hero"><div><p class="eyebrow">Veranstaltung</p><h1>{{ event.title }}</h1><p>{{ event.starts_at|date:"D, d.m.Y · H:i" }}–{{ event.ends_at|date:"H:i" }} Uhr{% if not event.meeting_url and event.location %} · {{ event.location }}{% endif %}</p></div></header>
   {% if status %}<p class="status-banner">{% if status == 'reserved' %}Dein Beitrag wurde eingetragen.{% elif status == 'cancelled' %}Deine Zusage wurde zurückgenommen.{% elif status == 'conflict' %}Die gewünschte Menge ist nicht mehr verfügbar.{% else %}Bitte prüfe deine Eingabe.{% endif %}</p>{% endif %}
-
-  {% if event.meeting_url %}
-    <section class="event-meeting-card" aria-labelledby="meeting-heading">
-      <div><p class="eyebrow">Online-Termin</p><h2 id="meeting-heading">Teams-Meeting</h2><p>Öffne den aktuellen Link direkt zum vereinbarten Termin.</p></div>
-      <a class="button button-primary" href="{{ event.meeting_url }}" target="_blank" rel="noreferrer">Am Teams-Meeting teilnehmen ↗</a>
-    </section>
-  {% endif %}
-
+  {% if event.meeting_url %}<section class="event-meeting-card"><div><p class="eyebrow">Online-Termin</p><h2>Teams-Meeting</h2><p>Öffne den aktuellen Link direkt zum vereinbarten Termin.</p></div><a class="button button-primary" href="{{ event.meeting_url }}" target="_blank" rel="noreferrer">Am Teams-Meeting teilnehmen ↗</a></section>{% endif %}
   {% if event.description %}<p class="event-description">{{ event.description }}</p>{% endif %}
 
   {% if contribution_items %}
-    <nav class="event-section-nav" aria-label="Bereiche dieser Veranstaltung"><a href="#bring-list">Wer bringt was mit?</a>{% if is_organizer %}<a href="#manage-event">Liste verwalten</a>{% endif %}<a href="#event-info">Beschreibung</a></nav>
-    <section id="bring-list">
-      <div class="section-heading"><div><p class="eyebrow">Gemeinsam organisieren</p><h2>Wer bringt was mit?</h2></div><button class="button button-primary" type="button" data-dialog-open="own-contribution">Ich bringe zusätzlich mit</button></div>
-      <div class="bring-board">
-        <section><header><span class="board-count">1</span><div><h3>Noch offen</h3><p>Davon wird noch etwas gebraucht.</p></div></header><div class="board-list">{% for item in contribution_items %}{% if item.remaining > 0 %}<article><h4>{{ item.label }}</h4><p>Noch <strong>{{ item.remaining|floatformat:"-2" }} {{ item.unit }}</strong> von {{ item.desired_quantity|floatformat:"-2" }}</p><form method="post" action="{% url 'ui-reserve' item.id %}" class="bring-action">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ idempotency_key }}-{{ item.id }}"><input type="number" name="quantity" min="0.01" max="{{ item.remaining }}" step="0.01" value="{{ item.remaining|floatformat:'-2' }}" aria-label="Menge"><span>{{ item.unit }}</span><button class="button button-primary">Übernehmen</button></form></article>{% endif %}{% empty %}<p class="empty-compact">Noch keine Einträge.</p>{% endfor %}</div></section>
-        <section><header><span class="board-count">2</span><div><h3>Zugesagt</h3><p>Diese Beiträge sind eingeplant.</p></div></header><div class="board-list">{% for item in contribution_items %}{% for reservation in item.active_reservations %}{% if not reservation.fulfilled_at %}<article><h4>{{ item.label }}</h4><p><strong>{{ reservation.display_name }}</strong> · {{ reservation.quantity|floatformat:"-2" }} {{ item.unit }}</p>{% if reservation.user_id == request.user.id or is_organizer %}<div class="bring-links"><form method="post" action="{% url 'ui-fulfill-reservation' reservation.id %}">{% csrf_token %}<button class="link-button">Als mitgebracht markieren</button></form>{% if reservation.user_id == request.user.id %}<form method="post" action="{% url 'ui-cancel-reservation' reservation.id %}">{% csrf_token %}<button class="link-button">Zurücknehmen</button></form>{% endif %}</div>{% endif %}</article>{% endif %}{% endfor %}{% endfor %}</div></section>
-        <section><header><span class="board-count">3</span><div><h3>Mitgebracht</h3><p>Ist bereits erledigt.</p></div></header><div class="board-list">{% for item in contribution_items %}{% for reservation in item.active_reservations %}{% if reservation.fulfilled_at %}<article class="is-complete"><h4>✓ {{ item.label }}</h4><p>{{ reservation.display_name }} · {{ reservation.quantity|floatformat:"-2" }} {{ item.unit }}</p>{% if reservation.user_id == request.user.id or is_organizer %}<form method="post" action="{% url 'ui-fulfill-reservation' reservation.id %}">{% csrf_token %}<button class="link-button">Zurück zu zugesagt</button></form>{% endif %}</article>{% endif %}{% endfor %}{% endfor %}</div></section>
-      </div>
-    </section>
-    <section id="event-info" class="settings-panel"><header><h2>Über die Veranstaltung</h2></header><p>{{ event.description|default:"Keine weitere Beschreibung." }}</p></section>
+  <section id="bring-list" class="bring-list-modern">
+    <header class="section-heading"><div><p class="eyebrow">Gemeinsam organisieren</p><h2>Mitbringliste</h2><p class="muted">Wähle einen Eintrag und gib an, wie viel du mitbringst.</p></div><button class="button button-primary" type="button" data-dialog-open="own-contribution">＋ Hinzufügen</button></header>
+    <div class="bring-items">
+      {% for item in contribution_items %}
+      <article class="bring-item-modern{% if item.my_reservation %} is-mine{% endif %}{% if item.my_reservation.fulfilled_at %} is-fulfilled{% endif %}">
+        <div class="bring-item-copy"><h3>{{ item.label }}</h3><p>{{ item.remaining|floatformat:"-2" }} {{ item.unit }} offen · insgesamt {{ item.desired_quantity|floatformat:"-2" }} {{ item.unit }}</p>{% if item.my_reservation %}<small>Du bringst {{ item.my_reservation.quantity|floatformat:"-2" }} {{ item.unit }}{% if item.my_reservation.fulfilled_at %} · erledigt{% endif %}</small>{% endif %}</div>
+        <div class="bring-item-actions">
+          {% if item.my_reservation %}<span class="bring-own-chip">{% if item.my_reservation.fulfilled_at %}✓ Mitgebracht{% else %}Vorgemerkt{% endif %}</span>{% if not item.my_reservation.fulfilled_at %}<form method="post" action="{% url 'ui-fulfill-reservation' item.my_reservation.id %}">{% csrf_token %}<button class="button button-secondary" type="submit">Als mitgebracht markieren</button></form>{% endif %}<form method="post" action="{% url 'ui-cancel-reservation' item.my_reservation.id %}">{% csrf_token %}<button class="button button-quiet" type="submit">Zurücknehmen</button></form>
+          {% elif item.remaining > 0 %}<form method="post" action="{% url 'ui-reserve' item.id %}" class="bring-compact-form">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ idempotency_key }}-{{ item.id }}">{% if item.needs_quantity_choice %}<label class="sr-only" for="quantity-{{ item.id }}">Menge</label><input id="quantity-{{ item.id }}" type="number" name="quantity" min="0.01" max="{{ item.remaining }}" step="0.01" value="1" aria-label="Menge">{% else %}<input type="hidden" name="quantity" value="1">{% endif %}<span>{{ item.unit }}</span><button class="button button-primary" type="submit">＋ Mitbringen</button></form>
+          {% else %}<span class="bring-own-chip is-muted">Vollständig</span>{% endif %}
+        </div>
+      </article>
+      {% if item.active_reservations %}<p class="bring-item-people">{% for reservation in item.active_reservations %}{{ reservation.display_name }} · {{ reservation.quantity|floatformat:"-2" }} {{ item.unit }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+      {% endfor %}
+    </div>
+  </section>
   {% endif %}
-  {% if is_organizer and not event.meeting_url %}
-    <section id="manage-event" class="event-management"><details class="settings-panel" {% if food_query %}open{% endif %}><summary>Mitbringliste verwalten und Lebensmittel suchen</summary><div class="settings-details-body"><p>Bezeichnung, Menge und Einheit kannst du vor dem Hinzufügen frei ändern.</p><form method="get" class="recipe-search"><label>Suche<input name="food_q" value="{{ food_query }}" placeholder="z. B. Obst, Saft oder Brötchen" required></label><button class="button">Vorschläge zeigen</button></form>{% if food_error %}<p class="error-banner">{{ food_error }}</p>{% endif %}<div class="food-results">{% for food in food_results %}<article><div><strong>{{ food.name }}</strong><small>{% if food.provider == 'local' %}Schnellauswahl{% else %}Spoonacular{% endif %}</small></div><form method="post" action="{% url 'event-food-import' event.id food.source_id %}">{% csrf_token %}<input type="text" name="label" value="{{ food.name }}" maxlength="160" aria-label="Bezeichnung bearbeiten"><input type="number" name="quantity" value="1" min="0.01" step="0.01" aria-label="Menge"><input name="unit" value="Stück" maxlength="40" aria-label="Einheit"><button class="button button-primary">Hinzufügen</button></form></article>{% endfor %}</div></div></details></section>
-  {% endif %}
-    <dialog id="own-contribution" class="app-dialog"><form method="post" action="{% url 'ui-free-contribution' event.id %}" class="form-stack">{% csrf_token %}<header class="dialog-head"><div><p class="eyebrow">Eigener Beitrag</p><h2>Ich bringe mit</h2></div><button class="icon-button" type="button" data-dialog-close>×</button></header><input type="hidden" name="idempotency_key" value="{{ idempotency_key }}-free"><label>Bezeichnung<input name="label" maxlength="160" placeholder="z. B. zwei Kannen Kaffee" required></label><div class="quantity-unit-row"><label>Menge<input type="number" name="quantity" min="0.01" step="0.01" value="1" required></label><label>Einheit<input name="unit" maxlength="40" value="Stück" required></label></div><button class="button button-primary">Eintragen</button></form></dialog>
+
+  {% if is_organizer %}<section class="event-management-modern"><div class="section-heading"><div><p class="eyebrow">Verwaltung</p><h2>Lebensmittel hinzufügen</h2></div><button class="button button-secondary" type="button" data-dialog-open="food-search-dialog">＋ Aus Lebensmitteln wählen</button></div></section>{% endif %}
+  <section id="event-info" class="settings-panel"><header><h2>Über die Veranstaltung</h2></header><p>{{ event.description|default:"Keine weitere Beschreibung." }}</p></section>
+
+  <dialog id="own-contribution" class="app-dialog"><form method="post" action="{% url 'ui-free-contribution' event.id %}" class="form-stack">{% csrf_token %}<header class="dialog-head"><div><p class="eyebrow">Eigener Beitrag</p><h2>Lebensmittel hinzufügen</h2></div><button class="icon-button" type="button" data-dialog-close>×</button></header><input type="hidden" name="idempotency_key" value="{{ idempotency_key }}-free"><label>Bezeichnung<input name="label" maxlength="160" placeholder="z. B. zwei Kannen Kaffee" required></label><div class="quantity-unit-row"><label>Menge<input type="number" name="quantity" min="0.01" step="0.01" value="1" required></label><label>Einheit<input name="unit" maxlength="40" value="Stück" required></label></div><button class="button button-primary">OK · Hinzufügen</button></form></dialog>
+  {% if is_organizer %}<dialog id="food-search-dialog" class="app-dialog app-dialog-wide"{% if food_query %} open{% endif %}><form method="get" class="form-stack"><header class="dialog-head"><div><p class="eyebrow">Lebensmittelauswahl</p><h2>Lebensmittel suchen</h2></div><button class="icon-button" type="button" data-dialog-close>×</button></header><label>Suche<input name="food_q" value="{{ food_query }}" placeholder="z. B. Obst, Saft oder Brötchen" required></label><button class="button button-primary">Ergebnisse anzeigen</button>{% if food_error %}<p class="error-banner">{{ food_error }}</p>{% endif %}{% if food_results %}<div class="food-results">{% for food in food_results %}<article><div><strong>{{ food.name }}</strong><small>{% if food.provider == 'local' %}Schnellauswahl{% else %}Spoonacular{% endif %}</small></div><form method="post" action="{% url 'event-food-import' event.id food.source_id %}">{% csrf_token %}<label>Menge<input type="number" name="quantity" value="1" min="0.01" step="0.01"></label><label>Einheit<input name="unit" value="Stück" maxlength="40"></label><input type="hidden" name="label" value="{{ food.name }}"><button class="button button-primary">OK</button></form></article>{% endfor %}</div>{% endif %}</form></dialog>{% endif %}
 </section>
 {% endblock %}

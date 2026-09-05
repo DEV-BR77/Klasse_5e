@@ -386,7 +386,7 @@ def _webuntis_connections(user):
 @login_required
 def dashboard(request):
     family_children, active_child = active_child_context(request)
-    dashboard_child = active_child or (family_children[0] if len(family_children) == 1 else None)
+    dashboard_child = active_child or (family_children[0] if family_children else None)
     school_class = dashboard_child.school_class if dashboard_child else None
     if school_class is None and not family_children:
         school_class = _class_or_404(request.user, request)
@@ -495,7 +495,6 @@ def dashboard(request):
             "homework": homework,
             "family_children": family_children,
             "active_child": active_child,
-            "family_overview": _family_overview_items(family_children, now=timezone.now()),
             "calendar_entries": (
                 CalendarEntry.objects.filter(school_class=school_class, starts_at__date=day)
                 .order_by("starts_at")[:5]
@@ -1659,6 +1658,11 @@ def event(request, event_id):
                 if person.contribution_name_mode == "personal"
                 else f"Familie {child.student_person.last_name if child else person.last_name}"
             )
+        entry.my_reservation = next(
+            (reservation for reservation in entry.active_reservations if reservation.user_id == request.user.id),
+            None,
+        )
+        entry.needs_quantity_choice = entry.desired_quantity > 1
     if food_query and is_organizer:
         try:
             food_results = search_food_items(food_query)
@@ -1689,13 +1693,17 @@ def event(request, event_id):
 def reserve(request, item_id):
     item = get_object_or_404(ContributionItem.objects.select_related("category__event"), id=item_id)
     try:
-        create_reservation(
+        reservation, _ = create_reservation(
             item_id=item.id,
             user=request.user,
             quantity=request.POST.get("quantity", "1"),
             note=request.POST.get("note", ""),
             idempotency_key=request.POST.get("idempotency_key", "")[:80],
         )
+        # A single requested item is complete as soon as the user takes it.
+        if reservation.quantity >= item.desired_quantity:
+            reservation.fulfilled_at = timezone.now()
+            reservation.save(update_fields=["fulfilled_at"])
     except (ValidationError, PermissionDenied):
         return redirect(f"/mehr/veranstaltungen/{item.category.event_id}/?status=conflict")
     return redirect(f"/mehr/veranstaltungen/{item.category.event_id}/?status=reserved")

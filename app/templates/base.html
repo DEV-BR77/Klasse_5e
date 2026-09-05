@@ -21,22 +21,6 @@
 <div class="app-shell{% if not request.user.is_authenticated %} app-shell-public{% endif %}">
   <header class="topbar">
     {% if request.user.is_authenticated %}
-    {% if family_children %}
-    <details class="family-switcher">
-      <summary aria-label="Kind oder Familienübersicht auswählen">
-        <span class="family-switcher-mark" aria-hidden="true">{% if active_child %}{{ active_child.name|first }}{% else %}⌂{% endif %}</span>
-        <span><small>Ansicht</small><strong>{% if active_child %}{{ active_child.name }}{% else %}Familienübersicht{% endif %}</strong></span>
-      </summary>
-      <nav aria-label="Kind auswählen">
-        <a href="{% url 'family-overview-select' %}?next={{ request.get_full_path|urlencode }}"{% if not active_child %} aria-current="page"{% endif %}>Familienübersicht</a>
-        {% for child in family_children %}
-          <a href="{% url 'family-child-select' child.student.id %}?next={{ request.get_full_path|urlencode }}"{% if active_child and active_child.student.id == child.student.id %} aria-current="page"{% endif %}>
-            <span>{{ child.name }}</span><small>{{ child.school_name }}{% if child.class_name %} · {{ child.class_name }}{% endif %}</small>
-          </a>
-        {% endfor %}
-      </nav>
-    </details>
-    {% endif %}
     <div class="topbar-actions">
       {% if active_section != "start" and request.path != "/mehr/" %}<a class="topbar-back" href="{% url 'ui-more' %}">← <span>Hauptmenü</span></a>{% endif %}
       <a class="icon-link {% if notification_unread_count %}has-unread{% endif %}" href="/benachrichtigungen/" aria-label="Benachrichtigungen öffnen, {{ notification_unread_count }} ungelesen">
