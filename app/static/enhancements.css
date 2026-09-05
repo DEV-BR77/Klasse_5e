@@ -10,7 +10,8 @@
 [data-theme] .site-footer{background:color-mix(in srgb,var(--color-surface) 88%,transparent);color:var(--color-text-muted)}
 [data-theme] .site-footer a{color:var(--color-text-muted)}
 [data-theme] :is(.button,.welcome-panel,.dashboard-tab.is-active,.mini-week a[aria-current=date],.message-row.is-own .message-bubble,.conversation-meta b,.meal-day>header em,.family-explainer>span,.board-count,.filter-chips .is-active){color:var(--color-on-primary)}
-[data-theme] :is(.button-secondary,.button-quiet){background:var(--color-surface);color:var(--color-primary-dark)}
+[data-theme] :is(.button-secondary,.button-quiet){background:var(--color-surface);color:var(--color-text);border-color:var(--color-border)}
+[data-theme] :is(.button-secondary,.button-quiet):hover{background:var(--color-primary-light);color:var(--color-text)}
 [data-theme] .welcome-panel .eyebrow{color:var(--color-on-primary);opacity:.78}
 [data-theme] .calendar-chip{color:#172b3a}
 
