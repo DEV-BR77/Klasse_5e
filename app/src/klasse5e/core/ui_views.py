@@ -1219,7 +1219,11 @@ def menu_management(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def theme_settings(request):
-    _class_or_404(request.user, request)
+    can_manage_themes = request.user.is_superuser or request.user.roleassignment_set.filter(
+        active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+    ).exists()
+    if not can_manage_themes:
+        _class_or_404(request.user, request)
     audience = (
         PortalTheme.Audience.CHILDREN
         if hasattr(request.user, "person")
@@ -1236,7 +1240,14 @@ def theme_settings(request):
         messages.success(request, f"Theme „{selected.name}“ ist jetzt aktiv.")
         return redirect("theme-settings")
     context = _shared(request, "Design & Themes", "more")
-    context.update({"themes": themes, "audience": audience})
+    context.update(
+        {
+            "themes": themes,
+            "audience": audience,
+            "can_manage_themes": can_manage_themes,
+            "template_catalog_count": len(TEMPLATE_PREVIEW_CATALOG),
+        }
+    )
     return render(request, "ui/theme_settings.html", context)
 
 

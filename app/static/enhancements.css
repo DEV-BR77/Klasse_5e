@@ -13,6 +13,8 @@
 [data-theme] :is(.button-secondary,.button-quiet){background:var(--color-surface);color:var(--color-text);border-color:var(--color-border)}
 [data-theme] :is(.button-secondary,.button-quiet):hover{background:var(--color-primary-light);color:var(--color-text)}
 [data-theme-mode="dark"] :is(.button-secondary,.button-quiet){background:var(--color-surface);color:var(--color-text);border-color:var(--color-border)}
+[data-theme-mode="dark"] .theme-choice-actions .button-secondary{background:var(--color-surface);color:var(--color-text)!important;border-color:var(--color-border)}
+[data-theme-mode="dark"] .theme-choice-actions .button:not(.button-secondary){background:color-mix(in srgb,var(--color-primary) 65%,#000);color:#fff!important}
 [data-theme-mode="dark"] .lede,[data-theme-mode="dark"] .muted{color:var(--color-text-muted)}
 .more-page .lede{display:none}
 [data-theme] .welcome-panel .eyebrow{color:var(--color-on-primary);opacity:.78}

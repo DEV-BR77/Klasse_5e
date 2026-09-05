@@ -7,6 +7,9 @@
       <h1>Dein Design</h1>
       <p class="lede">Schau dir ein Design zuerst mit derselben Beispiel-Übersicht und demselben Beispiel-Kalender an. Erst „Auswählen“ ändert das Theme für deinen Login.</p>
     </div>
+    {% if can_manage_themes %}
+      <a class="button button-secondary" href="{% url 'theme-management' %}">{{ template_catalog_count }} CSS-Vorlagen vergleichen</a>
+    {% endif %}
   </header>
   <div class="theme-grid">
     {% for theme in themes %}

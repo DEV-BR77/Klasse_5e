@@ -89,6 +89,24 @@ def test_theme_settings_links_to_preview_instead_of_activating_it(client, guardi
 
 
 @pytest.mark.django_db
+def test_theme_settings_links_administrators_to_the_css_template_catalog(
+    client, admin_user, guardian
+):
+    client.force_login(admin_user)
+
+    management_link = client.get("/einstellungen/design/", secure=True)
+
+    assert management_link.status_code == 200
+    assert b"6 CSS-Vorlagen vergleichen" in management_link.content
+    assert b'/verwaltung/themes/' in management_link.content
+
+    client.force_login(guardian)
+    guardian_view = client.get("/einstellungen/design/", secure=True)
+
+    assert b"CSS-Vorlagen vergleichen" not in guardian_view.content
+
+
+@pytest.mark.django_db
 def test_unknown_preview_page_or_template_returns_404(client, admin_user):
     client.force_login(admin_user)
 
