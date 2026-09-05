@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
@@ -211,6 +212,7 @@ def tutorial_step(request, step=None):
         if action == "dismiss":
             state.dismissed_at = timezone.now()
             state.save(update_fields=["dismissed_at", "updated_at"])
+            messages.info(request, "Die Tour wurde beendet. Du bist wieder auf der Startseite.")
             return redirect("dashboard")
         if action == "restart":
             state.current_step = 1
@@ -222,6 +224,7 @@ def tutorial_step(request, step=None):
             state.completed_at = timezone.now()
             state.current_step = step
             state.save()
+            messages.info(request, "Die Tour ist abgeschlossen. Du bist wieder auf der Startseite.")
             return redirect("dashboard")
         state.current_step = step + 1
         state.save(update_fields=["current_step", "updated_at"])
