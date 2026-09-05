@@ -1,0 +1,67 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div id="content-main">
+  <h1>Schulen aus CSV importieren</h1>
+  <p>Wähle eine Schuldatei aus, prüfe die Vorschau und importiere anschließend nur die markierten Datensätze.</p>
+
+  {% if errors %}
+    <div class="messagelist">
+      {% for error in errors %}<div class="errornote">{{ error }}</div>{% endfor %}
+    </div>
+  {% endif %}
+
+  {% if not rows %}
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <fieldset class="module aligned">
+        <div class="form-row">
+          <label for="id_csv_file">CSV-Datei</label>
+          <input id="id_csv_file" type="file" name="csv_file" accept=".csv,text/csv" required>
+          <p class="help">Erwartet werden die Spalten der Schulstammliste. Maximal 5 MB.</p>
+        </div>
+      </fieldset>
+      <div class="submit-row">
+        <input type="submit" value="Vorschau laden" class="default">
+        <a href="{{ changelist_url }}" class="button cancel-link">Abbrechen</a>
+      </div>
+    </form>
+  {% else %}
+    <p><strong>{{ uploaded_name }}</strong>: {{ rows|length }} Datensätze gefunden.</p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="submit-row">
+        <input type="submit" value="Auswahl importieren" class="default">
+        <a href="{{ request.path }}" class="button cancel-link">Andere Datei wählen</a>
+      </div>
+      <table id="result_list">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="select-all" aria-label="Alle auswählen"></th>
+            <th>Name</th><th>Ort</th><th>PLZ</th><th>Schulart</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>
+                <input type="checkbox" name="selected_row" value="{{ row.encoded }}" class="row-select">
+              </td>
+              <td>{{ row.name }}</td>
+              <td>{{ row.city }}</td>
+              <td>{{ row.zip }}</td>
+              <td>{{ row.school_type }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </form>
+    <script>
+      document.getElementById('select-all').addEventListener('change', function () {
+        document.querySelectorAll('.row-select').forEach(function (item) { item.checked = this.checked; }, this);
+      });
+    </script>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+  {% if has_import_permission %}
+    <li><a href="import-csv/" class="addlink">CSV importieren</a></li>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
