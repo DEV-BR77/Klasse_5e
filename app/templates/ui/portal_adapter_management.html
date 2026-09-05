@@ -14,7 +14,7 @@
         <div><h3>{{ item.label }}</h3><p>{{ item.hint }}</p></div>
         <label>Schule<select name="school_id" required><option value="">Bitte auswählen</option>{% for school in schools %}<option value="{{ school.id }}">{{ school }}</option>{% endfor %}</select></label>
         <label>Anzeigename <input name="name" maxlength="120" value="{{ item.label }}"></label>
-        <button class="button button-primary">Adapter anlegen</button>
+        <footer class="form-actions"><a class="button button-secondary" href="{% url 'portal-management' %}">Abbrechen</a><button class="button button-primary">Adapter anlegen</button></footer>
       </form>
       {% endfor %}
     </div>

@@ -3,7 +3,6 @@
 <section class="settings-page">
   <header class="page-heading">
     <div><p class="eyebrow">Admin-Bereich</p><h1>Terminumfrage</h1><p class="lede">Teams-Link und Präsentationsumfrage zentral pflegen. Der Link bleibt änderbar und wird nie fest im Portalcode hinterlegt.</p></div>
-    <a class="button button-secondary" href="{% url 'portal-management' %}">← Hauptmenü</a>
   </header>
   {% if current_poll %}
     <article class="settings-card">
@@ -12,7 +11,7 @@
       <form method="post" class="form-stack">
         {% csrf_token %}<input type="hidden" name="poll_id" value="{{ current_poll.id }}">
         <label>Aktueller Teams- oder Meeting-Link<input type="url" name="meeting_url" value="{{ current_poll.meeting_url }}" placeholder="https://teams.microsoft.com/..." maxlength="200"></label>
-        <button class="button button-primary" name="action" value="save_link">Link speichern</button>
+        <footer class="form-actions"><a class="button button-secondary" href="{% url 'portal-management' %}">Abbrechen</a><button class="button button-primary" name="action" value="save_link">Link speichern</button></footer>
       </form>
       <details class="settings-panel"><summary>Umfrage neu starten</summary>
         <form method="post" class="settings-details-body form-stack">
@@ -20,7 +19,7 @@
           <label>Neue Umfrage offen bis<input type="datetime-local" name="closes_at" required></label>
           <label>Neuer Teams- oder Meeting-Link<input type="url" name="meeting_url" value="{{ current_poll.meeting_url }}" placeholder="https://teams.microsoft.com/..." maxlength="200"></label>
           <p class="help-text">Titel, Beschreibung und Terminoptionen werden übernommen. Die bisherige Umfrage wird beendet.</p>
-          <button class="button button-primary" name="action" value="restart">Umfrage neu starten</button>
+          <footer class="form-actions"><a class="button button-secondary" href="{% url 'portal-management' %}">Abbrechen</a><button class="button button-primary" name="action" value="restart">Umfrage neu starten</button></footer>
         </form>
       </details>
     </article>

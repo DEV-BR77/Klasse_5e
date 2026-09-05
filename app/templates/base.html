@@ -21,8 +21,8 @@
 <div class="app-shell{% if not request.user.is_authenticated %} app-shell-public{% endif %}">
   <header class="topbar">
     {% if request.user.is_authenticated %}
+    {% if active_section != "start" and request.path != "/mehr/" %}<a class="topbar-back" href="{% url 'ui-more' %}">← <span>Zum Menü</span></a>{% endif %}
     <div class="topbar-actions">
-      {% if active_section != "start" and request.path != "/mehr/" %}<a class="topbar-back" href="{% url 'ui-more' %}">← <span>Hauptmenü</span></a>{% endif %}
       <a class="icon-link {% if notification_unread_count %}has-unread{% endif %}" href="/benachrichtigungen/" aria-label="Benachrichtigungen öffnen, {{ notification_unread_count }} ungelesen">
         {% include "ui/_icon.html" with name="bell" %}{% if notification_unread_count %}<span class="notification-badge">{{ notification_unread_count }}</span>{% endif %}
       </a>
@@ -49,7 +49,7 @@
 </div>
 
 {% if request.user.is_authenticated %}
-<dialog id="pilot-report" class="app-dialog"><form method="post" action="/pilot/melden/" enctype="multipart/form-data" class="form-stack">{% csrf_token %}<header class="dialog-head"><div><p class="eyebrow">Feedback</p><h2>Idee oder Fehler melden</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header><label>Art<select name="kind"><option value="idea">Idee</option><option value="note">Anmerkung</option><option value="bug">Fehler</option></select></label><label>Beschreibung<textarea name="description" rows="5" required maxlength="3000"></textarea></label><label>Screenshot (optional)<input type="file" name="screenshot" accept="image/png,image/jpeg,image/webp"></label><input type="hidden" name="page_path" value="{{ request.get_full_path }}"><button class="button button-primary" type="submit">Meldung senden</button></form></dialog>
+<dialog id="pilot-report" class="app-dialog"><form method="post" action="/pilot/melden/" enctype="multipart/form-data" class="form-stack">{% csrf_token %}<header class="dialog-head"><div><p class="eyebrow">Feedback</p><h2>Idee oder Fehler melden</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header><label>Art<select name="kind"><option value="idea">Idee</option><option value="note">Anmerkung</option><option value="bug">Fehler</option></select></label><label>Beschreibung<textarea name="description" rows="5" required maxlength="3000"></textarea></label><label>Screenshot (optional)<input type="file" name="screenshot" accept="image/png,image/jpeg,image/webp"></label><input type="hidden" name="page_path" value="{{ request.get_full_path }}"><footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-primary" type="submit">Meldung senden</button></footer></form></dialog>
 {% endif %}
 <div id="live-status" class="sr-only" aria-live="polite"></div>
 <script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
