@@ -2,7 +2,6 @@ from decimal import Decimal
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
-from django.utils import timezone
 from web_push_kit import DeliveryStatus, NotificationPayload, Subscription
 
 from klasse5e.core.models import AuditEvent, PushSubscription
@@ -24,8 +23,6 @@ def create_reservation(*, item_id, user, quantity, note, idempotency_key):
     event = item.category.event
     if not has_active_membership(user, event.school_class):
         raise PermissionDenied
-    if timezone.now() > event.change_deadline:
-        raise ValidationError("deadline_passed")
     amount = Decimal(str(quantity))
     if amount <= 0 or amount > item.remaining:
         raise ValidationError("quantity_unavailable")
@@ -54,8 +51,6 @@ def cancel_reservation_for_user(reservation, user):
     )
     if locked.user_id != user.id:
         raise PermissionDenied
-    if timezone.now() > locked.item.category.event.change_deadline:
-        raise ValidationError("deadline_passed")
     if locked.status != Reservation.Status.CANCELLED:
         locked.status = Reservation.Status.CANCELLED
         locked.save(update_fields=["status"])

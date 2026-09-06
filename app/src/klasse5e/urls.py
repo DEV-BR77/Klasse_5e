@@ -199,6 +199,11 @@ urlpatterns = [
         name="mobility-pickup-revoke",
     ),
     path("mehr/veranstaltungen/<int:event_id>/", ui_views.event, name="ui-event"),
+    path(
+        "mehr/veranstaltungen/<int:event_id>/mitbringliste/",
+        ui_views.add_contribution_list,
+        name="ui-add-contribution-list",
+    ),
     path("mehr/mitbringen/<int:item_id>/reservieren/", ui_views.reserve, name="ui-reserve"),
     path(
         "mehr/veranstaltungen/<int:event_id>/freier-beitrag/",

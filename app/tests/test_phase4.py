@@ -70,7 +70,7 @@ def test_reservation_quantity_idempotency_and_audit(guardian, item):
 
 
 @pytest.mark.django_db
-def test_no_overbooking_and_deadline(guardian, item, event):
+def test_no_overbooking_and_reservations_remain_manageable(guardian, item, event):
     create_reservation(
         item_id=item.id, user=guardian, quantity="2", note="", idempotency_key="full"
     )
@@ -80,10 +80,13 @@ def test_no_overbooking_and_deadline(guardian, item, event):
         )
     event.change_deadline = timezone.now() - timedelta(seconds=1)
     event.save()
-    with pytest.raises(ValidationError):
-        create_reservation(
-            item_id=item.id, user=guardian, quantity="1", note="", idempotency_key="late"
-        )
+    later_item = ContributionItem.objects.create(
+        category=item.category, label="Saft", desired_quantity=1, unit="Flaschen"
+    )
+    reservation, created = create_reservation(
+        item_id=later_item.id, user=guardian, quantity="1", note="", idempotency_key="late"
+    )
+    assert created and reservation.item_id == later_item.id
 
 
 @pytest.mark.django_db
@@ -151,3 +154,59 @@ def test_reservation_endpoint_requires_idempotency_key(client, guardian, item):
         f"/items/{item.id}/reserve/", {"quantity": "1"}, HTTP_IDEMPOTENCY_KEY="web-1"
     )
     assert response.status_code == 201
+
+
+@pytest.mark.django_db
+def test_event_detail_is_focused_without_a_contribution_list(client, guardian, event):
+    event.meeting_url = "https://teams.example.test/meeting"
+    event.description = "Einmalig sichtbare Beschreibung"
+    event.save(update_fields=["meeting_url", "description"])
+    client.force_login(guardian)
+
+    response = client.get(f"/mehr/veranstaltungen/{event.id}/")
+    page = response.content.decode()
+
+    assert response.status_code == 200
+    assert page.count("Einmalig sichtbare Beschreibung") == 1
+    assert "Am Teams-Meeting teilnehmen" in page
+    assert "Lebensmittel hinzufügen" not in page
+    assert "Über die Veranstaltung" not in page
+
+
+@pytest.mark.django_db
+def test_event_detail_separates_open_and_claimed_items(client, guardian, event, item):
+    reservation, _ = create_reservation(
+        item_id=item.id, user=guardian, quantity="1", note="", idempotency_key="mine"
+    )
+    open_item = ContributionItem.objects.create(
+        category=item.category, label="Brötchen", desired_quantity=1, unit="Stück"
+    )
+    client.force_login(guardian)
+
+    response = client.get(f"/mehr/veranstaltungen/{event.id}/")
+    page = response.content.decode()
+
+    assert response.status_code == 200
+    assert "Noch offen" in page and "Wird mitgebracht" in page
+    assert "Brötchen" in page and "Wasser" in page
+    assert "Du bringst es mit" in page
+    assert reservation.item_id == item.id and open_item.id
+
+
+@pytest.mark.django_db
+def test_event_organizer_can_add_a_named_non_food_contribution_list(client, guardian, event):
+    client.force_login(guardian)
+
+    response = client.post(
+        f"/mehr/veranstaltungen/{event.id}/mitbringliste/",
+        {
+            "bring_list_name": "Aufbau und Material",
+            "bring_label": ["Klapptische", "Bälle"],
+            "bring_quantity": ["4", "6"],
+            "bring_unit": ["Stück", "Stück"],
+        },
+    )
+
+    assert response.status_code == 302
+    category = ContributionCategory.objects.get(event=event, name="Aufbau und Material")
+    assert list(category.items.values_list("label", flat=True)) == ["Klapptische", "Bälle"]

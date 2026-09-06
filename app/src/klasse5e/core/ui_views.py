@@ -1910,7 +1910,7 @@ def events(request):
             starts_at=starts_at,
             ends_at=ends_at,
             location=request.POST.get("location", "").strip()[:200],
-            change_deadline=starts_at,
+            change_deadline=ends_at,
             status=Event.Status.PUBLISHED,
         )
         item.organizers.add(request.user)
@@ -1927,22 +1927,16 @@ def events(request):
             .order_by("-retention_days")
             .first(),
         )
-        requested_items = []
-        for line in request.POST.get("bring_items", "").splitlines()[:30]:
-            parts = [part.strip() for part in line.split("|")]
-            if not parts[0]:
-                continue
-            try:
-                amount = Decimal(parts[1]) if len(parts) > 1 else Decimal("1")
-                if amount <= 0:
-                    raise ValueError
-            except (InvalidOperation, ValueError):
-                amount = Decimal("1")
-            requested_items.append(
-                (parts[0][:160], amount, (parts[2] if len(parts) > 2 else "Stück")[:40])
-            )
+        requested_items = (
+            _contribution_items_from_request(request)
+            if request.POST.get("create_bring_list") == "on"
+            else []
+        )
         if requested_items:
-            category = ContributionCategory.objects.create(event=item, name="Mitbringliste")
+            category = ContributionCategory.objects.create(
+                event=item,
+                name=request.POST.get("bring_list_name", "").strip()[:100] or "Mitbringliste",
+            )
             ContributionItem.objects.bulk_create(
                 [
                     ContributionItem(
@@ -1963,6 +1957,26 @@ def events(request):
         .order_by("closes_at")
     )
     return render(request, "ui/events.html", context)
+
+
+def _contribution_items_from_request(request):
+    requested_items = []
+    labels = request.POST.getlist("bring_label")
+    quantities = request.POST.getlist("bring_quantity")
+    units = request.POST.getlist("bring_unit")
+    for index, raw_label in enumerate(labels[:30]):
+        label = raw_label.strip()[:160]
+        if not label:
+            continue
+        try:
+            amount = Decimal(quantities[index] if index < len(quantities) else "1")
+            if amount <= 0:
+                raise ValueError
+        except (InvalidOperation, ValueError):
+            amount = Decimal("1")
+        unit = (units[index] if index < len(units) else "Stück").strip()[:40] or "Stück"
+        requested_items.append((label, amount, unit))
+    return requested_items
 
 
 @login_required
@@ -2060,7 +2074,7 @@ def finalize_event_poll(request, poll_id):
         ends_at=option.ends_at,
         location=meeting_url or "Wird bekannt gegeben",
         meeting_url=meeting_url,
-        change_deadline=option.starts_at,
+        change_deadline=option.ends_at,
         status=Event.Status.PUBLISHED,
     )
     event_item.organizers.add(request.user)
@@ -2086,7 +2100,7 @@ def finalize_event_poll(request, poll_id):
 def event(request, event_id):
     school_class = _class_or_404(request.user, request)
     item = get_object_or_404(Event, id=event_id, school_class=school_class, status="published")
-    categories = item.categories.prefetch_related("items__reservations__user__person")
+    categories = list(item.categories.prefetch_related("items__reservations__user__person"))
     reservations = Reservation.objects.filter(
         item__category__event=item, user=request.user, status=Reservation.Status.ACTIVE
     )
@@ -2094,32 +2108,49 @@ def event(request, event_id):
     food_results = []
     food_error = ""
     is_organizer = item.organizers.filter(id=request.user.id).exists()
-    contribution_items = [entry for category in categories for entry in category.items.all()]
-    for entry in contribution_items:
-        entry.active_reservations = [
-            reservation
-            for reservation in entry.reservations.all()
-            if reservation.status == "active"
-        ]
-        for reservation in entry.active_reservations:
-            person = reservation.user.person
-            child = (
-                person.guardian_relationships.filter(status="verified")
-                .select_related("student_person")
-                .first()
+    contribution_items = []
+    contribution_lists = []
+    for category in categories:
+        category.open_items = []
+        category.claimed_items = []
+        category_items = list(category.items.all())
+        for entry in category_items:
+            contribution_items.append(entry)
+            entry.active_reservations = [
+                reservation
+                for reservation in entry.reservations.all()
+                if reservation.status == Reservation.Status.ACTIVE
+            ]
+            for reservation in entry.active_reservations:
+                person = reservation.user.person
+                child = (
+                    person.guardian_relationships.filter(status="verified")
+                    .select_related("student_person")
+                    .first()
+                )
+                reservation.display_name = (
+                    child.student_person.first_name
+                    if person.contribution_name_mode == "child" and child
+                    else (person.chat_display_name or person.first_name)
+                    if person.contribution_name_mode == "personal"
+                    else f"Familie {child.student_person.last_name if child else person.last_name}"
+                )
+            entry.my_reservation = next(
+                (
+                    reservation
+                    for reservation in entry.active_reservations
+                    if reservation.user_id == request.user.id
+                ),
+                None,
             )
-            reservation.display_name = (
-                child.student_person.first_name
-                if person.contribution_name_mode == "child" and child
-                else (person.chat_display_name or person.first_name)
-                if person.contribution_name_mode == "personal"
-                else f"Familie {child.student_person.last_name if child else person.last_name}"
-            )
-        entry.my_reservation = next(
-            (reservation for reservation in entry.active_reservations if reservation.user_id == request.user.id),
-            None,
-        )
-        entry.needs_quantity_choice = entry.desired_quantity > 1
+            entry.needs_quantity_choice = entry.desired_quantity > 1
+            entry.reserve_quantity_default = min(Decimal("1"), entry.remaining)
+            if entry.active_reservations:
+                category.claimed_items.append(entry)
+            if entry.remaining > 0 and not entry.my_reservation:
+                category.open_items.append(entry)
+        if category_items:
+            contribution_lists.append(category)
     if food_query and is_organizer:
         try:
             food_results = search_food_items(food_query)
@@ -2140,9 +2171,40 @@ def event(request, event_id):
             "food_error": food_error,
             "food_status": request.GET.get("food_status", ""),
             "contribution_items": contribution_items,
+            "contribution_lists": contribution_lists,
         }
     )
     return render(request, "ui/event_detail.html", context)
+
+
+@login_required
+@require_POST
+def add_contribution_list(request, event_id):
+    school_class = _class_or_404(request.user, request)
+    item_event = get_object_or_404(
+        Event, id=event_id, school_class=school_class, status=Event.Status.PUBLISHED
+    )
+    if not item_event.organizers.filter(id=request.user.id).exists():
+        raise Http404
+    name = request.POST.get("bring_list_name", "").strip()[:100]
+    requested_items = _contribution_items_from_request(request)
+    if not name or not requested_items:
+        return redirect(f"/mehr/veranstaltungen/{event_id}/?status=list-invalid")
+    category = ContributionCategory.objects.create(event=item_event, name=name)
+    ContributionItem.objects.bulk_create(
+        [
+            ContributionItem(category=category, label=label, desired_quantity=amount, unit=unit)
+            for label, amount, unit in requested_items
+        ]
+    )
+    AuditEvent.objects.create(
+        actor=request.user,
+        action="event.contribution_list.created",
+        target_type="contribution_category",
+        target_id=str(category.id),
+        metadata={"event_id": item_event.id, "item_count": len(requested_items)},
+    )
+    return redirect(f"/mehr/veranstaltungen/{event_id}/?status=list-added")
 
 
 @login_required
@@ -2171,8 +2233,6 @@ def reserve(request, item_id):
 def free_contribution(request, event_id):
     school_class = _class_or_404(request.user, request)
     item_event = get_object_or_404(Event, id=event_id, school_class=school_class)
-    if timezone.now() > item_event.change_deadline:
-        return redirect(f"/mehr/veranstaltungen/{event_id}/?status=deadline")
     label = request.POST.get("label", "").strip()[:160]
     if not label:
         return redirect(f"/mehr/veranstaltungen/{event_id}/?status=invalid")

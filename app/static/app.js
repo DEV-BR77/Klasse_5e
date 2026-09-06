@@ -106,6 +106,18 @@
   }));
   document.querySelectorAll("[data-dialog-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog")?.close()));
   document.querySelectorAll("dialog").forEach((dialog) => dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); }));
+  document.querySelectorAll("[data-contribution-builder]").forEach((builder) => {
+    const rows = builder.querySelector("[data-contribution-rows]");
+    const addRow = builder.querySelector("[data-add-contribution-row]");
+    addRow?.addEventListener("click", () => {
+      if (!rows || rows.children.length >= 30) return;
+      const row = document.createElement("div");
+      row.className = "contribution-entry-row";
+      row.innerHTML = '<label>Eintrag<input name="bring_label" maxlength="160" placeholder="z. B. Bälle"></label><label>Menge<input name="bring_quantity" type="number" min="0.01" step="0.01" value="1"></label><label>Einheit<input name="bring_unit" maxlength="40" value="Stück"></label>';
+      rows.append(row);
+      row.querySelector("input")?.focus();
+    });
+  });
   document.addEventListener("click", (event) => {
     document.querySelectorAll("details[open]").forEach((details) => {
       if (!details.contains(event.target)) details.removeAttribute("open");
