@@ -12,6 +12,7 @@ from klasse5e.events.models import Event
 class ChatRetentionCategory(models.Model):
     name = models.CharField(max_length=80, unique=True)
     retention_days = models.PositiveSmallIntegerField(default=30)
+    automatic_deletion_enabled = models.BooleanField(default=False)
     intended_for_events = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
@@ -19,16 +20,27 @@ class ChatRetentionCategory(models.Model):
         ordering = ["-intended_for_events", "retention_days", "name"]
 
     def __str__(self):
+        if not self.automatic_deletion_enabled:
+            return f"{self.name} (keine automatische Löschung)"
         return f"{self.name} ({self.retention_days} Tage)"
 
 
 class ChatRoom(models.Model):
+    class Appearance(models.TextChoices):
+        STANDARD = "standard", "Standard"
+        CLASSIC = "classic", "Klassische Schultafel"
+        MODERN = "modern", "Moderne Tafel"
+        MATH = "math", "Mathe-Tafel"
+
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE)
     school_year = models.ForeignKey(SchoolYear, on_delete=models.PROTECT)
     event = models.OneToOneField(Event, null=True, blank=True, on_delete=models.CASCADE)
     retention_category = models.ForeignKey(ChatRetentionCategory, null=True, blank=True, on_delete=models.PROTECT)
     title = models.CharField(max_length=120)
+    appearance = models.CharField(
+        max_length=16, choices=Appearance.choices, default=Appearance.STANDARD
+    )
     is_open = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -3,6 +3,56 @@
 from .models import PortalAdapter, PortalAdapterModule
 
 ADAPTER_CATALOG = {
+    PortalAdapter.Provider.WEBUNTIS: {
+        "label": "Schuldaten-Zugang",
+        "default_url": "",
+        "hint": "Stundenplan und Schulorganisation werden erst nach der Freigabe einzelner Funktionen für die Schule angezeigt.",
+        "modules": (
+            (
+                "timetable",
+                "Stundenplan",
+                "Unterrichtszeiten und Fächer des Kindes im persönlichen Überblick.",
+                True,
+            ),
+            (
+                "substitutions",
+                "Vertretungen",
+                "Ausfälle, Vertretungen sowie Raum- und Lehreränderungen anzeigen.",
+                True,
+            ),
+            (
+                "homework",
+                "Hausaufgaben",
+                "Aufgaben, Fälligkeiten und Fachzuordnung abrufen.",
+                True,
+            ),
+            (
+                "exams",
+                "Prüfungen",
+                "Angekündigte Arbeiten und Prüfungstermine anzeigen.",
+                True,
+            ),
+        ),
+    },
+    PortalAdapter.Provider.ITSLEARNING: {
+        "label": "Lernplattform-Zugang",
+        "default_url": "",
+        "hint": "Lernmaterialien und Termine werden nur nach Freigabe der einzelnen Funktionen bereitgestellt.",
+        "modules": (
+            (
+                "learning-material",
+                "Lernmaterial",
+                "Kurse, Materialien und Hinweise der Lernplattform anzeigen.",
+                True,
+            ),
+            (
+                "calendar",
+                "Schulkalender",
+                "Termine der Lernplattform zum persönlichen Kalender ergänzen.",
+                True,
+            ),
+        ),
+    },
     PortalAdapter.Provider.MENSAMAX: {
         "label": "MensaMax",
         "default_url": "https://app.mensamax.de/",
@@ -94,9 +144,15 @@ def provider_definition(provider):
 
 
 def seed_default_modules(adapter):
-    for key, label, description in provider_definition(adapter.provider)["modules"]:
+    for key, label, description, *credential_requirement in provider_definition(adapter.provider)[
+        "modules"
+    ]:
         PortalAdapterModule.objects.get_or_create(
             adapter=adapter,
             key=key,
-            defaults={"label": label, "description": description},
+            defaults={
+                "label": label,
+                "description": description,
+                "requires_child_credentials": bool(credential_requirement and credential_requirement[0]),
+            },
         )

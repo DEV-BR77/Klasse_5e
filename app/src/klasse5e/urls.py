@@ -132,6 +132,11 @@ urlpatterns = [
         name="presentation-poll-settings",
     ),
     path(
+        "verwaltung/chat-aufbewahrung/",
+        ui_views.chat_retention_settings,
+        name="chat-retention-settings",
+    ),
+    path(
         "verwaltung/anmeldung/qr.svg",
         ui_views.registration_invitation_qr,
         name="registration-invitation-qr",

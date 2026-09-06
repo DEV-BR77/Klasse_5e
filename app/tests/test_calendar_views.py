@@ -101,6 +101,42 @@ def test_day_view_builds_hourly_fallback_without_school_time_grid(guardian, scho
 
 
 @pytest.mark.django_db
+def test_imported_adjacent_lessons_keep_the_double_lesson_marker(guardian, school_class):
+    student = Person.objects.create(first_name="Mila", last_name="Beispiel")
+    connection = WebUntisConnection.objects.create(
+        user=guardian,
+        student=student,
+        username_encrypted=b"x",
+        password_encrypted=b"x",
+    )
+    zone = timezone.get_current_timezone()
+    for fingerprint, starts_at, ends_at in (
+        ("double-one", datetime(2026, 9, 4, 8), datetime(2026, 9, 4, 8, 45)),
+        ("double-two", datetime(2026, 9, 4, 8, 45), datetime(2026, 9, 4, 9, 30)),
+    ):
+        WebUntisLesson.objects.create(
+            connection=connection,
+            external_fingerprint=fingerprint,
+            subject="Mathematik",
+            starts_at=timezone.make_aware(starts_at, zone),
+            ends_at=timezone.make_aware(ends_at, zone),
+        )
+
+    context = build_calendar_context(
+        school_class=school_class,
+        selected_day=date(2026, 9, 4),
+        webuntis_connections=WebUntisConnection.objects.filter(pk=connection.pk),
+        itslearning_connections=ItslearningConnection.objects.none(),
+        view="day",
+    )
+
+    lesson = context["agenda"][0]
+    assert lesson["lesson_count"] == 2
+    assert lesson["is_double"] is True
+    assert lesson["duration_minutes"] == 90
+
+
+@pytest.mark.django_db
 def test_cancelled_original_is_hidden_when_replacement_uses_same_slot(guardian, school_class):
     student = Person.objects.create(first_name="Mila", last_name="Beispiel")
     connection = WebUntisConnection.objects.create(

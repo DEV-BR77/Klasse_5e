@@ -20,6 +20,11 @@ CALENDAR_CATEGORIES = (
 def _merge_adjacent_lessons(lessons):
     merged = []
     for lesson in lessons:
+        # Keep the number of source periods when two consecutive entries form
+        # one double lesson.  The UI can then show one tidy 90-minute block
+        # without suggesting that a lesson has disappeared.
+        lesson.lesson_count = 1
+        lesson.is_double = False
         if merged:
             previous = merged[-1]
             if (
@@ -29,12 +34,25 @@ def _merge_adjacent_lessons(lessons):
                 and previous.ends_at == lesson.starts_at
             ):
                 previous.ends_at = lesson.ends_at
+                previous.lesson_count += lesson.lesson_count
+                previous.is_double = previous.lesson_count >= 2
                 continue
         merged.append(lesson)
     return merged
 
 
-def _item(kind, label, title, *, starts_at=None, ends_at=None, meta="", url=""):
+def _item(
+    kind,
+    label,
+    title,
+    *,
+    starts_at=None,
+    ends_at=None,
+    meta="",
+    url="",
+    lesson_count=1,
+    is_double=False,
+):
     local_start = timezone.localtime(starts_at) if starts_at else None
     local_end = timezone.localtime(ends_at) if ends_at else None
     return {
@@ -53,8 +71,8 @@ def _item(kind, label, title, *, starts_at=None, ends_at=None, meta="", url=""):
         ),
         "meta": meta,
         "url": url,
-        "lesson_count": 1,
-        "is_double": False,
+        "lesson_count": lesson_count,
+        "is_double": is_double,
     }
 
 
@@ -79,8 +97,8 @@ def _merge_consecutive_lessons(day_items):
         previous["duration_minutes"] = max(
             1, int((previous["ends_at"] - previous["starts_at"]).total_seconds() // 60)
         )
-        previous["lesson_count"] += 1
-        previous["is_double"] = previous["lesson_count"] == 2
+        previous["lesson_count"] += item["lesson_count"]
+        previous["is_double"] = previous["lesson_count"] >= 2
     return merged
 
 
@@ -154,6 +172,8 @@ def build_calendar_context(
                 starts_at=lesson.starts_at,
                 ends_at=lesson.ends_at,
                 meta=meta,
+                lesson_count=lesson.lesson_count,
+                is_double=lesson.is_double,
             )
         )
 

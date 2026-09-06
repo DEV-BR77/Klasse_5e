@@ -1,1 +1,67 @@
-{% extends "base.html" %}{% block content %}<section class="settings-page family-page"><header class="page-heading"><div><p class="eyebrow">Familie &amp; Profile</p><h1>Wer gehört zu meiner Familie?</h1><p class="lede">Registrierungen werden nicht automatisch anhand von Namen oder E-Mail-Adressen verbunden. Die Klassenverwaltung prüft jede Eltern-Kind-Beziehung, bevor persönliche Schuldaten sichtbar werden.</p></div><a class="button button-primary" href="{% url 'personal-profile' %}">Meine Daten bearbeiten</a></header><article class="family-explainer"><span>1</span><div><strong>Person registriert sich</strong><small>Jeder Login bleibt eigenständig.</small></div><span>2</span><div><strong>Verwaltung prüft</strong><small>Klasse und Beziehung werden bestätigt.</small></div><span>3</span><div><strong>Freigaben gelten</strong><small>Nur bestätigte Rechte werden wirksam.</small></div></article><h2>Meine Kinder und Berechtigungen</h2><div class="family-list">{% for relationship in relationships %}<article class="family-row"><div class="family-avatar">{{ relationship.student_person.first_name|first }}</div><div><h3>{{ relationship.student_person.first_name }} {{ relationship.student_person.last_name }}</h3><p>{{ relationship.get_relationship_type_display }}</p><div class="permission-chips"><span class="{% if relationship.status == 'verified' %}is-on{% endif %}">{{ relationship.get_status_display }}</span><span class="{% if relationship.may_view_student_profile %}is-on{% endif %}">Profil ansehen</span><span class="{% if relationship.may_manage_profile %}is-on{% endif %}">Profil pflegen</span><span class="{% if relationship.may_manage_general_consents %}is-on{% endif %}">Einwilligungen</span></div></div>{% if relationship.status == 'verified' %}<a class="button button-secondary" href="/mehr/webuntis/?student={{ relationship.student_person_id }}">Schuldaten</a>{% else %}<span class="status status-warning">Prüfung offen</span>{% endif %}</article>{% empty %}<div class="empty-state"><h3>Noch keine Zuordnung</h3><p>Die Klassenverwaltung kann nach Prüfung eine Beziehung anlegen. Eine automatische Zuordnung wäre bei Namensgleichheit zu fehleranfällig.</p></div>{% endfor %}</div><p class="help-text">Berechtigungen können nicht selbst erweitert werden. So kann sich niemand ohne Prüfung Zugriff auf ein Kinderprofil geben.</p></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page family-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Mein Konto</p>
+      <h1>Familie &amp; Kinder</h1>
+      <p class="lede">Jedes Kind bleibt seiner Schule und Klasse zugeordnet. Du siehst nur die Funktionen, die für diese Schule freigegeben sind.</p>
+    </div>
+    <a class="button button-secondary" href="{% url 'personal-profile' %}">Meine Daten</a>
+  </header>
+
+  <div class="family-list">
+    {% for row in relationship_rows %}
+      {% with relationship=row.relationship %}
+      <article class="settings-panel family-child-panel">
+        <header class="section-heading">
+          <div>
+            <p class="eyebrow">Kind</p>
+            <h2>{{ relationship.student_person.first_name }} {{ relationship.student_person.last_name }}</h2>
+            {% if row.membership %}<p class="muted">{{ row.membership.school_class.school }} · {{ row.membership.school_class.display_name|default:row.membership.school_class.name }}</p>{% endif %}
+          </div>
+          <span class="status {% if relationship.status == 'verified' %}status-success{% else %}status-warning{% endif %}">{{ relationship.get_status_display }}</span>
+        </header>
+
+        <div class="permission-chips">
+          <span class="{% if relationship.is_legal_guardian %}is-on{% endif %}">{{ relationship.get_relationship_type_display }}</span>
+          {% if relationship.is_legal_guardian %}<span class="is-on">Sorgeberechtigt</span>{% endif %}
+          {% if relationship.may_manage_profile %}<span class="is-on">Darf Zugänge verwalten</span>{% endif %}
+        </div>
+
+        <section class="settings-details-body">
+          <div class="section-heading"><div><h3>Funktionen dieser Schule</h3><p class="muted">Die technische Quelle bleibt im Hintergrund. Du entscheidest nur, ob die freigegebene Funktion für dieses Kind verbunden wird.</p></div></div>
+          <div class="settings-grid family-module-grid">
+            {% for module_row in row.modules %}
+              {% with module=module_row.module connection=module_row.connection %}
+              <article class="content-card family-module-card">
+                <div>
+                  <h4>{{ module.label }}</h4>
+                  <p>{{ module.description }}</p>
+                  {% if connection and connection.is_enabled %}<span class="status status-success">{{ connection.get_connection_state_display }}</span>{% else %}<span class="status status-info">Noch nicht verbunden</span>{% endif %}
+                </div>
+                {% if relationship.status == 'verified' and relationship.may_manage_profile %}
+                  <div class="button-row">
+                    <form method="post">{% csrf_token %}
+                      <input type="hidden" name="relationship_id" value="{{ relationship.id }}">
+                      <input type="hidden" name="module_id" value="{{ module.id }}">
+                      <button class="button {% if connection and connection.is_enabled %}button-secondary{% else %}button-primary{% endif %}" name="enabled" value="{% if connection and connection.is_enabled %}off{% else %}on{% endif %}">{% if connection and connection.is_enabled %}Ausschalten{% else %}Aktivieren{% endif %}</button>
+                    </form>
+                    {% if connection and connection.is_enabled and module_row.connection_url %}<a class="button button-quiet" href="{{ module_row.connection_url }}">{% if module.requires_child_credentials %}Zugang hinterlegen{% else %}Öffnen{% endif %}</a>{% endif %}
+                  </div>
+                {% endif %}
+              </article>
+              {% endwith %}
+            {% empty %}
+              <div class="empty-state"><h3>Noch keine Funktion freigegeben</h3><p>Die Schulverwaltung kann für diese Schule passende Funktionen bereitstellen.</p></div>
+            {% endfor %}
+          </div>
+        </section>
+      </article>
+      {% endwith %}
+    {% empty %}
+      <div class="empty-state"><h2>Noch keine bestätigte Zuordnung</h2><p>Die Verwaltung prüft Eltern-Kind-Beziehungen, bevor persönliche Schuldaten sichtbar werden.</p></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

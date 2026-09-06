@@ -1,9 +1,11 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from allauth.mfa.models import Authenticator
+from django.utils import timezone
 
-from klasse5e.chat.models import ChatMessage, ChatRoom
+from klasse5e.chat.models import ChatMessage, ChatRetentionCategory, ChatRoom
+from klasse5e.chat.retention import cleanup_expired_messages
 from klasse5e.core.models import (
     ClassMembership,
     Person,
@@ -113,3 +115,25 @@ def test_report_is_idempotent_and_foreign_class_hidden(client, room):
     Person.objects.create(user=stranger, first_name="Fremd", last_name="Person")
     client.force_login(stranger)
     assert client.get(f"/chat/rooms/{room.public_id}/").status_code == 404
+
+
+@pytest.mark.django_db
+def test_messages_remain_when_retention_is_disabled_and_expire_only_when_enabled(room):
+    author = member(room)
+    category = ChatRetentionCategory.objects.create(
+        name="Prüfregel", retention_days=30, automatic_deletion_enabled=False
+    )
+    room.retention_category = category
+    room.save(update_fields=["retention_category"])
+    message = ChatMessage.objects.create(room=room, author=author, body="Bleibt zunächst erhalten")
+    ChatMessage.objects.filter(pk=message.pk).update(
+        created_at=timezone.now() - timedelta(days=31)
+    )
+
+    assert cleanup_expired_messages() == 0
+    assert ChatMessage.objects.filter(pk=message.pk).exists()
+
+    category.automatic_deletion_enabled = True
+    category.save(update_fields=["automatic_deletion_enabled"])
+    assert cleanup_expired_messages() == 1
+    assert not ChatMessage.objects.filter(pk=message.pk).exists()

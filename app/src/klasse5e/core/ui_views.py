@@ -12,6 +12,7 @@ from django.core.files.base import ContentFile
 from django.db.models import Count, Q
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import content_disposition_header
 from django.utils.text import slugify
@@ -45,7 +46,11 @@ from klasse5e.portal_adapters.catalog import (
     provider_definition,
     seed_default_modules,
 )
-from klasse5e.portal_adapters.models import PortalAdapter, PortalAdapterModule
+from klasse5e.portal_adapters.models import (
+    ChildModuleConnection,
+    PortalAdapter,
+    PortalAdapterModule,
+)
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
 from klasse5e.webuntis.models import (
     HomeworkProgress,
@@ -752,15 +757,16 @@ def chat_overview(request):
             retention = ChatRetentionCategory.objects.filter(
                 pk=request.POST.get("retention_category"), is_active=True, intended_for_events=False
             ).first()
+            appearance = request.POST.get("appearance", ChatRoom.Appearance.STANDARD)
+            if appearance not in ChatRoom.Appearance.values:
+                appearance = ChatRoom.Appearance.STANDARD
             ChatRoom.objects.create(
                 school_class=school_class,
                 school_year=school_class.school_year,
                 title=title,
                 is_open=True,
-                retention_category=retention
-                or ChatRetentionCategory.objects.filter(is_active=True, intended_for_events=False)
-                .order_by("retention_days")
-                .first(),
+                retention_category=retention,
+                appearance=appearance,
             )
             messages.success(request, "Der Chatraum wurde angelegt.")
         return redirect("ui-chat")
@@ -785,6 +791,7 @@ def chat_overview(request):
     context["retention_categories"] = ChatRetentionCategory.objects.filter(
         is_active=True, intended_for_events=False
     )
+    context["appearance_choices"] = ChatRoom.Appearance.choices
     return render(request, "ui/chat_overview.html", context)
 
 
@@ -950,11 +957,17 @@ def portal_adapter_detail(request, adapter_id):
         elif action in {"save_module", "toggle_module"}:
             module = get_object_or_404(adapter.modules, pk=request.POST.get("module_id"))
             module.is_enabled = request.POST.get("is_enabled") == "on"
+            module.requires_child_credentials = request.POST.get("requires_child_credentials") == "on"
             if action == "save_module":
                 module.configuration_note = request.POST.get("configuration_note", "").strip()[:1200]
                 if module.is_enabled and module.status == PortalAdapterModule.Status.NOT_CONFIGURED:
                     module.status = PortalAdapterModule.Status.READY
             module.save()
+            module.available_to_classes.set(
+                SchoolClass.objects.filter(
+                    pk__in=request.POST.getlist("available_to_classes"), school=adapter.school
+                )
+            )
             AuditEvent.objects.create(
                 actor=request.user,
                 action="portal_adapter.module.updated",
@@ -987,8 +1000,57 @@ def portal_adapter_detail(request, adapter_id):
                 messages.success(request, f"Modul „{module.label}“ angelegt.")
         return redirect("portal-adapter-detail", adapter_id=adapter.pk)
     context = _shared(request, adapter.name, "management")
-    context.update({"adapter": adapter, "provider_definition": provider_definition(adapter.provider)})
+    context.update(
+        {
+            "adapter": adapter,
+            "provider_definition": provider_definition(adapter.provider),
+            "school_classes": SchoolClass.objects.filter(
+                school=adapter.school, status="active"
+            ).order_by("display_name", "name"),
+        }
+    )
     return render(request, "ui/portal_adapter_detail.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def chat_retention_settings(request):
+    """Let portal administrators decide whether chat messages expire at all."""
+
+    _require_portal_admin(request.user)
+    if request.method == "POST":
+        category = get_object_or_404(ChatRetentionCategory, pk=request.POST.get("category_id"))
+        automatic_deletion_enabled = request.POST.get("automatic_deletion_enabled") == "on"
+        try:
+            retention_days = int(request.POST.get("retention_days", category.retention_days))
+        except (TypeError, ValueError):
+            retention_days = 0
+        if automatic_deletion_enabled and not 1 <= retention_days <= 3650:
+            messages.error(request, "Für eine automatische Löschung gib bitte 1 bis 3.650 Tage an.")
+        else:
+            category.automatic_deletion_enabled = automatic_deletion_enabled
+            if retention_days:
+                category.retention_days = retention_days
+            category.save(update_fields=["automatic_deletion_enabled", "retention_days"])
+            AuditEvent.objects.create(
+                actor=request.user,
+                action="chat.retention.changed",
+                target_type="chat_retention_category",
+                target_id=str(category.pk),
+                metadata={"automatic_deletion_enabled": automatic_deletion_enabled, "days": category.retention_days},
+            )
+            messages.success(
+                request,
+                "Automatische Löschung aktiviert."
+                if automatic_deletion_enabled
+                else "Automatische Löschung deaktiviert. Bestehende Nachrichten bleiben erhalten.",
+            )
+        return redirect("chat-retention-settings")
+    context = _shared(request, "Chat-Aufbewahrung", "management")
+    context["retention_categories"] = ChatRetentionCategory.objects.order_by(
+        "intended_for_events", "name"
+    )
+    return render(request, "ui/chat_retention_settings.html", context)
 
 
 @login_required
@@ -1621,7 +1683,9 @@ def events(request):
             event=item,
             title=item.title,
             retention_category=ChatRetentionCategory.objects.filter(
-                is_active=True, intended_for_events=True
+                is_active=True,
+                intended_for_events=True,
+                automatic_deletion_enabled=True,
             )
             .order_by("-retention_days")
             .first(),
@@ -1771,7 +1835,9 @@ def finalize_event_poll(request, poll_id):
         event=event_item,
         title=event_item.title,
         retention_category=ChatRetentionCategory.objects.filter(
-            is_active=True, intended_for_events=True
+            is_active=True,
+            intended_for_events=True,
+            automatic_deletion_enabled=True,
         )
         .order_by("-retention_days")
         .first(),
@@ -1978,14 +2044,131 @@ def galleries(request):
     return render(request, "ui/galleries.html", context)
 
 
+def _active_student_membership(student):
+    today = timezone.localdate()
+    return (
+        ClassMembership.objects.filter(
+            person=student,
+            status="active",
+            valid_from__lte=today,
+        )
+        .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+        .select_related("school_class", "school_class__school")
+        .order_by("school_class__school_year__starts_on", "id")
+        .last()
+    )
+
+
+def _school_modules_for_student(student):
+    membership = _active_student_membership(student)
+    if membership is None:
+        return membership, PortalAdapterModule.objects.none()
+    modules = (
+        PortalAdapterModule.objects.filter(
+            adapter__school=membership.school_class.school,
+            adapter__is_enabled=True,
+            is_enabled=True,
+        )
+        .filter(
+            Q(available_to_classes__isnull=True)
+            | Q(available_to_classes=membership.school_class)
+        )
+        .select_related("adapter")
+        .distinct()
+        .order_by("label")
+    )
+    return membership, modules
+
+
+def _module_connection_url(module, student):
+    """Keep provider names out of the parent-facing family area."""
+
+    if module.adapter.provider == PortalAdapter.Provider.WEBUNTIS:
+        return f"{reverse('webuntis-connection')}?student={student.pk}"
+    if module.adapter.provider == PortalAdapter.Provider.ITSLEARNING:
+        return reverse("itslearning-portal")
+    if module.adapter.base_url:
+        return module.adapter.base_url
+    return ""
+
+
 @login_required
+@require_http_methods(["GET", "POST"])
 def family(request):
     _class_or_404(request.user, request)
-    relationships = GuardianChildRelationship.objects.filter(
-        guardian_person=request.user.person
-    ).select_related("student_person")
+    relationships = list(
+        GuardianChildRelationship.objects.filter(guardian_person=request.user.person)
+        .select_related("student_person")
+        .order_by("student_person__first_name", "student_person__last_name")
+    )
+    if request.method == "POST":
+        relationship = get_object_or_404(
+            GuardianChildRelationship,
+            pk=request.POST.get("relationship_id"),
+            guardian_person=request.user.person,
+        )
+        if not relationship.is_current() or not relationship.may_manage_profile:
+            raise PermissionDenied
+        _membership, allowed_modules = _school_modules_for_student(relationship.student_person)
+        module = get_object_or_404(allowed_modules, pk=request.POST.get("module_id"))
+        enabled = request.POST.get("enabled") == "on"
+        state = ChildModuleConnection.ConnectionState.NOT_CONNECTED
+        if enabled and module.requires_child_credentials:
+            state = ChildModuleConnection.ConnectionState.CREDENTIALS_NEEDED
+        elif enabled and module.adapter.base_url:
+            state = ChildModuleConnection.ConnectionState.EXTERNAL
+        elif enabled:
+            state = ChildModuleConnection.ConnectionState.CONNECTED
+        connection, _created = ChildModuleConnection.objects.update_or_create(
+            student=relationship.student_person,
+            module=module,
+            defaults={
+                "is_enabled": enabled,
+                "connection_state": state,
+                "configured_by": request.user,
+            },
+        )
+        AuditEvent.objects.create(
+            actor=request.user,
+            action="family.module_connection.changed",
+            target_type="child_module_connection",
+            target_id=str(connection.pk),
+            metadata={"module_id": module.pk, "enabled": enabled, "state": state},
+        )
+        messages.success(
+            request,
+            f"{module.label} wurde {'für dieses Kind aktiviert' if enabled else 'für dieses Kind ausgeschaltet'}."
+        )
+        return redirect("ui-family")
+
+    module_connections = {
+        (item.student_id, item.module_id): item
+        for item in ChildModuleConnection.objects.filter(
+            student__in=[relationship.student_person for relationship in relationships]
+        )
+    }
+    relationship_rows = []
+    for relationship in relationships:
+        membership, modules = _school_modules_for_student(relationship.student_person)
+        module_rows = []
+        for module in modules:
+            connection = module_connections.get((relationship.student_person_id, module.pk))
+            module_rows.append(
+                {
+                    "module": module,
+                    "connection": connection,
+                    "connection_url": _module_connection_url(module, relationship.student_person),
+                }
+            )
+        relationship_rows.append(
+            {
+                "relationship": relationship,
+                "membership": membership,
+                "modules": module_rows,
+            }
+        )
     context = _shared(request, "Familie & Profile", "more")
-    context["relationships"] = relationships
+    context["relationship_rows"] = relationship_rows
     return render(request, "ui/family.html", context)
 
 

@@ -10,7 +10,9 @@ def cleanup_expired_messages(*, now=None):
     deleted = 0
     for message in ChatMessage.objects.select_related("room__retention_category").iterator():
         category = message.room.retention_category
-        days = category.retention_days if category else (365 if message.room.event_id else 30)
+        if not category or not category.is_active or not category.automatic_deletion_enabled:
+            continue
+        days = category.retention_days
         if message.created_at >= now - timedelta(days=days):
             continue
         if message.attachment:

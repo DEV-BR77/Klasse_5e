@@ -302,6 +302,37 @@ html[data-theme-mode="dark"] {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /* Room appearances are a small, audited palette. They never alter message
+     semantics, controls, or contrast guarantees from the portal theme. */
+  .chat-room--classic .message-thread,
+  .chat-room--modern .message-thread,
+  .chat-room--math .message-thread {
+    border-radius: 1.25rem;
+    padding: clamp(.75rem, 2vw, 1.25rem);
+  }
+
+  .chat-room--classic .message-thread {
+    background-color: #274c43;
+    background-image: radial-gradient(rgb(255 255 255 / 7%) 1px, transparent 1px);
+    background-size: 15px 15px;
+  }
+
+  .chat-room--modern .message-thread {
+    background: linear-gradient(145deg, #27334a, #182235);
+  }
+
+  .chat-room--math .message-thread {
+    background-color: #1e332a;
+    background-image: linear-gradient(rgb(255 255 255 / 8%) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 8%) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .chat-room--classic .message-bubble,
+  .chat-room--modern .message-bubble,
+  .chat-room--math .message-bubble {
+    box-shadow: 0 5px 18px rgb(0 0 0 / 18%);
+  }
 }
 
 @media (max-width: 420px) {
