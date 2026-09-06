@@ -1,0 +1,4 @@
+# Container entrypoints require Unix line endings.  Without this rule, a
+# Windows worktree can turn the shebang into /bin/sh\r and prevent Docker
+# from starting the service.
+*.sh text eol=lf
