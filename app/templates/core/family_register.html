@@ -7,23 +7,37 @@
     {% csrf_token %}
     <fieldset><legend>Erste erwachsene Person</legend><div class="field-pair"><label>Vorname<input name="first_name" value="{{ submitted.first_name|default:'' }}" required maxlength="100" autocomplete="given-name"></label><label>Nachname<input name="last_name" value="{{ submitted.last_name|default:'' }}" required maxlength="100" autocomplete="family-name"></label></div><label>E-Mail<input type="email" name="email" value="{{ submitted.email|default:'' }}" required autocomplete="email"></label><label>Persönliches Passwort<input type="password" name="password" required autocomplete="new-password"></label></fieldset>
     <details{% if submitted.adult_2_first_name or submitted.adult_2_last_name or submitted.adult_2_email %} open{% endif %}><summary>Zweite erwachsene Person hinzufügen</summary><div class="field-pair"><label>Vorname<input name="adult_2_first_name" value="{{ submitted.adult_2_first_name|default:'' }}" maxlength="100"></label><label>Nachname<input name="adult_2_last_name" value="{{ submitted.adult_2_last_name|default:'' }}" maxlength="100"></label></div><label>E-Mail<input type="email" name="adult_2_email" value="{{ submitted.adult_2_email|default:'' }}"></label><p class="help-text">Diese Person ist optional. Wenn sie bereits einen eigenen Zugang hat, lässt du diesen Bereich vollständig leer.</p></details>
-    <fieldset>
-      <legend>Erstes Kind</legend>
-      <p class="help-text">Das Kind meldet sich später selbst mit dieser E-Mail-Adresse und seinem eigenen Passwort an.</p>
-      <div class="field-pair"><label>Vorname<input name="child_1_first_name" value="{{ submitted.child_1_first_name|default:'' }}" required maxlength="100" autocomplete="off"></label><label>Nachname<input name="child_1_last_name" value="{{ submitted.child_1_last_name|default:'' }}" required maxlength="100" autocomplete="off"></label></div>
-      <label>E-Mail des Kindes<input type="email" name="child_1_email" value="{{ submitted.child_1_email|default:'' }}" required autocomplete="off"></label>
-      <label>Eigenes Passwort des Kindes<input type="password" name="child_1_password" required autocomplete="new-password"></label>
-    </fieldset>
-    <details{% if submitted.child_2_first_name or submitted.child_2_last_name or submitted.child_2_email %} open{% endif %}>
-      <summary>Zweites Kind hinzufügen</summary>
-      <div class="field-pair"><label>Vorname<input name="child_2_first_name" value="{{ submitted.child_2_first_name|default:'' }}" maxlength="100" autocomplete="off"></label><label>Nachname<input name="child_2_last_name" value="{{ submitted.child_2_last_name|default:'' }}" maxlength="100" autocomplete="off"></label></div>
-      <label>E-Mail des Kindes<input type="email" name="child_2_email" value="{{ submitted.child_2_email|default:'' }}" autocomplete="off"></label>
-      <label>Eigenes Passwort des Kindes<input type="password" name="child_2_password" autocomplete="new-password"></label>
-    </details>
+    <section class="form-stack" data-family-children>
+      <div>
+        <h2>Kinder</h2>
+        <p class="help-text">Jedes Kind erhält einen eigenen persönlichen Login und ein eigenes Passwort. Bei Bedarf kannst du beliebig weitere Kinder ergänzen.</p>
+      </div>
+      <div class="form-stack" data-family-child-rows>
+        {% for child in submitted.children %}
+          <fieldset data-family-child-row>
+            <legend>Kind {{ forloop.counter }}</legend>
+            <div class="field-pair"><label>Vorname<input name="child_{{ child.index }}_first_name" value="{{ child.first_name }}"{% if forloop.first %} required{% endif %} maxlength="100" autocomplete="off"></label><label>Nachname<input name="child_{{ child.index }}_last_name" value="{{ child.last_name }}"{% if forloop.first %} required{% endif %} maxlength="100" autocomplete="off"></label></div>
+            <label>E-Mail des Kindes<input type="email" name="child_{{ child.index }}_email" value="{{ child.email }}"{% if forloop.first %} required{% endif %} autocomplete="off"></label>
+            <label>Eigenes Passwort des Kindes<input type="password" name="child_{{ child.index }}_password"{% if forloop.first %} required{% endif %} autocomplete="new-password"></label>
+            {% if not forloop.first %}<button class="button button-secondary" type="button" data-remove-family-child>Dieses Kind entfernen</button>{% endif %}
+          </fieldset>
+        {% endfor %}
+      </div>
+      <button class="button button-secondary" type="button" data-add-family-child>+ Weiteres Kind hinzufügen</button>
+    </section>
     <label>Familienbezeichnung (optional)<input name="household_label" value="{{ submitted.household_label|default:'' }}" maxlength="120" placeholder="z. B. Familie Radke"></label>
     <label class="consent-line"><input type="checkbox" name="privacy_ack" value="yes" required> Ich habe die <a href="{% url 'privacy-information' %}" target="_blank" rel="noopener">Datenschutzinformationen</a> gelesen und darf die angegebenen Personen zur Prüfung anmelden.</label>
     <button class="button button-primary">Familie zur Prüfung einreichen</button>
     <small>Nach dem Absenden bestätigt die erste erwachsene Person ihre E-Mail-Adresse. Erst nach der Freigabe und Aktivierung funktionieren die persönlichen Logins.{% if invitation.max_uses > 1 %} Dieser Einladungscode kann insgesamt {{ invitation.max_uses }}-mal verwendet werden; {{ invitation.remaining_uses }} Verwendung(en) sind noch frei.{% else %} Dieser Einladungscode ist einmal verwendbar.{% endif %}</small>
   </form>
 </section>
+<template id="family-child-template">
+  <fieldset data-family-child-row>
+    <legend>Kind <span data-family-child-number></span></legend>
+    <div class="field-pair"><label>Vorname<input data-family-child-name="first_name" maxlength="100" autocomplete="off" required></label><label>Nachname<input data-family-child-name="last_name" maxlength="100" autocomplete="off" required></label></div>
+    <label>E-Mail des Kindes<input type="email" data-family-child-name="email" autocomplete="off" required></label>
+    <label>Eigenes Passwort des Kindes<input type="password" data-family-child-name="password" autocomplete="new-password" required></label>
+    <button class="button button-secondary" type="button" data-remove-family-child>Dieses Kind entfernen</button>
+  </fieldset>
+</template>
 {% endblock %}

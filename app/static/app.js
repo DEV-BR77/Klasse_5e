@@ -118,6 +118,33 @@
       row.querySelector("input")?.focus();
     });
   });
+  document.querySelectorAll("[data-family-children]").forEach((section) => {
+    const rows = section.querySelector("[data-family-child-rows]");
+    const template = document.getElementById("family-child-template");
+    const add = section.querySelector("[data-add-family-child]");
+    const update = () => rows?.querySelectorAll("[data-family-child-row]").forEach((row, position) => {
+      row.querySelector("legend")?.replaceChildren(`Kind ${position + 1}`);
+      const index = position + 1;
+      row.querySelectorAll("[data-family-child-name]").forEach((input) => {
+        input.name = `child_${index}_${input.dataset.familyChildName}`;
+      });
+      row.querySelectorAll("input").forEach((input) => { input.required = true; });
+    });
+    add?.addEventListener("click", () => {
+      if (!rows || !template) return;
+      const row = template.content.cloneNode(true);
+      rows.append(row);
+      update();
+      rows.lastElementChild?.querySelector("input")?.focus();
+    });
+    rows?.addEventListener("click", (event) => {
+      const remove = event.target.closest("[data-remove-family-child]");
+      if (!remove) return;
+      remove.closest("[data-family-child-row]")?.remove();
+      update();
+    });
+    update();
+  });
   document.addEventListener("click", (event) => {
     document.querySelectorAll("details[open]").forEach((details) => {
       if (!details.contains(event.target)) details.removeAttribute("open");

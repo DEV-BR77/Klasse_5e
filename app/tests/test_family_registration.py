@@ -118,6 +118,45 @@ def test_family_form_keeps_safe_fields_after_validation_error(client, school_cla
 
 @pytest.mark.django_db
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+def test_family_registration_accepts_more_than_two_children(client, school_class, admin_user):
+    _access_code, token = FamilyAccessCode.issue(
+        batch_id=uuid4(),
+        serial_number=1,
+        school_class=school_class,
+        created_by=admin_user,
+    )
+
+    response = client.post(
+        f"/familie/start/{token}/",
+        {
+            "first_name": "Erika",
+            "last_name": "Beispiel",
+            "email": "erika@example.test",
+            "password": "Safe-Test-Password-123!",
+            "child_1_first_name": "Kim",
+            "child_1_last_name": "Beispiel",
+            "child_1_email": "kim@example.test",
+            "child_1_password": "Child-Safe-Password-123!",
+            "child_2_first_name": "Jan",
+            "child_2_last_name": "Beispiel",
+            "child_2_email": "jan@example.test",
+            "child_2_password": "Child-Safe-Password-123!",
+            "child_3_first_name": "Noa",
+            "child_3_last_name": "Beispiel",
+            "child_3_email": "noa@example.test",
+            "child_3_password": "Child-Safe-Password-123!",
+            "privacy_ack": "yes",
+        },
+    )
+
+    assert response.status_code == 202
+    family = FamilyRegistrationRequest.objects.get(household_label="Familie Beispiel")
+    assert FamilyChildAccount.objects.filter(family_request=family).count() == 3
+    assert [child["first_name"] for child in family.children] == ["Kim", "Jan", "Noa"]
+
+
+@pytest.mark.django_db
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 def test_activation_links_existing_father_without_duplicate_account(
     school, school_class, admin_user
 ):

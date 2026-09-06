@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import re
 import secrets
 
 from django.conf import settings
@@ -139,8 +140,24 @@ def family_register(request, token):
                 "household_label",
             )
         }
+        child_indexes = sorted(
+            {
+                int(match.group(1))
+                for key in request.POST
+                if (match := re.fullmatch(r"child_(\d+)_(?:first_name|last_name|email|password)", key))
+            }
+        )
+        submitted["children"] = [
+            {
+                "index": index,
+                "first_name": request.POST.get(f"child_{index}_first_name", "").strip(),
+                "last_name": request.POST.get(f"child_{index}_last_name", "").strip(),
+                "email": request.POST.get(f"child_{index}_email", "").strip(),
+            }
+            for index in child_indexes
+        ] or [{"index": 1, "first_name": "", "last_name": "", "email": ""}]
         children = []
-        for index in (1, 2):
+        for index in child_indexes or [1]:
             first = request.POST.get(f"child_{index}_first_name", "").strip()[:100]
             last = request.POST.get(f"child_{index}_last_name", "").strip()[:100]
             email = normalize_login_email(request.POST.get(f"child_{index}_email", ""))
@@ -293,7 +310,18 @@ def family_register(request, token):
                 },
                 status=503,
             )
-    return render(request, "core/family_register.html", {"invitation": invitation})
+    return render(
+        request,
+        "core/family_register.html",
+        {
+            "invitation": invitation,
+            "submitted": {
+                "children": [
+                    {"index": 1, "first_name": "", "last_name": "", "email": ""}
+                ]
+            },
+        },
+    )
 
 
 def verify_registration_email(request, token):
