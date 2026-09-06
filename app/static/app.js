@@ -71,6 +71,14 @@
     });
     show(0);
   }
+  document.querySelectorAll("[data-replace-history]").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const url = new URL(form.action || window.location.href);
+      url.search = new URLSearchParams(new FormData(form)).toString();
+      window.location.replace(url.href);
+    });
+  });
   document.querySelectorAll("[data-auto-submit]").forEach((form) => form.addEventListener("change", () => form.requestSubmit()));
   document.querySelectorAll("[data-menu-sort]").forEach((list) => {
     const syncPositions = () => list.querySelectorAll("[data-menu-row]").forEach((row, index) => {

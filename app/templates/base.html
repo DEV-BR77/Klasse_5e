@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#5558a6">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
-  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}?v=tailwind-v1">
+  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}?v=tailwind-v2">
   {% block extra_head %}{% endblock %}
   <title>{{ page_title|default:"Home" }} · KlassID</title>
 </head>
@@ -20,7 +20,7 @@
     {% if request.user.is_authenticated %}
     <div class="app-topbar__leading">
       {% if active_section != "start" and request.path != "/mehr/" %}
-        <a class="app-topbar__back" href="{% url 'ui-more' %}">← <span>Zum Menü</span></a>
+        <a class="app-topbar__back" href="/">← <span>Zur Startseite</span></a>
       {% else %}
         <nav class="app-topbar__legal" aria-label="Rechtliche Informationen">
           <span>© 2026 KlassID</span>
@@ -92,7 +92,7 @@
 {% endif %}
 <div id="live-status" class="sr-only" aria-live="polite"></div>
 <script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
-  <script src="{% static 'app.js' %}?v=7" defer></script>
+  <script src="{% static 'app.js' %}?v=8" defer></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js')}</script>
 </body>
 </html>

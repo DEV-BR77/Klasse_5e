@@ -1,0 +1,2 @@
+{% load meal_tags %}
+{% if option.allergen_codes or option.additive_codes %}<div class="meal-codes meal-codes-readable">{% for code in option.allergen_codes %}<span>Allergen: {{ plan.legend.allergens|get_item:code|default:code }}</span>{% endfor %}{% for code in option.additive_codes %}<span>Zusatzstoff: {{ plan.legend.additives|get_item:code|default:code }}</span>{% endfor %}</div>{% endif %}

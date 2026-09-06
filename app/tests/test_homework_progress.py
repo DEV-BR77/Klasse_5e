@@ -57,6 +57,7 @@ def test_dashboard_keeps_full_homework_text_in_readable_dialog(rf, guardian, per
 
     request = rf.get("/")
     request.user = guardian
+    request.session = {}
     response = dashboard(request)
 
     assert response.status_code == 200

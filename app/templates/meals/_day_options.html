@@ -1,0 +1,2 @@
+{% load meal_tags %}
+{% if meal %}<div class="dashboard-meals">{% for option in meal.options.all %}<section><strong>Menü {{ option.line }}</strong><p>{{ option.components|join:", " }}</p>{% include "meals/_codes.html" with plan=meal.plan %}</section>{% endfor %}</div><small>Änderungen vorbehalten · Stand {{ meal.plan.fetched_at|date:"d.m., H:i" }} Uhr</small>{% else %}<p class="empty-compact">Für diesen Tag ist kein Speiseplan veröffentlicht.</p>{% endif %}

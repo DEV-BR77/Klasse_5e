@@ -580,19 +580,20 @@ def dashboard(request):
     except Exception:
         pass
     day = _day_from_request(request)
-    meal_reference_day = day
-    if day == timezone.localdate() and timezone.localtime().hour >= 15:
-        meal_reference_day += timedelta(days=1)
-    next_meal = (
+    week_start = day - timedelta(days=day.weekday())
+    meal_days = list(
         MealDay.objects.filter(
-            plan__status=MealPlan.Status.READY,
-            date__gte=meal_reference_day,
-        )
-        .select_related("plan")
-        .prefetch_related("options")
-        .order_by("date")
-        .first()
+            plan__status=MealPlan.Status.READY, is_published=True,
+            date__gte=week_start, date__lte=week_start + timedelta(days=4),
+        ).select_related("plan").prefetch_related("options").order_by("date")
     )
+    daily_meal = next((meal for meal in meal_days if meal.date == day), None)
+    meal_week = [
+        {"date": week_start + timedelta(days=offset),
+         "meal": next((meal for meal in meal_days
+                       if meal.date == week_start + timedelta(days=offset)), None)}
+        for offset in range(5)
+    ]
     context = _shared(request, "Start", "start")
     portal_connections = _connections_for_active_child(
         _itslearning_connections(request.user), dashboard_child
@@ -644,8 +645,13 @@ def dashboard(request):
             "release_channel": settings.APP_RELEASE_CHANNEL,
             "selected_day": day,
             **_dashboard_day_copy(day),
+            **({"dashboard_heading": f"Was steht am {day:%d.%m.%Y} an?",
+                "dashboard_schedule_label": f"{day:%d.%m.%Y}",
+                "dashboard_empty_schedule_text": "Für diesen Tag ist kein Unterricht eingetragen."}
+               if request.GET.get("tag") and day not in (timezone.localdate(), timezone.localdate() + timedelta(days=1)) else {}),
             "dashboard_week": [
-                {"date": day + timedelta(days=offset), "selected": offset == 0}
+                {"date": week_start + timedelta(days=offset),
+                 "selected": week_start + timedelta(days=offset) == day}
                 for offset in range(7)
             ],
             "webuntis_last_sync": webuntis_last_sync,
@@ -668,7 +674,8 @@ def dashboard(request):
                 if school_class
                 else Event.objects.none()
             ),
-            "next_meal": next_meal,
+            "daily_meal": daily_meal,
+            "meal_week": meal_week,
             "posts": (
                 Post.objects.filter(school_class=school_class, status=Post.Status.PUBLISHED)
                 .order_by("-important", "-pinned", "-updated_at")[:3]
