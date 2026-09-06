@@ -6,13 +6,13 @@
     <a class="button button-secondary" href="{% url 'portal-management' %}">← Zur Verwaltung</a>
   </header>
 
-  <section class="settings-panel"><h2>Adapter hinzufügen</h2><p class="help-text">Die Zugangsdaten von Kindern werden hier nie eingegeben oder gespeichert. Du pflegst zunächst nur Adresse und technische Kennungen.</p>
+  <section class="settings-panel"><h2>Adapter hinzufügen{% if selected_school %} · {{ selected_school.name }}{% endif %}</h2><p class="help-text">Die Zugangsdaten von Kindern werden hier nie eingegeben oder gespeichert. Du pflegst zunächst nur Adresse und technische Kennungen.</p>
     <div class="adapter-catalog-grid">
       {% for provider, item in adapter_catalog %}
       <form method="post" class="content-card form-stack">{% csrf_token %}
         <input type="hidden" name="provider" value="{{ provider }}">
         <div><h3>{{ item.label }}</h3><p>{{ item.hint }}</p></div>
-        <label>Schule<select name="school_id" required><option value="">Bitte auswählen</option>{% for school in schools %}<option value="{{ school.id }}">{{ school }}</option>{% endfor %}</select></label>
+        <label>Schule<select name="school_id" required><option value="">Bitte auswählen</option>{% for school in schools %}<option value="{{ school.id }}" {% if selected_school and school.id == selected_school.id %}selected{% endif %}>{{ school }}</option>{% endfor %}</select></label>
         <label>Anzeigename <input name="name" maxlength="120" value="{{ item.label }}"></label>
         <footer class="form-actions"><a class="button button-secondary" href="{% url 'portal-management' %}">Abbrechen</a><button class="button button-primary">Adapter anlegen</button></footer>
       </form>
@@ -20,7 +20,7 @@
     </div>
   </section>
 
-  <section><div class="section-heading"><div><p class="eyebrow">Eingerichtet</p><h2>Adapter nach Schule</h2></div></div>
+  <section><div class="section-heading"><div><p class="eyebrow">Eingerichtet</p><h2>{% if selected_school %}Adapter für {{ selected_school.name }}{% else %}Adapter nach Schule{% endif %}</h2></div>{% if selected_school %}<a class="button button-secondary" href="{% url 'portal-adapter-management' %}">Alle Schulen anzeigen</a>{% endif %}</div>
     <div class="card-grid">{% for adapter in adapters %}
       <a class="content-card" href="{% url 'portal-adapter-detail' adapter.id %}"><p class="eyebrow">{{ adapter.school }}</p><h3>{{ adapter.name }}</h3><p>{{ adapter.modules.count }} Module · {% if adapter.is_enabled %}Adapter freigegeben{% else %}Adapter pausiert{% endif %}</p><p class="muted">{{ adapter.base_url|default:"Noch keine Adresse hinterlegt" }}</p></a>
     {% empty %}<div class="empty-state"><h3>Noch kein Adapter eingerichtet</h3><p>Lege oben ein Portal für die gewünschte Schule an. Danach konfigurierst und veröffentlichst du die einzelnen Module unabhängig voneinander.</p></div>{% endfor %}</div>

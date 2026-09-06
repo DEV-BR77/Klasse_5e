@@ -4,13 +4,16 @@
 <section class="dashboard-page">
   <header class="welcome-panel">
     <div><p class="eyebrow">Guten Tag, {{ request.user.person.first_name|default:request.user.email }}</p><h1>{{ dashboard_heading }}</h1>{% if active_child %}<p>{{ family_name }} · {{ active_child.school_name }}{% if active_child.class_name %} · {{ active_child.class_name }}{% endif %}</p>{% elif family_children %}<p>Wichtige Termine und Informationen für alle Kinder.</p>{% elif membership %}<p>{{ family_name }} · {{ membership.school_class.display_name|default:membership.school_class.name }}</p>{% endif %}</div>
-    <button class="icon-button refresh-button" type="button" onclick="window.location.reload()" aria-label="Startseite aktualisieren">↻</button>
   </header>
 
   {% if notification_counts.chat_mention %}<a class="mention-alert" href="{% url 'notification-list' %}"><span>@</span><div><strong>{{ notification_counts.chat_mention }} neue Erwähnung{% if notification_counts.chat_mention != 1 %}en{% endif %}</strong><small>Jemand hat dich in einem Chat angesprochen.</small></div><b>Öffnen →</b></a>{% endif %}
 
   <section class="today-strip" aria-labelledby="today-heading">
-    <div class="section-heading"><div><p class="eyebrow">Diese Woche</p><h2 id="today-heading">Dein Überblick</h2></div><a href="/kalender/">Alle Termine</a></div>
+    <div class="dashboard-overview-heading">
+      <div><p class="eyebrow">Diese Woche</p><h2 id="today-heading">Dein Überblick</h2></div>
+      <div class="dashboard-sync-status"><span>{% if webuntis_last_sync %}Schuldaten zuletzt aktualisiert: {{ webuntis_last_sync|date:"d.m.Y, H:i" }} Uhr{% else %}Noch keine Schuldaten synchronisiert.{% endif %}</span><button class="icon-button dashboard-refresh-button" type="button" onclick="window.location.reload()" aria-label="Startseite aktualisieren" title="Schuldatenansicht aktualisieren">↻</button></div>
+      <a href="/kalender/">Alle Termine</a>
+    </div>
     <div class="mini-week">{% for item in dashboard_week %}<a href="/kalender/?tag={{ item.date|date:'Y-m-d' }}&amp;ansicht=day" {% if item.selected %}aria-current="date"{% endif %}><span>{{ item.date|date:"D" }}</span><strong>{{ item.date|date:"d" }}</strong></a>{% endfor %}</div>
   </section>
 
@@ -110,6 +113,5 @@
       </article>
     </div>
   </section>
-  <p class="sync-note">{% if webuntis_last_sync %}Schuldaten zuletzt aktualisiert: {{ webuntis_last_sync|date:"d.m.Y, H:i" }} Uhr{% else %}Noch keine Schuldaten synchronisiert.{% endif %}</p>
 </section>
 {% endblock %}

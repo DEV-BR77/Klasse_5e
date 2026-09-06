@@ -21,6 +21,13 @@
     <div class="app-topbar__leading">
       {% if active_section != "start" and request.path != "/mehr/" %}
         <a class="app-topbar__back" href="{% url 'ui-more' %}">← <span>Zum Menü</span></a>
+      {% else %}
+        <nav class="app-topbar__legal" aria-label="Rechtliche Informationen">
+          <span>© 2026 KlassID</span>
+          <a href="{% url 'privacy-information' %}">Datenschutz</a>
+          <a href="{% url 'imprint' %}">Impressum</a>
+          <a href="{% url 'terms' %}">Hinweise</a>
+        </nav>
       {% endif %}
     </div>
     <div class="app-topbar__actions">
@@ -32,7 +39,7 @@
       </a>
       <details class="app-profile-menu">
         <summary aria-label="Profilmenü öffnen">
-          <span class="app-avatar" aria-hidden="true">{% local_peeps_avatar personal_display_name %}</span>
+          <span class="app-avatar" aria-hidden="true">{% if profile_image_mode == "photo" and profile_photo_person_id %}<img src="{% url 'profile-photo' profile_photo_person_id %}" alt="">{% else %}<img src="{% static profile_avatar_path %}" alt="">{% endif %}</span>
           <span class="app-profile-menu__name">{{ personal_display_name|default:request.user.email }}</span>
         </summary>
         <nav class="app-profile-menu__panel" aria-label="Profilmenü">
@@ -77,7 +84,7 @@
     {% if messages %}<div class="toast-stack" aria-live="polite">{% for message in messages %}{% if 'success' not in message.tags %}<p class="status-banner">{{ message }}</p>{% endif %}{% endfor %}</div>{% endif %}
     {% block content %}{% endblock %}
   </main>
-  {% include "includes/site_footer.html" %}
+  {% if not request.user.is_authenticated %}{% include "includes/site_footer.html" %}{% endif %}
 </div>
 
 {% if request.user.is_authenticated %}

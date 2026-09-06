@@ -18,13 +18,9 @@
       <h2>Schulportal-Adapter</h2>
       <p>Portale, Adressen und einzeln freigegebene Abrufmodule pro Schule verwalten.</p>
     </a>
-    <a class="content-card" href="/admin/core/school/">
+    <a class="content-card" href="{% url 'school-management' %}">
       <h2>Schulen</h2>
-      <p>{{ schools }} aktive Schulen. Weitere Schule aus der hinterlegten Schulliste auswählen oder anlegen.</p>
-    </a>
-    <a class="content-card" href="/admin/core/schoolclass/">
-      <h2>Klassen</h2>
-      <p>{{ classes }} aktive Klassen. Klassen einer Schule und einem Schuljahr zuordnen.</p>
+      <p>{{ schools }} eingerichtete Schulen · {{ classes }} aktive Klassen. Schule suchen, hinzufügen und Klassen direkt darunter anlegen.</p>
     </a>
     <a class="content-card" href="/admin/core/registrationapplication/">
       <h2>Neue Registrierungen</h2>

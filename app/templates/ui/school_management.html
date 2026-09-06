@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="settings-page portal-management-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Portalverwaltung</p>
+      <h1>Schulen &amp; Klassen</h1>
+      <p class="lede">Eine Schule wird zuerst zum Portal hinzugefügt. Danach legst du ihre Klassen, Adapter und die jeweils erlaubten Module direkt an derselben Stelle fest.</p>
+    </div>
+    <a class="button button-secondary" href="{% url 'portal-management' %}">← Zur Verwaltung</a>
+  </header>
+
+  {% if may_manage_school_catalog %}
+    <section class="settings-panel form-stack">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Schulkatalog</p>
+          <h2>Schule suchen und hinzufügen</h2>
+          <p class="muted">Suche zunächst in den bereits importierten Datensätzen. Noch nicht eingerichtete Schulen werden erst durch „Zum Portal hinzufügen“ freigegeben.</p>
+        </div>
+        <a class="button button-secondary" href="{% url 'school-catalog-import' %}">CSV durchsuchen &amp; importieren</a>
+      </div>
+      <form method="get" class="inline-search-form">
+        <label for="school-query" class="sr-only">Schule, Ort oder Postleitzahl suchen</label>
+        <input id="school-query" name="q" value="{{ query }}" minlength="2" placeholder="z. B. Heinrich-Nordhoff, Gifhorn oder 38518">
+        <button class="button button-primary" type="submit">Schule suchen</button>
+      </form>
+      {% if query %}
+        <div class="school-search-results">
+          {% for school in candidate_schools %}
+            <article class="content-card school-search-result">
+              <div><h3>{{ school.name }}</h3><p>{{ school.postal_code }} {{ school.city }}{% if school.school_type %} · {{ school.school_type }}{% endif %}</p></div>
+              <form method="post">{% csrf_token %}<input type="hidden" name="action" value="activate_school"><input type="hidden" name="school_id" value="{{ school.pk }}"><button class="button button-primary">Zum Portal hinzufügen</button></form>
+            </article>
+          {% empty %}
+            <p class="empty-state">Keine noch nicht eingerichtete Schule gefunden. Du kannst die CSV-Datei oben gezielt durchsuchen und passende Datensätze importieren.</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  <section class="form-stack">
+    <div class="section-heading">
+      <div><p class="eyebrow">Eingerichtet</p><h2>Schulen im Portal</h2></div>
+    </div>
+    {% for school in active_schools %}
+      <article class="settings-panel school-management-card">
+        <header class="section-heading">
+          <div>
+            <p class="eyebrow">{{ school.postal_code }} {{ school.city }}</p>
+            <h2>{{ school.name }}</h2>
+            <p>{% if school.school_type %}{{ school.school_type }}{% else %}Schule ohne hinterlegte Schulart{% endif %}</p>
+          </div>
+          <a class="button button-secondary" href="{% url 'portal-adapter-management' %}?schule={{ school.pk }}">Adapter &amp; Module</a>
+        </header>
+
+        <div class="settings-details-body form-stack">
+          <div>
+            <h3>Klassen</h3>
+            <ul class="plain-item-list">
+              {% for school_class in school.classes.all %}
+                {% if school_class.status == "active" %}
+                  <li><strong>{{ school_class.display_name|default:school_class.name }}</strong><span>Jahrgang {{ school_class.grade_level|default:"nicht gesetzt" }} · {{ school_class.school_year.label }}</span></li>
+                {% endif %}
+              {% empty %}
+                <li><span>Noch keine Klasse eingerichtet.</span></li>
+              {% endfor %}
+            </ul>
+          </div>
+          <form method="post" class="class-create-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_class">
+            <input type="hidden" name="school_id" value="{{ school.pk }}">
+            <div class="section-heading"><div><p class="eyebrow">Klasse hinzufügen</p><h3>Neue Klasse für {{ school.name }}</h3></div></div>
+            <div class="field-pair">
+              <label>Schuljahr
+                <select name="school_year_id" required>
+                  {% for school_year in school_years %}<option value="{{ school_year.pk }}" {% if current_year and school_year.pk == current_year.pk %}selected{% endif %}>{{ school_year.label }}</option>{% endfor %}
+                </select>
+              </label>
+              <label>Jahrgang
+                <select name="grade_level" required>
+                  <option value="">Bitte auswählen</option>
+                  <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option>
+                </select>
+              </label>
+              <label>Klassenbezeichnung<input name="class_label" maxlength="64" placeholder="z. B. 5a oder 5.1"></label>
+              <label>Kurzcode<input name="class_code" maxlength="64" placeholder="z. B. 5a"></label>
+            </div>
+            <p class="help-text">Der Jahrgang wird zentral mit der Klasse gespeichert. Dadurch können später Lernmaterial und andere Adapter automatisch passend gefiltert werden. Ohne Klassenbezeichnung entsteht „Klasse 5“, „Klasse 6“ usw.</p>
+            <footer class="form-actions"><a class="button button-secondary" href="{% url 'portal-management' %}">Abbrechen</a><button class="button button-primary" type="submit">Klasse anlegen</button></footer>
+          </form>
+        </div>
+      </article>
+    {% empty %}
+      <div class="empty-state"><h2>Noch keine Schule eingerichtet</h2><p>Suche oben eine Schule aus dem Katalog oder importiere aus einer CSV-Datei zunächst nur die passende Auswahl.</p></div>
+    {% endfor %}
+  </section>
+
+  <p class="help-text">Die Django-Verwaltung bleibt für Sonderfälle verfügbar, ist für das Einrichten von Schulen, Klassen und Adaptern aber nicht mehr der normale Weg.</p>
+</section>
+{% endblock %}

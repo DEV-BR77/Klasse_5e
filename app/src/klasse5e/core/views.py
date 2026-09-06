@@ -23,6 +23,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .models import (
+    PROFILE_AVATAR_PRESETS,
     AccountDeletionRequest,
     AuditEvent,
     ClassMembership,
@@ -341,6 +342,20 @@ def personal_profile(request):
             person.profile_photo.save(
                 f"{secrets.token_urlsafe(18)}.webp", ContentFile(encoded), save=False
             )
+            person.profile_image_mode = Person.ProfileImageMode.PHOTO
+        elif request.POST.get("remove_profile_photo") == "yes" and person.profile_photo:
+            person.profile_photo.delete(save=False)
+            person.profile_photo = ""
+            person.profile_image_mode = Person.ProfileImageMode.AVATAR
+        else:
+            requested_image_mode = request.POST.get("profile_image_mode")
+            if requested_image_mode in Person.ProfileImageMode.values:
+                person.profile_image_mode = requested_image_mode
+        avatar_key = request.POST.get("avatar_key")
+        if avatar_key in dict(PROFILE_AVATAR_PRESETS):
+            person.avatar_key = avatar_key
+        if not person.profile_photo:
+            person.profile_image_mode = Person.ProfileImageMode.AVATAR
         person.full_clean()
         person.save()
         if previous != (person.email_visibility, person.phone_visibility):
@@ -357,7 +372,13 @@ def personal_profile(request):
         messages.success(request, "Dein Profil wurde gespeichert.")
         return redirect("personal-profile")
     return render(
-        request, "ui/personal_profile.html", {"page_title": "Persönliches Profil", "person": person}
+        request,
+        "ui/personal_profile.html",
+        {
+            "page_title": "Persönliches Profil",
+            "person": person,
+            "avatar_presets": PROFILE_AVATAR_PRESETS,
+        },
     )
 
 
@@ -392,13 +413,11 @@ def profile_photo(request, person_id):
 
     school_class = active_class_for_user(request.user)
     person = Person.objects.filter(pk=person_id, profile_photo__gt="").first()
-    if (
-        not school_class
-        or not person
-        or not ClassMembership.objects.filter(
-            school_class=school_class, person=person, status="active"
-        ).exists()
-    ):
+    own_photo = hasattr(request.user, "person") and request.user.person.pk == person_id
+    shared_class_photo = school_class and person and ClassMembership.objects.filter(
+        school_class=school_class, person=person, status="active"
+    ).exists()
+    if not person or not (own_photo or shared_class_photo):
         raise Http404
     response = FileResponse(person.profile_photo.open("rb"), content_type="image/webp")
     response["Cache-Control"] = "private, max-age=300"

@@ -111,6 +111,15 @@
       if (!details.contains(event.target)) details.removeAttribute("open");
     });
   });
+  document.querySelectorAll("details").forEach((details) => details.addEventListener("toggle", () => {
+    if (!details.open) return;
+    window.setTimeout(() => {
+      details.querySelectorAll("[data-local-map]").forEach((map) => {
+        map._leafletInstance?.invalidateSize();
+        map._leafletRestoreView?.();
+      });
+    }, 80);
+  }));
 
   const applyHomeworkState = (homeworkId, completed) => {
     document.querySelectorAll(`[data-homework-id="${homeworkId}"]`).forEach((toggle) => {
@@ -194,6 +203,111 @@
   const readJsonScript = (id, fallback) => {
     try { return JSON.parse(document.getElementById(id)?.textContent || JSON.stringify(fallback)); } catch (_) { return fallback; }
   };
+
+  document.querySelectorAll("[data-profile-form]").forEach((form) => {
+    const input = form.querySelector("[data-profile-photo-input]");
+    const cropper = form.querySelector("[data-profile-cropper]");
+    const viewport = form.querySelector("[data-profile-crop-viewport]");
+    const image = form.querySelector("[data-profile-crop-image]");
+    const zoomControl = form.querySelector("[data-profile-crop-zoom]");
+    const currentPreview = form.querySelector("[data-profile-current-preview] img");
+    const photoMode = form.querySelector("[data-profile-photo-mode]");
+    if (!input || !cropper || !viewport || !image || !zoomControl) return;
+
+    let objectUrl = "";
+    let zoomLevel = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+    let dragStart = null;
+    let cropReady = false;
+
+    const clampOffset = () => {
+      const width = image.naturalWidth * image._baseScale * zoomLevel;
+      const height = image.naturalHeight * image._baseScale * zoomLevel;
+      const maxX = Math.max(0, (width - viewport.clientWidth) / 2);
+      const maxY = Math.max(0, (height - viewport.clientHeight) / 2);
+      offsetX = Math.max(-maxX, Math.min(maxX, offsetX));
+      offsetY = Math.max(-maxY, Math.min(maxY, offsetY));
+    };
+    const renderCrop = () => {
+      if (!image._baseScale) return;
+      clampOffset();
+      const width = image.naturalWidth * image._baseScale * zoomLevel;
+      const height = image.naturalHeight * image._baseScale * zoomLevel;
+      image.style.width = `${width}px`;
+      image.style.height = `${height}px`;
+      image.style.left = `${(viewport.clientWidth - width) / 2 + offsetX}px`;
+      image.style.top = `${(viewport.clientHeight - height) / 2 + offsetY}px`;
+    };
+    const prepareCrop = () => {
+      if (!image.naturalWidth || !viewport.clientWidth) return;
+      image._baseScale = Math.max(
+        viewport.clientWidth / image.naturalWidth,
+        viewport.clientHeight / image.naturalHeight,
+      );
+      zoomLevel = 1;
+      offsetX = 0;
+      offsetY = 0;
+      zoomControl.value = "1";
+      cropReady = true;
+      renderCrop();
+    };
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(file);
+      image.src = objectUrl;
+      cropper.hidden = false;
+      photoMode.disabled = false;
+      photoMode.checked = true;
+      image.addEventListener("load", prepareCrop, {once:true});
+    });
+    zoomControl.addEventListener("input", () => {
+      zoomLevel = Number(zoomControl.value);
+      renderCrop();
+    });
+    viewport.addEventListener("pointerdown", (event) => {
+      if (!cropReady) return;
+      dragStart = {x:event.clientX, y:event.clientY, offsetX, offsetY};
+      viewport.setPointerCapture(event.pointerId);
+    });
+    viewport.addEventListener("pointermove", (event) => {
+      if (!dragStart) return;
+      offsetX = dragStart.offsetX + event.clientX - dragStart.x;
+      offsetY = dragStart.offsetY + event.clientY - dragStart.y;
+      renderCrop();
+    });
+    const stopDragging = () => { dragStart = null; };
+    viewport.addEventListener("pointerup", stopDragging);
+    viewport.addEventListener("pointercancel", stopDragging);
+
+    form.addEventListener("submit", (event) => {
+      if (!input.files?.length || !cropReady || form.dataset.profileCropApplied === "yes") return;
+      event.preventDefault();
+      const width = image.naturalWidth * image._baseScale * zoomLevel;
+      const height = image.naturalHeight * image._baseScale * zoomLevel;
+      const left = (viewport.clientWidth - width) / 2 + offsetX;
+      const top = (viewport.clientHeight - height) / 2 + offsetY;
+      const sourceX = Math.max(0, (-left / width) * image.naturalWidth);
+      const sourceY = Math.max(0, (-top / height) * image.naturalHeight);
+      const sourceWidth = Math.min(image.naturalWidth - sourceX, (viewport.clientWidth / width) * image.naturalWidth);
+      const sourceHeight = Math.min(image.naturalHeight - sourceY, (viewport.clientHeight / height) * image.naturalHeight);
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 512;
+      canvas.getContext("2d").drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, 512, 512);
+      canvas.toBlob((blob) => {
+        if (!blob) { form.submit(); return; }
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([blob], "profilfoto.webp", {type:"image/webp"}));
+        input.files = transfer.files;
+        form.dataset.profileCropApplied = "yes";
+        form.requestSubmit();
+      }, "image/webp", .92);
+    });
+  });
+
   const initLeafletMap = (container) => {
     const bounds = readJsonScript(container.dataset.boundsId, {south:52.329, west:10.623, north:52.509, east:10.913});
     const points = readJsonScript(container.dataset.pointsId, []);
@@ -204,7 +318,10 @@
     const southWest = [Number(bounds.south), Number(bounds.west)];
     const northEast = [Number(bounds.north), Number(bounds.east)];
     const validPoints = points.filter((point) => Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude)));
-    const schoolPoint = validPoints.find((point) => point.kind === "school") || validPoints[0];
+    const selectable = Boolean(container.dataset.selectLat && container.dataset.selectLon);
+    const fixedPoints = selectable ? validPoints.filter((point) => point.kind === "school") : validPoints;
+    const savedSelection = selectable ? validPoints.find((point) => point.kind !== "school") : null;
+    const schoolPoint = fixedPoints.find((point) => point.kind === "school") || fixedPoints[0];
     const restoreView = () => {
       if (validPoints.length > 1) {
         leafletMap.fitBounds(window.L.latLngBounds(validPoints.map((point) => [Number(point.latitude), Number(point.longitude)])), {padding:[42, 42], maxZoom:15});
@@ -222,7 +339,7 @@
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap-Mitwirkende</a>',
     }).addTo(leafletMap);
     window.L.control.zoom({position:"topright"}).addTo(leafletMap);
-    validPoints.forEach((point) => {
+    fixedPoints.forEach((point) => {
       const latitude = Number(point.latitude);
       const longitude = Number(point.longitude);
       const school = point.kind === "school";
@@ -238,19 +355,27 @@
         window.L.circle([latitude, longitude], {radius:Number(point.radiusMeters), color:"#6256c7", weight:2, fillColor:"#6256c7", fillOpacity:.12}).addTo(leafletMap);
       }
     });
-    if (container.dataset.connectPoints === "true" && validPoints.length > 1) {
-      window.L.polyline(validPoints.map((point) => [Number(point.latitude), Number(point.longitude)]), {color:"#6256c7", weight:5, opacity:.85, dashArray:"10 8", lineCap:"round", lineJoin:"round"}).addTo(leafletMap);
+    if (container.dataset.connectPoints === "true" && fixedPoints.length > 1) {
+      window.L.polyline(fixedPoints.map((point) => [Number(point.latitude), Number(point.longitude)]), {color:"#6256c7", weight:5, opacity:.85, dashArray:"10 8", lineCap:"round", lineJoin:"round"}).addTo(leafletMap);
     }
-    if (container.dataset.selectLat && container.dataset.selectLon) {
+    if (selectable) {
       let selectedMarker;
+      let selectedCircle;
+      const setSelection = (latitude, longitude, writeToForm = true) => {
+        if (writeToForm) {
+          document.getElementById(container.dataset.selectLat).value = latitude.toFixed(6);
+          document.getElementById(container.dataset.selectLon).value = longitude.toFixed(6);
+        }
+        selectedMarker?.remove();
+        selectedCircle?.remove();
+        selectedMarker = window.L.circleMarker([latitude, longitude], {radius:8, color:"#fff", weight:3, fillColor:"#6256c7", fillOpacity:1}).addTo(leafletMap);
+        selectedCircle = window.L.circle([latitude, longitude], {radius:Number(container.dataset.selectionRadius || 0), color:"#6256c7", weight:2, fillColor:"#6256c7", fillOpacity:.12}).addTo(leafletMap);
+      };
+      if (savedSelection) setSelection(Number(savedSelection.latitude), Number(savedSelection.longitude), false);
       leafletMap.on("click", (event) => {
         const latitude = event.latlng.lat;
         const longitude = event.latlng.lng;
-        document.getElementById(container.dataset.selectLat).value = latitude.toFixed(6);
-        document.getElementById(container.dataset.selectLon).value = longitude.toFixed(6);
-        selectedMarker?.remove();
-        selectedMarker = window.L.circleMarker([latitude, longitude], {radius:8, color:"#fff", weight:3, fillColor:"#6256c7", fillOpacity:1}).addTo(leafletMap);
-        window.L.circle([latitude, longitude], {radius:Number(container.dataset.selectionRadius || 0), color:"#6256c7", weight:2, fillColor:"#6256c7", fillOpacity:.12}).addTo(leafletMap);
+        setSelection(latitude, longitude);
         const output = container.parentElement?.querySelector(".map-selection-status");
         if (output) output.textContent = "Position markiert. Du kannst sie durch erneutes Tippen verschieben.";
       });
@@ -271,7 +396,11 @@
       if (response.ok) roads = (await response.json()).roads || [];
     } catch (_) { /* the picker remains usable with its local fallback grid */ }
     loading?.remove();
-    const selected = [];
+    const selectable = Boolean(map.dataset.selectLat && map.dataset.selectLon);
+    const validPoints = points.filter((point) => Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude)));
+    const fixedPoints = selectable ? validPoints.filter((point) => point.kind === "school") : validPoints;
+    const savedSelection = selectable ? validPoints.find((point) => point.kind !== "school") : null;
+    const selected = savedSelection ? [{...savedSelection, kind:"start"}] : [];
     const context = canvas.getContext("2d");
     const project = (longitude, latitude, width, height) => ({
       x: (longitude - viewBounds.west) / (viewBounds.east - viewBounds.west) * width,
@@ -305,7 +434,7 @@
         context.strokeStyle = major ? "#c8d0d5" : road.kind === "cycleway" ? "#9fd7b1" : "#dde2e5";
         context.lineWidth = major ? 2.4 : 1.15; context.stroke();
       });
-      const route = [...points, ...selected].filter((point) => Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude)));
+      const route = [...fixedPoints, ...selected];
       route.filter((point) => Number(point.radiusMeters) > 0).forEach((point) => {
         const p = project(Number(point.longitude), Number(point.latitude), width, height);
         const longitudeDegrees = Number(point.radiusMeters) / (111320 * Math.cos(Number(point.latitude) * Math.PI / 180));
@@ -331,7 +460,7 @@
     controls.children[1].addEventListener("click", () => zoom(1.72));
     controls.children[2].addEventListener("click", () => { Object.assign(viewBounds, bounds); draw(); });
     map.addEventListener("wheel", (event) => { event.preventDefault(); zoom(event.deltaY < 0 ? .78 : 1.28); }, {passive:false});
-    if (map.dataset.selectLat && map.dataset.selectLon) {
+    if (selectable) {
       map.classList.add("is-picker");
       map.addEventListener("click", (event) => {
         const rectangle = canvas.getBoundingClientRect();

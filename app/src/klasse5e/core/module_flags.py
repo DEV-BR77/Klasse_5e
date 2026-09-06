@@ -62,6 +62,7 @@ def module_context(request):
             "active_child": None,
         }
     family_children, active_child = active_child_context(request)
+    person = request.user.person if hasattr(request.user, "person") else None
     school_class = active_child_school_class(request) or active_class_for_user(request.user)
     keys = PortalModule.objects.values_list("key", flat=True)
     unread_count = 0
@@ -71,11 +72,10 @@ def module_context(request):
         ).count()
     return {
         "enabled_modules": {key: module_enabled(key, school_class) for key in keys},
-        "personal_display_name": (
-            request.user.person.first_name
-            if request.user.is_authenticated and hasattr(request.user, "person")
-            else ""
-        ),
+        "personal_display_name": person.first_name if person else "",
+        "profile_image_mode": person.profile_image_mode if person else "avatar",
+        "profile_avatar_path": person.avatar_static_path if person else "vendor/open-peeps/peep-1.svg",
+        "profile_photo_person_id": person.pk if person and person.profile_photo else None,
         "notification_unread_count": unread_count,
         "family_children": family_children,
         "active_child": active_child,

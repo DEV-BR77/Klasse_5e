@@ -187,7 +187,10 @@ def _write_batch(rows, stats, dry_run):
                 ).first()
             created = school is None
             if created:
-                school = School(source_id=source_id, **defaults)
+                # A catalogue import only makes a school searchable. It is
+                # deliberately not a portal activation: an administrator
+                # chooses the school and enables its modules afterwards.
+                school = School(source_id=source_id, is_active=False, **defaults)
             else:
                 school.source_id = source_id
                 for field, value in defaults.items():

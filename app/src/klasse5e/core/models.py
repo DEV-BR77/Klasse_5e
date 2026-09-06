@@ -121,7 +121,23 @@ class Visibility(models.TextChoices):
     HIDDEN = "hidden", "Nicht sichtbar"
 
 
+PROFILE_AVATAR_PRESETS = (
+    ("peep-1", "Avatar 1"),
+    ("peep-12", "Avatar 2"),
+    ("peep-27", "Avatar 3"),
+    ("peep-46", "Avatar 4"),
+    ("peep-63", "Avatar 5"),
+    ("peep-78", "Avatar 6"),
+    ("peep-94", "Avatar 7"),
+    ("peep-101", "Avatar 8"),
+)
+
+
 class Person(models.Model):
+    class ProfileImageMode(models.TextChoices):
+        AVATAR = "avatar", "Avatar"
+        PHOTO = "photo", "Profilfoto"
+
     user = models.OneToOneField(UserAccount, null=True, blank=True, on_delete=models.SET_NULL)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -143,6 +159,10 @@ class Person(models.Model):
         default="family",
     )
     profile_photo = models.ImageField(upload_to="profiles/opaque/", blank=True)
+    profile_image_mode = models.CharField(
+        max_length=12, choices=ProfileImageMode, default=ProfileImageMode.AVATAR
+    )
+    avatar_key = models.CharField(max_length=16, choices=PROFILE_AVATAR_PRESETS, default="peep-1")
     email_visibility = models.CharField(
         max_length=16, choices=Visibility, default=Visibility.HIDDEN
     )
@@ -153,6 +173,10 @@ class Person(models.Model):
         max_length=16, choices=Visibility, default=Visibility.HIDDEN
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def avatar_static_path(self):
+        return f"vendor/open-peeps/{self.avatar_key or 'peep-1'}.svg"
 
 
 class Household(models.Model):

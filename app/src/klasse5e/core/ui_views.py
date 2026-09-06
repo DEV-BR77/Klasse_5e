@@ -1,7 +1,13 @@
+import base64
+import csv
+import io
+import json
 import secrets
+import tempfile
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
+from pathlib import Path
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -78,11 +84,13 @@ from .models import (
     Role,
     School,
     SchoolClass,
+    SchoolYear,
     StudentProfile,
     UserNotification,
 )
 from .policies import active_roles, family_label, has_active_membership
 from .registration import sanitized_profile_photo
+from .school_import import EXPECTED_FIELDS, detect_encoding, import_schools
 
 TEMPLATE_PREVIEW_CATALOG = (
     {
@@ -320,6 +328,12 @@ def _manageable_schools(user):
     return School.objects.filter(pk__in=_manageable_classes(user).values("school_id")).order_by(
         "name"
     )
+
+
+def _may_manage_school_catalog(user):
+    return user.is_superuser or user.roleassignment_set.filter(
+        active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+    ).exists()
 
 
 def _membership(user, request=None):
@@ -907,6 +921,201 @@ def portal_management(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+def school_management(request):
+    """Manage the small, enabled school set without exposing Django admin first."""
+
+    _require_portal_admin(request.user)
+    manageable_schools = _manageable_schools(request.user)
+    school_years = SchoolYear.objects.order_by("-is_active", "-starts_on")
+    current_year = school_years.filter(is_active=True).first()
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "activate_school":
+            if not _may_manage_school_catalog(request.user):
+                raise Http404
+            school = get_object_or_404(School.objects, pk=request.POST.get("school_id"))
+            school.is_active = True
+            school.save(update_fields=["is_active", "updated_at"])
+            AuditEvent.objects.create(
+                actor=request.user,
+                action="school.activated",
+                target_type="school",
+                target_id=str(school.pk),
+            )
+            messages.success(request, f"{school.name} ist jetzt im Portal eingerichtet.")
+            return redirect("school-management")
+
+        if action == "add_class":
+            school = get_object_or_404(manageable_schools, pk=request.POST.get("school_id"))
+            school_year = get_object_or_404(school_years, pk=request.POST.get("school_year_id"))
+            grade_level = request.POST.get("grade_level", "").strip()
+            label = request.POST.get("class_label", "").strip()[:64]
+            code = request.POST.get("class_code", "").strip()[:64]
+            if not grade_level.isdigit() or not 1 <= int(grade_level) <= 13:
+                messages.error(request, "Bitte wähle einen Jahrgang zwischen 1 und 13.")
+            else:
+                if not label:
+                    label = f"Klasse {grade_level}"
+                if not code:
+                    code = label.casefold().replace(" ", "-")[:64]
+                school_class, created = SchoolClass.objects.get_or_create(
+                    school=school,
+                    school_year=school_year,
+                    code=code,
+                    defaults={
+                        "name": label,
+                        "display_name": label,
+                        "grade_level": grade_level,
+                        "status": "active",
+                    },
+                )
+                if created:
+                    AuditEvent.objects.create(
+                        actor=request.user,
+                        action="school_class.created",
+                        target_type="school_class",
+                        target_id=str(school_class.pk),
+                        metadata={"school_id": school.pk, "grade_level": grade_level},
+                    )
+                    messages.success(request, f"{label} wurde für {school.name} angelegt.")
+                else:
+                    messages.info(request, "Diese Klasse ist für das gewählte Schuljahr bereits vorhanden.")
+            return redirect("school-management")
+
+        raise Http404
+
+    query = request.GET.get("q", "").strip()
+    candidates = School.objects.none()
+    if len(query) >= 2 and _may_manage_school_catalog(request.user):
+        candidates = (
+            School.objects.filter(is_active=False)
+            .filter(
+                Q(name__icontains=query)
+                | Q(search_name__icontains=query.casefold())
+                | Q(city__icontains=query)
+                | Q(postal_code__startswith=query)
+            )
+            .order_by("name")[:50]
+        )
+    active_schools = manageable_schools.prefetch_related("classes").order_by("name")
+    context = _shared(request, "Schulen & Klassen", "management")
+    context.update(
+        {
+            "active_schools": active_schools,
+            "candidate_schools": candidates,
+            "query": query,
+            "school_years": school_years,
+            "current_year": current_year,
+            "may_manage_school_catalog": _may_manage_school_catalog(request.user),
+        }
+    )
+    return render(request, "ui/school_management.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def school_catalog_import(request):
+    """Preview a bounded set of matching CSV records before importing them."""
+
+    _require_portal_admin(request.user)
+    if not _may_manage_school_catalog(request.user):
+        raise Http404
+    context = _shared(request, "Schulliste importieren", "management")
+    context.update({"rows": [], "errors": [], "query": ""})
+
+    if request.method == "POST" and request.POST.get("action") == "import_selected":
+        selected_rows = request.POST.getlist("selected_row")
+        try:
+            if not selected_rows:
+                raise ValueError("Bitte wähle mindestens eine Schule aus.")
+            if len(selected_rows) > 250:
+                raise ValueError("Bitte importiere höchstens 250 Schulen pro Auswahl.")
+            records = []
+            for encoded in selected_rows:
+                record = json.loads(base64.urlsafe_b64decode(encoded.encode()).decode("utf-8"))
+                records.append({field: record.get(field, "") for field in EXPECTED_FIELDS})
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".csv", encoding="utf-8", newline="", delete=False
+            ) as handle:
+                temporary_path = Path(handle.name)
+                writer = csv.DictWriter(handle, fieldnames=sorted(EXPECTED_FIELDS))
+                writer.writeheader()
+                writer.writerows(records)
+            try:
+                _encoding, stats = import_schools(
+                    temporary_path, source_name="portal-schulliste.csv"
+                )
+            finally:
+                temporary_path.unlink(missing_ok=True)
+            AuditEvent.objects.create(
+                actor=request.user,
+                action="school.catalog_imported",
+                target_type="school_catalog",
+                target_id="selection",
+                metadata={"created": stats.created, "updated": stats.updated},
+            )
+            messages.success(
+                request,
+                f"{stats.created + stats.updated} Schule(n) importiert. Suche sie jetzt und füge die gewünschte Schule zum Portal hinzu.",
+            )
+            return redirect("school-management")
+        except (UnicodeError, ValueError, json.JSONDecodeError, csv.Error) as exc:
+            context["errors"] = [str(exc)]
+
+    elif request.method == "POST":
+        upload = request.FILES.get("csv_file")
+        query = request.POST.get("query", "").strip()
+        context["query"] = query
+        if upload is None:
+            context["errors"] = ["Bitte wähle eine CSV-Datei aus."]
+        elif upload.size > 60 * 1024 * 1024:
+            context["errors"] = ["Die CSV-Datei darf höchstens 60 MB groß sein."]
+        elif len(query) < 2:
+            context["errors"] = ["Gib mindestens zwei Zeichen ein, damit nur passende Schulen vorgeschlagen werden."]
+        else:
+            try:
+                data = upload.read()
+                encoding = detect_encoding(data)
+                reader = csv.DictReader(io.StringIO(data.decode(encoding), newline=""))
+                if not reader.fieldnames or not EXPECTED_FIELDS.issubset(set(reader.fieldnames)):
+                    raise ValueError("Die CSV-Spalten entsprechen nicht dem erwarteten Schulformat.")
+                needle = query.casefold()
+                rows = []
+                matched = 0
+                for row in reader:
+                    haystack = " ".join(
+                        str(row.get(field) or "") for field in ("name", "city", "zip", "school_type")
+                    ).casefold()
+                    if needle not in haystack:
+                        continue
+                    matched += 1
+                    if len(rows) >= 250:
+                        continue
+                    cleaned = {field: str(row.get(field) or "") for field in EXPECTED_FIELDS}
+                    if cleaned["id"] and cleaned["name"]:
+                        cleaned["encoded"] = base64.urlsafe_b64encode(
+                            json.dumps(cleaned, ensure_ascii=False).encode("utf-8")
+                        ).decode("ascii")
+                        rows.append(cleaned)
+                context.update(
+                    {
+                        "rows": rows,
+                        "uploaded_name": upload.name,
+                        "matched": matched,
+                        "truncated": matched > len(rows),
+                    }
+                )
+                if not rows:
+                    context["errors"] = ["Zu dieser Suche wurden keine Schulen in der Datei gefunden."]
+            except (UnicodeError, ValueError, csv.Error) as exc:
+                context["errors"] = [str(exc)]
+
+    return render(request, "ui/school_catalog_import.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
 def portal_adapter_management(request):
     """Configure reviewed portal connectors without collecting credentials here."""
     _require_portal_admin(request.user)
@@ -938,11 +1147,21 @@ def portal_adapter_management(request):
         else:
             messages.info(request, "Dieser Adapter ist für die Schule bereits vorhanden.")
         return redirect("portal-adapter-detail", adapter_id=adapter.pk)
+    selected_school = schools.filter(pk=request.GET.get("schule")).first()
     adapters = PortalAdapter.objects.filter(school__in=schools).select_related("school").prefetch_related(
         "modules"
     )
+    if selected_school:
+        adapters = adapters.filter(school=selected_school)
     context = _shared(request, "Schulportal-Adapter", "management")
-    context.update({"schools": schools, "adapters": adapters, "adapter_catalog": ADAPTER_CATALOG.items()})
+    context.update(
+        {
+            "schools": schools,
+            "selected_school": selected_school,
+            "adapters": adapters,
+            "adapter_catalog": ADAPTER_CATALOG.items(),
+        }
+    )
     return render(request, "ui/portal_adapter_management.html", context)
 
 
@@ -1299,15 +1518,9 @@ def more(request):
                     },
                     {
                         "key": "schools",
-                        "label": "Schulen verwalten",
-                        "url": "/admin/core/school/",
+                        "label": "Schulen & Klassen",
+                        "url": "/verwaltung/schulen/",
                         "icon": "teacher",
-                    },
-                    {
-                        "key": "classes",
-                        "label": "Klassen verwalten",
-                        "url": "/admin/core/schoolclass/",
-                        "icon": "people",
                     },
                     {
                         "key": "family_invitations",

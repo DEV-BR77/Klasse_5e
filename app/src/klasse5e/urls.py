@@ -103,6 +103,12 @@ urlpatterns = [
         name="ui-chat-attachment",
     ),
     path("verwaltung/", ui_views.portal_management, name="portal-management"),
+    path("verwaltung/schulen/", ui_views.school_management, name="school-management"),
+    path(
+        "verwaltung/schulen/import/",
+        ui_views.school_catalog_import,
+        name="school-catalog-import",
+    ),
     path(
         "verwaltung/adapter/",
         ui_views.portal_adapter_management,

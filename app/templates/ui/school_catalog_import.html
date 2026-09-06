@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="settings-page narrow-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Portalverwaltung</p>
+      <h1>Schulliste durchsuchen</h1>
+      <p class="lede">Wähle eine CSV-Datei, suche darin gezielt nach Schule, Ort oder Postleitzahl und importiere nur die Datensätze, die du anschließend einrichten möchtest.</p>
+    </div>
+    <a class="button button-secondary" href="{% url 'school-management' %}">← Schulen &amp; Klassen</a>
+  </header>
+
+  {% if errors %}
+    <div class="status-banner status-error">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</div>
+  {% endif %}
+
+  {% if rows %}
+    <form method="post" class="settings-panel form-stack">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="import_selected">
+      <header><div><h2>Passende Schulen auswählen</h2><p>{% if truncated %}{{ matched }} Treffer gefunden; zur Sicherheit werden die ersten {{ rows|length }} angezeigt. Suche bei Bedarf genauer.{% else %}{{ rows|length }} Treffer in {{ uploaded_name }}.{% endif %}</p></div></header>
+      <div class="catalog-selection-list">
+        {% for row in rows %}
+          <label class="checkbox-row catalog-selection-row"><input type="checkbox" name="selected_row" value="{{ row.encoded }}"><span><strong>{{ row.name }}</strong><small>{{ row.zip }} {{ row.city }}{% if row.school_type %} · {{ row.school_type }}{% endif %}</small></span></label>
+        {% endfor %}
+      </div>
+      <footer class="form-actions"><a class="button button-secondary" href="{% url 'school-catalog-import' %}">Andere Datei oder Suche</a><button class="button button-primary" type="submit">Auswahl importieren</button></footer>
+    </form>
+  {% else %}
+    <form method="post" enctype="multipart/form-data" class="settings-panel form-stack">
+      {% csrf_token %}
+      <header><div><h2>CSV-Datei filtern</h2><p>Die Datei bleibt nur während dieser Auswahl lokal verarbeitet. Es werden maximal 250 passende Treffer zur Auswahl angezeigt.</p></div></header>
+      <label>CSV-Datei<input type="file" name="csv_file" accept=".csv,text/csv" required></label>
+      <label>Suche in der Schulliste<input name="query" value="{{ query }}" minlength="2" required placeholder="z. B. Gifhorn, Heinrich-Nordhoff oder 38518"></label>
+      <p class="help-text">Erwartet wird das bekannte Format mit Name, Adresse, Postleitzahl, Ort und Schulart. Dateien bis 60 MB werden unterstützt.</p>
+      <footer class="form-actions"><a class="button button-secondary" href="{% url 'school-management' %}">Abbrechen</a><button class="button button-primary" type="submit">Treffer anzeigen</button></footer>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}
