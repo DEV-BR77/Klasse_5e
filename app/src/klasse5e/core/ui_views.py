@@ -374,6 +374,29 @@ def _day_from_request(request):
     return day
 
 
+def _dashboard_day_copy(day, *, today=None):
+    """Name the day actually shown on the dashboard, not always today."""
+
+    today = today or timezone.localdate()
+    if day == today:
+        return {
+            "dashboard_heading": "Was steht heute an?",
+            "dashboard_schedule_label": "Heute",
+            "dashboard_empty_schedule_text": "Heute ist kein Unterricht eingetragen.",
+        }
+    if day == today + timedelta(days=1):
+        return {
+            "dashboard_heading": "Was steht morgen an?",
+            "dashboard_schedule_label": "Morgen",
+            "dashboard_empty_schedule_text": "Für morgen ist kein Unterricht eingetragen.",
+        }
+    return {
+        "dashboard_heading": "Was steht am nächsten Schultag an?",
+        "dashboard_schedule_label": "Nächster Schultag",
+        "dashboard_empty_schedule_text": "Für den nächsten Schultag ist kein Unterricht eingetragen.",
+    }
+
+
 def _shared(request, title, section):
     school_class = _membership(request.user, request)
     return {
@@ -606,6 +629,7 @@ def dashboard(request):
             "app_version": settings.APP_VERSION,
             "release_channel": settings.APP_RELEASE_CHANNEL,
             "selected_day": day,
+            **_dashboard_day_copy(day),
             "dashboard_week": [
                 {"date": day + timedelta(days=offset), "selected": offset == 0}
                 for offset in range(7)

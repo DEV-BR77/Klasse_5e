@@ -1,10 +1,15 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
 from django.utils import timezone
 
 from klasse5e.core.models import ClassMembership, GuardianChildRelationship, Person
-from klasse5e.webuntis.models import HomeworkProgress, WebUntisConnection, WebUntisHomework
+from klasse5e.webuntis.models import (
+    HomeworkProgress,
+    WebUntisConnection,
+    WebUntisHomework,
+    WebUntisLesson,
+)
 
 
 @pytest.fixture
@@ -58,6 +63,49 @@ def test_dashboard_keeps_full_homework_text_in_readable_dialog(rf, guardian, per
     assert "homework-detail-" in response.content.decode()
     assert "begründe ausführlich jeden einzelnen Schritt" in response.content.decode()
     assert "data-homework-toggle" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_dashboard_names_tomorrow_and_renders_a_double_lesson_time_range(
+    rf, guardian, personal_homework
+):
+    from klasse5e.core.ui_views import _dashboard_day_copy, dashboard
+
+    zone = timezone.get_current_timezone()
+    day = timezone.localdate() + timedelta(days=1)
+    for fingerprint, start_time, end_time in (
+        ("dashboard-double-one", (7, 45), (8, 30)),
+        ("dashboard-double-two", (8, 30), (9, 15)),
+    ):
+        WebUntisLesson.objects.create(
+            connection=personal_homework.connection,
+            external_fingerprint=fingerprint,
+            subject="Geschichte",
+            starts_at=timezone.make_aware(
+                datetime.combine(day, datetime.min.time()).replace(
+                    hour=start_time[0], minute=start_time[1]
+                ),
+                zone,
+            ),
+            ends_at=timezone.make_aware(
+                datetime.combine(day, datetime.min.time()).replace(
+                    hour=end_time[0], minute=end_time[1]
+                ),
+                zone,
+            ),
+        )
+
+    request = rf.get(f"/?tag={day.isoformat()}")
+    request.user = guardian
+    request.session = {}
+    response = dashboard(request)
+    html = response.content.decode()
+
+    copy = _dashboard_day_copy(day, today=day - timedelta(days=1))
+    assert copy["dashboard_heading"] == "Was steht morgen an?"
+    assert _dashboard_day_copy(day, today=day)["dashboard_heading"] == "Was steht heute an?"
+    assert "Morgen" in html
+    assert "07:45–09:15 Uhr" in html
 
 
 @pytest.mark.django_db

@@ -58,6 +58,21 @@ html[data-theme-mode="dark"] {
   color-scheme: dark;
 }
 
+/* The dashboard shows the real start and end of each (possibly double) lesson. */
+.dashboard-summary-grid .compact-timeline li {
+  grid-template-columns: 8.8rem minmax(0, 1fr);
+}
+
+.lesson-time-range {
+  white-space: nowrap;
+}
+
+@media (max-width: 44rem) {
+  .dashboard-summary-grid .compact-timeline li {
+    grid-template-columns: 8.2rem minmax(0, 1fr);
+  }
+}
+
 @layer base {
   html {
     min-width: 320px;
