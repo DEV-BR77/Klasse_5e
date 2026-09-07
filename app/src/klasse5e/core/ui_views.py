@@ -2518,6 +2518,14 @@ def family(request):
         .select_related("student_person")
         .order_by("student_person__first_name", "student_person__last_name")
     )
+    active_tab = request.GET.get("tab", "overview")
+    if active_tab not in {"overview", "data", "privacy", "modules", "add-child"}:
+        active_tab = "overview"
+    requested_child = request.GET.get("child", "")
+    active_relationship = next(
+        (item for item in relationships if str(item.pk) == requested_child and item.is_current()),
+        relationships[0] if relationships else None,
+    )
     if request.method == "POST" and request.POST.get("action") in {
         "profile",
         "consent",
@@ -2552,7 +2560,10 @@ def family(request):
                 messages.success(request, "Die Änderungen wurden gespeichert.")
         except ValidationError as error:
             messages.error(request, " ".join(error.messages))
-        return redirect("ui-family")
+        tab = request.POST.get("tab", "overview")
+        child = request.POST.get("child", "")
+        suffix = f"?tab={tab}" + (f"&child={child}" if child else "")
+        return redirect(f"{reverse('ui-family')}{suffix}")
     if request.method == "POST":
         relationship = get_object_or_404(
             GuardianChildRelationship,
@@ -2591,7 +2602,7 @@ def family(request):
             request,
             f"{module.label} wurde {'für dieses Kind aktiviert' if enabled else 'für dieses Kind ausgeschaltet'}.",
         )
-        return redirect("ui-family")
+        return redirect(f"{reverse('ui-family')}?tab=modules&child={relationship.pk}")
 
     module_connections = {
         (item.student_id, item.module_id): item
@@ -2626,6 +2637,12 @@ def family(request):
         )
     context = _shared(request, "Familien-Zentrale", "more")
     context["relationship_rows"] = relationship_rows
+    context["active_tab"] = active_tab
+    context["active_relationship"] = active_relationship
+    context["active_row"] = next(
+        (row for row in relationship_rows if active_relationship and row["relationship"].pk == active_relationship.pk),
+        None,
+    )
     child_ids = [
         r.student_person_id for r in relationships if r.is_current() and r.may_view_student_profile
     ]

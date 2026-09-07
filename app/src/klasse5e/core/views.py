@@ -358,6 +358,9 @@ def personal_profile(request):
     if not hasattr(request.user, "person"):
         raise Http404
     person = request.user.person
+    active_tab = request.GET.get("tab", "data")
+    if active_tab not in {"data", "appearance", "privacy", "account"}:
+        active_tab = "data"
     if request.method == "POST":
         try:
             return _save_personal_profile(request, person)
@@ -370,6 +373,7 @@ def personal_profile(request):
         {
             "page_title": "Persönliches Profil",
             "person": person,
+            "active_tab": active_tab,
             "avatar_presets": PROFILE_AVATAR_PRESETS,
             "avatar_designer": avatar_designer_context(),
         },
@@ -378,28 +382,27 @@ def personal_profile(request):
 
 def _save_personal_profile(request, person):
         previous = (person.email_visibility, person.phone_visibility)
-        person.first_name = request.POST.get("first_name", "").strip()[:100]
-        person.last_name = request.POST.get("last_name", "").strip()[:100]
-        person.street = request.POST.get("street", "").strip()[:180]
-        person.postal_code = request.POST.get("postal_code", "").strip()[:10]
-        person.city = request.POST.get("city", "").strip()[:120]
-        try:
-            person.home_latitude = request.POST.get("home_latitude") or None
-            person.home_longitude = request.POST.get("home_longitude") or None
-        except (TypeError, ValueError):
-            person.home_latitude = person.home_longitude = None
-        person.phone = request.POST.get("phone", "").strip()[:50]
-        person.chat_display_name = request.POST.get("chat_display_name", "").strip()[:80]
-        mode = request.POST.get("contribution_name_mode", "family")
-        person.contribution_name_mode = (
-            mode if mode in {"family", "child", "personal"} else "family"
-        )
-        person.email_visibility = (
-            "members" if request.POST.get("share_email") == "yes" else "hidden"
-        )
-        person.phone_visibility = (
-            "members" if request.POST.get("share_phone") == "yes" else "hidden"
-        )
+        text_fields = {
+            "first_name": 100, "last_name": 100, "street": 180,
+            "postal_code": 10, "city": 120, "phone": 50, "chat_display_name": 80,
+        }
+        for field, limit in text_fields.items():
+            if field in request.POST:
+                setattr(person, field, request.POST[field].strip()[:limit])
+        if "home_latitude" in request.POST or "home_longitude" in request.POST:
+            try:
+                person.home_latitude = request.POST.get("home_latitude") or None
+                person.home_longitude = request.POST.get("home_longitude") or None
+            except (TypeError, ValueError):
+                person.home_latitude = person.home_longitude = None
+        if "contribution_name_mode" in request.POST:
+            mode = request.POST.get("contribution_name_mode", "family")
+            person.contribution_name_mode = (
+                mode if mode in {"family", "child", "personal"} else "family"
+            )
+        if request.POST.get("save_scope") == "privacy":
+            person.email_visibility = "members" if request.POST.get("share_email") == "yes" else "hidden"
+            person.phone_visibility = "members" if request.POST.get("share_phone") == "yes" else "hidden"
         photo = request.FILES.get("profile_photo")
         if photo:
             encoded = sanitized_profile_photo(photo)
@@ -437,7 +440,8 @@ def _save_personal_profile(request, person):
                 },
             )
         messages.success(request, "Dein Profil wurde gespeichert.")
-        return redirect("personal-profile")
+        tab = request.POST.get("tab", "data")
+        return redirect(f"{reverse('personal-profile')}?tab={tab}")
 
 
 @login_required

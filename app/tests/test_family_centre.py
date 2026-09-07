@@ -38,6 +38,20 @@ def test_family_centre_shows_parent_and_managed_child(client, guardian, managed_
 
 
 @pytest.mark.django_db
+def test_family_centre_uses_person_scoped_tabs(client, guardian, managed_child):
+    client.force_login(guardian)
+    relationship = GuardianChildRelationship.objects.get(student_person=managed_child)
+
+    response = client.get(f"{reverse('ui-family')}?tab=privacy&child={relationship.pk}")
+
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert 'aria-label="Familien-Zentrale"' in body
+    assert "Schulzugänge" in body
+    assert "Datenschutz und Einwilligungen" in body
+
+
+@pytest.mark.django_db
 def test_family_centre_saves_only_the_guardians_own_profile(client, guardian, managed_child):
     client.force_login(guardian)
     person_id = guardian.person.pk

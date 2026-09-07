@@ -45,7 +45,7 @@ def test_owner_can_preview_a_saved_profile_photo_and_switch_to_an_avatar(client,
     # the following request removes the just-used profile image.
     image.close()
 
-    page = client.get(profile_url, secure=True)
+    page = client.get(f"{profile_url}?tab=appearance", secure=True)
     assert page.status_code == 200
     assert b"peep-63.svg" in page.content
     assert b"data-profile-cropper" in page.content
@@ -108,7 +108,7 @@ def test_profile_persists_a_designed_svg_avatar(client, guardian):
     assert response.status_code == 302
     guardian.person.refresh_from_db()
     assert guardian.person.avatar_seed == "v2:2:1:3:4:1:2"
-    page = client.get(reverse("personal-profile"), secure=True)
+    page = client.get(f"{reverse('personal-profile')}?tab=appearance", secure=True)
     assert b"Avatar-Designer" in page.content
 
 
