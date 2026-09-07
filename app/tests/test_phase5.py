@@ -338,6 +338,8 @@ def test_delete_files_is_idempotent_and_retention_command(gallery, guardian, cap
     assert expired.status == "deleted"
 
 
-def test_service_worker_does_not_cache_gallery_media():
-    script = open("app/src/klasse5e/core/views.py", encoding="utf-8").read()
+def test_service_worker_does_not_cache_gallery_media(settings):
+    script = (settings.BASE_DIR / "src" / "klasse5e" / "core" / "views.py").read_text(
+        encoding="utf-8"
+    )
     assert "/photos/" not in script and "/galleries/" not in script

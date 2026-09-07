@@ -27,7 +27,9 @@ class ChildContext:
 
     @property
     def school_name(self):
-        return self.school_class.school.name if self.school_class else "Noch keiner Klasse zugeordnet"
+        return (
+            self.school_class.school.name if self.school_class else "Noch keiner Klasse zugeordnet"
+        )
 
     @property
     def class_name(self):
@@ -96,7 +98,7 @@ def active_child_context(request):
     """Resolve the optional child selected for this browser session."""
 
     contexts = available_child_contexts(request.user)
-    selected_id = request.session.get("active_child_person_id")
+    selected_id = getattr(request, "session", {}).get("active_child_person_id")
     selected = next((item for item in contexts if item.student.id == selected_id), None)
     return contexts, selected
 

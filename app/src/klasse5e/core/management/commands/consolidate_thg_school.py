@@ -102,6 +102,8 @@ class Command(BaseCommand):
             assignment.save(update_fields=["school_class", "school"])
 
         for relation in source._meta.related_objects:
+            if relation.field.many_to_many:
+                continue
             model = relation.related_model
             field_name = relation.field.name
             if model is RoleAssignment:

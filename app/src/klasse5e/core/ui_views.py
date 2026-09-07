@@ -15,7 +15,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, OuterRef, Q
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -331,9 +331,12 @@ def _manageable_schools(user):
 
 
 def _may_manage_school_catalog(user):
-    return user.is_superuser or user.roleassignment_set.filter(
-        active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
-    ).exists()
+    return (
+        user.is_superuser
+        or user.roleassignment_set.filter(
+            active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+        ).exists()
+    )
 
 
 def _membership(user, request=None):
@@ -543,10 +546,15 @@ def _webuntis_connections(user):
 @login_required
 def dashboard(request):
     family_children, active_child = active_child_context(request)
-    dashboard_child = active_child or (family_children[0] if family_children else None)
+    dashboard_child = active_child
     school_class = dashboard_child.school_class if dashboard_child else None
     if school_class is None and not family_children:
         school_class = _class_or_404(request.user, request)
+    dashboard_class_ids = [
+        child.school_class.pk for child in family_children if child.school_class is not None
+    ]
+    if school_class:
+        dashboard_class_ids = [school_class.pk]
     # The due scheduler is deliberately request-assisted: after a login the first
     # dashboard request claims at most one due schedule transactionally. This keeps
     # homework current without requiring a separate worker or a hidden manual click.
@@ -583,15 +591,24 @@ def dashboard(request):
     week_start = day - timedelta(days=day.weekday())
     meal_days = list(
         MealDay.objects.filter(
-            plan__status=MealPlan.Status.READY, is_published=True,
-            date__gte=week_start, date__lte=week_start + timedelta(days=4),
-        ).select_related("plan").prefetch_related("options").order_by("date")
+            plan__status=MealPlan.Status.READY,
+            is_published=True,
+            date__gte=week_start,
+            date__lte=week_start + timedelta(days=4),
+        )
+        .select_related("plan")
+        .prefetch_related("options")
+        .order_by("date")
     )
     daily_meal = next((meal for meal in meal_days if meal.date == day), None)
     meal_week = [
-        {"date": week_start + timedelta(days=offset),
-         "meal": next((meal for meal in meal_days
-                       if meal.date == week_start + timedelta(days=offset)), None)}
+        {
+            "date": week_start + timedelta(days=offset),
+            "meal": next(
+                (meal for meal in meal_days if meal.date == week_start + timedelta(days=offset)),
+                None,
+            ),
+        }
         for offset in range(5)
     ]
     context = _shared(request, "Start", "start")
@@ -645,13 +662,21 @@ def dashboard(request):
             "release_channel": settings.APP_RELEASE_CHANNEL,
             "selected_day": day,
             **_dashboard_day_copy(day),
-            **({"dashboard_heading": f"Was steht am {day:%d.%m.%Y} an?",
-                "dashboard_schedule_label": f"{day:%d.%m.%Y}",
-                "dashboard_empty_schedule_text": "Für diesen Tag ist kein Unterricht eingetragen."}
-               if request.GET.get("tag") and day not in (timezone.localdate(), timezone.localdate() + timedelta(days=1)) else {}),
+            **(
+                {
+                    "dashboard_heading": f"Was steht am {day:%d.%m.%Y} an?",
+                    "dashboard_schedule_label": f"{day:%d.%m.%Y}",
+                    "dashboard_empty_schedule_text": "Für diesen Tag ist kein Unterricht eingetragen.",
+                }
+                if request.GET.get("tag")
+                and day not in (timezone.localdate(), timezone.localdate() + timedelta(days=1))
+                else {}
+            ),
             "dashboard_week": [
-                {"date": week_start + timedelta(days=offset),
-                 "selected": week_start + timedelta(days=offset) == day}
+                {
+                    "date": week_start + timedelta(days=offset),
+                    "selected": week_start + timedelta(days=offset) == day,
+                }
                 for offset in range(7)
             ],
             "webuntis_last_sync": webuntis_last_sync,
@@ -660,33 +685,36 @@ def dashboard(request):
             "family_children": family_children,
             "active_child": active_child,
             "calendar_entries": (
-                CalendarEntry.objects.filter(school_class=school_class, starts_at__date=day)
-                .order_by("starts_at")[:5]
-                if school_class
+                CalendarEntry.objects.filter(
+                    school_class_id__in=dashboard_class_ids, starts_at__date=day
+                ).order_by("starts_at")[:5]
+                if dashboard_class_ids
                 else CalendarEntry.objects.none()
             ),
             "events": (
                 Event.objects.filter(
-                    school_class=school_class,
+                    school_class_id__in=dashboard_class_ids,
                     status=Event.Status.PUBLISHED,
                     ends_at__gte=timezone.now(),
                 ).order_by("starts_at")[:2]
-                if school_class
+                if dashboard_class_ids
                 else Event.objects.none()
             ),
             "daily_meal": daily_meal,
             "meal_week": meal_week,
             "posts": (
-                Post.objects.filter(school_class=school_class, status=Post.Status.PUBLISHED)
-                .order_by("-important", "-pinned", "-updated_at")[:3]
-                if school_class
+                Post.objects.filter(
+                    school_class_id__in=dashboard_class_ids, status=Post.Status.PUBLISHED
+                ).order_by("-important", "-pinned", "-updated_at")[:3]
+                if dashboard_class_ids
                 else Post.objects.none()
             ),
             "documents": (
                 ProtectedDocument.objects.filter(
-                    school_class=school_class, status=ProtectedDocument.Status.PUBLISHED
+                    school_class_id__in=dashboard_class_ids,
+                    status=ProtectedDocument.Status.PUBLISHED,
                 ).order_by("-is_updated", "-created_at")[:2]
-                if school_class
+                if dashboard_class_ids
                 else ProtectedDocument.objects.none()
             ),
             "chat_unread": _unread_count(request.user, school_class),
@@ -821,7 +849,9 @@ def chat_overview(request):
         title = request.POST.get("title", "").strip()[:120]
         if title:
             retention_id = request.POST.get("retention_category", "").strip()
-            if retention_id and (not retention_id.isascii() or not retention_id.isdecimal() or len(retention_id) > 18):
+            if retention_id and (
+                not retention_id.isascii() or not retention_id.isdecimal() or len(retention_id) > 18
+            ):
                 messages.error(request, "Bitte wähle eine gültige Aufbewahrungsregel.")
                 return redirect("ui-chat")
             retention = ChatRetentionCategory.objects.filter(
@@ -871,7 +901,9 @@ def chat_overview(request):
 @require_http_methods(["GET", "POST"])
 def chat_room(request, room_id):
     room = get_object_or_404(ChatRoom, public_id=room_id)
-    if not has_active_membership(request.user, room.school_class):
+    if not has_active_membership(request.user, room.school_class) and not _can_manage_portal(
+        request.user
+    ):
         raise Http404
     if request.method == "POST":
         from klasse5e.chat.services import create_message
@@ -1014,7 +1046,9 @@ def school_management(request):
                     )
                     messages.success(request, f"{label} wurde für {school.name} angelegt.")
                 else:
-                    messages.info(request, "Diese Klasse ist für das gewählte Schuljahr bereits vorhanden.")
+                    messages.info(
+                        request, "Diese Klasse ist für das gewählte Schuljahr bereits vorhanden."
+                    )
             return redirect("school-management")
 
         raise Http404
@@ -1106,20 +1140,25 @@ def school_catalog_import(request):
         elif upload.size > 60 * 1024 * 1024:
             context["errors"] = ["Die CSV-Datei darf höchstens 60 MB groß sein."]
         elif len(query) < 2:
-            context["errors"] = ["Gib mindestens zwei Zeichen ein, damit nur passende Schulen vorgeschlagen werden."]
+            context["errors"] = [
+                "Gib mindestens zwei Zeichen ein, damit nur passende Schulen vorgeschlagen werden."
+            ]
         else:
             try:
                 data = upload.read()
                 encoding = detect_encoding(data)
                 reader = csv.DictReader(io.StringIO(data.decode(encoding), newline=""))
                 if not reader.fieldnames or not EXPECTED_FIELDS.issubset(set(reader.fieldnames)):
-                    raise ValueError("Die CSV-Spalten entsprechen nicht dem erwarteten Schulformat.")
+                    raise ValueError(
+                        "Die CSV-Spalten entsprechen nicht dem erwarteten Schulformat."
+                    )
                 needle = query.casefold()
                 rows = []
                 matched = 0
                 for row in reader:
                     haystack = " ".join(
-                        str(row.get(field) or "") for field in ("name", "city", "zip", "school_type")
+                        str(row.get(field) or "")
+                        for field in ("name", "city", "zip", "school_type")
                     ).casefold()
                     if needle not in haystack:
                         continue
@@ -1141,7 +1180,9 @@ def school_catalog_import(request):
                     }
                 )
                 if not rows:
-                    context["errors"] = ["Zu dieser Suche wurden keine Schulen in der Datei gefunden."]
+                    context["errors"] = [
+                        "Zu dieser Suche wurden keine Schulen in der Datei gefunden."
+                    ]
             except (UnicodeError, ValueError, csv.Error) as exc:
                 context["errors"] = [str(exc)]
 
@@ -1182,8 +1223,10 @@ def portal_adapter_management(request):
             messages.info(request, "Dieser Adapter ist für die Schule bereits vorhanden.")
         return redirect("portal-adapter-detail", adapter_id=adapter.pk)
     selected_school = schools.filter(pk=request.GET.get("schule")).first()
-    adapters = PortalAdapter.objects.filter(school__in=schools).select_related("school").prefetch_related(
-        "modules"
+    adapters = (
+        PortalAdapter.objects.filter(school__in=schools)
+        .select_related("school")
+        .prefetch_related("modules")
     )
     if selected_school:
         adapters = adapters.filter(school=selected_school)
@@ -1214,7 +1257,9 @@ def portal_adapter_detail(request, adapter_id):
         if action == "save_adapter":
             adapter.base_url = request.POST.get("base_url", "").strip()[:200]
             adapter.project_identifier = request.POST.get("project_identifier", "").strip()[:120]
-            adapter.institution_identifier = request.POST.get("institution_identifier", "").strip()[:120]
+            adapter.institution_identifier = request.POST.get("institution_identifier", "").strip()[
+                :120
+            ]
             adapter.school_number = request.POST.get("school_number", "").strip()[:40]
             adapter.configuration_note = request.POST.get("configuration_note", "").strip()[:1200]
             adapter.is_enabled = request.POST.get("is_enabled") == "on"
@@ -1234,9 +1279,13 @@ def portal_adapter_detail(request, adapter_id):
         elif action in {"save_module", "toggle_module"}:
             module = get_object_or_404(adapter.modules, pk=request.POST.get("module_id"))
             module.is_enabled = request.POST.get("is_enabled") == "on"
-            module.requires_child_credentials = request.POST.get("requires_child_credentials") == "on"
+            module.requires_child_credentials = (
+                request.POST.get("requires_child_credentials") == "on"
+            )
             if action == "save_module":
-                module.configuration_note = request.POST.get("configuration_note", "").strip()[:1200]
+                module.configuration_note = request.POST.get("configuration_note", "").strip()[
+                    :1200
+                ]
                 if module.is_enabled and module.status == PortalAdapterModule.Status.NOT_CONFIGURED:
                     module.status = PortalAdapterModule.Status.READY
             module.save()
@@ -1314,7 +1363,10 @@ def chat_retention_settings(request):
                 action="chat.retention.changed",
                 target_type="chat_retention_category",
                 target_id=str(category.pk),
-                metadata={"automatic_deletion_enabled": automatic_deletion_enabled, "days": category.retention_days},
+                metadata={
+                    "automatic_deletion_enabled": automatic_deletion_enabled,
+                    "days": category.retention_days,
+                },
             )
             messages.success(
                 request,
@@ -1557,6 +1609,18 @@ def more(request):
                         "icon": "teacher",
                     },
                     {
+                        "key": "school_admin",
+                        "label": "Schulen verwalten",
+                        "url": "/admin/core/school/",
+                        "icon": "teacher",
+                    },
+                    {
+                        "key": "class_admin",
+                        "label": "Klassen verwalten",
+                        "url": "/admin/core/schoolclass/",
+                        "icon": "teacher",
+                    },
+                    {
                         "key": "school_portal_adapters",
                         "label": "Schulportaladapter",
                         "url": reverse("portal-adapter-management"),
@@ -1673,9 +1737,12 @@ def menu_management(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def theme_settings(request):
-    can_manage_themes = request.user.is_superuser or request.user.roleassignment_set.filter(
-        active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
-    ).exists()
+    can_manage_themes = (
+        request.user.is_superuser
+        or request.user.roleassignment_set.filter(
+            active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+        ).exists()
+    )
     if not can_manage_themes:
         _class_or_404(request.user, request)
     audience = (
@@ -1710,9 +1777,12 @@ def portal_theme_preview(request, theme_id, page):
     page_labels = {"uebersicht": "Übersicht", "kalender": "Kalender"}
     if page not in page_labels:
         raise Http404
-    can_manage_themes = request.user.is_superuser or request.user.roleassignment_set.filter(
-        active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
-    ).exists()
+    can_manage_themes = (
+        request.user.is_superuser
+        or request.user.roleassignment_set.filter(
+            active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+        ).exists()
+    )
     if can_manage_themes:
         themes = PortalTheme.objects.all()
     else:
@@ -2400,16 +2470,16 @@ def _school_modules_for_student(student):
     membership = _active_student_membership(student)
     if membership is None:
         return membership, PortalAdapterModule.objects.none()
+    class_links = PortalAdapterModule.available_to_classes.through.objects.filter(
+        portaladaptermodule_id=OuterRef("pk")
+    )
     modules = (
         PortalAdapterModule.objects.filter(
             adapter__school=membership.school_class.school,
             adapter__is_enabled=True,
             is_enabled=True,
         )
-        .filter(
-            Q(available_to_classes__isnull=True)
-            | Q(available_to_classes=membership.school_class)
-        )
+        .filter(Q(available_to_classes=membership.school_class) | ~Exists(class_links))
         .select_related("adapter")
         .distinct()
         .order_by("label")
@@ -2433,10 +2503,14 @@ def _module_connection_url(module, student):
 @require_http_methods(["GET", "POST"])
 def family(request):
     _class_or_404(request.user, request)
-    from .family_settings import (
-        available_classes, person_card, request_child, save_consent, save_person,
-    )
     from .avatar_designer import avatar_designer_context
+    from .family_settings import (
+        available_classes,
+        person_card,
+        request_child,
+        save_consent,
+        save_person,
+    )
     from .models import ChildJoinRequest
 
     relationships = list(
@@ -2444,7 +2518,11 @@ def family(request):
         .select_related("student_person")
         .order_by("student_person__first_name", "student_person__last_name")
     )
-    if request.method == "POST" and request.POST.get("action") in {"profile", "consent", "add_child"}:
+    if request.method == "POST" and request.POST.get("action") in {
+        "profile",
+        "consent",
+        "add_child",
+    }:
         try:
             action = request.POST["action"]
             if action == "add_child":
@@ -2454,8 +2532,16 @@ def family(request):
                 person_id = request.POST.get("person_id")
                 person = request.user.person if person_id == str(request.user.person.pk) else None
                 if person is None:
-                    relation = next((r for r in relationships if str(r.student_person_id) == person_id
-                                     and r.is_current() and r.may_manage_profile), None)
+                    relation = next(
+                        (
+                            r
+                            for r in relationships
+                            if str(r.student_person_id) == person_id
+                            and r.is_current()
+                            and r.may_manage_profile
+                        ),
+                        None,
+                    )
                     if not relation:
                         raise PermissionDenied
                     person = relation.student_person
@@ -2503,7 +2589,7 @@ def family(request):
         )
         messages.success(
             request,
-            f"{module.label} wurde {'für dieses Kind aktiviert' if enabled else 'für dieses Kind ausgeschaltet'}."
+            f"{module.label} wurde {'für dieses Kind aktiviert' if enabled else 'für dieses Kind ausgeschaltet'}.",
         )
         return redirect("ui-family")
 
@@ -2531,20 +2617,31 @@ def family(request):
                 "relationship": relationship,
                 "membership": membership,
                 "modules": module_rows,
-                "card": person_card(relationship.student_person, request.user,
-                    relationship.is_current() and relationship.may_manage_profile),
+                "card": person_card(
+                    relationship.student_person,
+                    request.user,
+                    relationship.is_current() and relationship.may_manage_profile,
+                ),
             }
         )
     context = _shared(request, "Familien-Zentrale", "more")
     context["relationship_rows"] = relationship_rows
-    child_ids = [r.student_person_id for r in relationships if r.is_current() and r.may_view_student_profile]
-    other_parents = GuardianChildRelationship.objects.filter(student_person_id__in=child_ids).select_related("guardian_person")
+    child_ids = [
+        r.student_person_id for r in relationships if r.is_current() and r.may_view_student_profile
+    ]
+    other_parents = GuardianChildRelationship.objects.filter(
+        student_person_id__in=child_ids
+    ).select_related("guardian_person")
     parent_map = {request.user.person.pk: request.user.person}
     for relation in other_parents:
         if relation.is_current():
             parent_map[relation.guardian_person_id] = relation.guardian_person
-    context["parent_cards"] = [person_card(p, request.user, p.pk == request.user.person.pk) for p in parent_map.values()]
-    context["join_requests"] = ChildJoinRequest.objects.filter(guardian=request.user.person).select_related("school_class__school")
+    context["parent_cards"] = [
+        person_card(p, request.user, p.pk == request.user.person.pk) for p in parent_map.values()
+    ]
+    context["join_requests"] = ChildJoinRequest.objects.filter(
+        guardian=request.user.person
+    ).select_related("school_class__school")
     context["available_classes"] = available_classes()
     context["avatar_designer"] = avatar_designer_context()
     return render(request, "ui/family.html", context)

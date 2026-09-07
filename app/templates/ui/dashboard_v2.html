@@ -3,7 +3,7 @@
 {% block content %}
 <section class="dashboard-page">
   <header class="welcome-panel">
-    <div><p class="eyebrow">Guten Tag, {{ request.user.person.first_name|default:request.user.email }}</p><h1>{{ dashboard_heading }}</h1>{% if active_child %}<p>{{ family_name }} · {{ active_child.school_name }}{% if active_child.class_name %} · {{ active_child.class_name }}{% endif %}</p>{% elif family_children %}<p>Wichtige Termine und Informationen für alle Kinder.</p>{% elif membership %}<p>{{ family_name }} · {{ membership.school_class.display_name|default:membership.school_class.name }}</p>{% endif %}</div>
+    <div><p class="eyebrow">Guten Tag, {{ request.user.person.first_name|default:request.user.email }}</p><h1>{{ dashboard_heading }}</h1>{% if active_child %}<p>{{ family_name }} · {{ active_child.school_name }}{% if active_child.class_name %} · {{ active_child.class_name }}{% endif %}</p>{% elif family_children %}<p><strong>Familie im Blick</strong> · Wichtige Termine und Informationen für {% for child in family_children %}{{ child.student.first_name }}{% if not forloop.last %}, {% endif %}{% endfor %}.</p>{% elif membership %}<p>{{ family_name }} · {{ membership.school_class.display_name|default:membership.school_class.name }}</p>{% endif %}</div>
   </header>
 
   {% if notification_counts.chat_mention %}<a class="mention-alert" href="{% url 'notification-list' %}"><span>@</span><div><strong>{{ notification_counts.chat_mention }} neue Erwähnung{% if notification_counts.chat_mention != 1 %}en{% endif %}</strong><small>Jemand hat dich in einem Chat angesprochen.</small></div><b>Öffnen →</b></a>{% endif %}
@@ -89,6 +89,10 @@
             </dialog>
           {% endfor %}
           {% if homework|length > 3 %}<a class="dashboard-more-link" href="/kalender/">Alle Hausaufgaben anzeigen →</a>{% endif %}
+        </article>
+        <article class="dashboard-subsection">
+          <header class="card-header"><div><p class="eyebrow">{{ selected_day|date:"d.m.Y" }}</p><h2>Termine</h2></div></header>
+          <ul class="timeline-list compact-timeline">{% for entry in calendar_entries %}<li><time>{{ entry.starts_at|date:"H:i" }} Uhr</time><div><strong>{{ entry.title }}</strong></div></li>{% empty %}<li class="empty-compact">Keine weiteren Termine an diesem Tag.</li>{% endfor %}</ul>
         </article>
       </div>
     </div>

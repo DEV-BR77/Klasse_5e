@@ -38,6 +38,7 @@ secrets*
 # Runtime data and logs
 data/
 /media/
+/app/runtime-media/
 /app/staticfiles/
 app/.test-media/
 **/.test-media/
@@ -54,6 +55,18 @@ schools.csv
 docs/design/*-ePortfolio.html
 app/static/itslearning/*-blogger-header.png
 5e logo_V1.png
+
+# Private local reference material and generated previews
+/.tmp-webuntis-main.js
+/FORAN_NORA_Systemmodell.html
+/KlassID-Familie-Radke.pdf
+/app/meal-kw36.pdf
+/app/theme/templates/
+/avatar/
+/docs/stuilguide.md
+/flyer-layout-preview.png
+/logo_class.png
+/logo_main.png
 
 # AI models and biometric artifacts
 models/

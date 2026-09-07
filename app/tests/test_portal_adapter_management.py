@@ -151,8 +151,13 @@ def test_guardian_can_only_activate_school_approved_modules_for_own_child(
     client.force_login(guardian)
     family = client.get("/mehr/familie/", secure=True)
     assert family.status_code == 200
-    assert b"Stundenplan" in family.content
-    assert b"Pr\xc3\xbcfungen" not in family.content
+    module_labels = [
+        module_row["module"].label
+        for row in family.context["relationship_rows"]
+        for module_row in row["modules"]
+    ]
+    assert "Stundenplan" in module_labels
+    assert "Prüfungen" not in module_labels
 
     response = client.post(
         "/mehr/familie/",

@@ -8,6 +8,7 @@ from klasse5e.core.models import Role, RoleAssignment, School, SchoolClass, Scho
 
 @pytest.mark.django_db
 def test_consolidates_legacy_thg_school_without_losing_roles(capsys):
+    School.objects.filter(slug="standard-schule").delete()
     year = SchoolYear.objects.create(
         label="2026/27", starts_on=date(2026, 8, 1), ends_on=date(2027, 7, 31), is_active=True
     )
@@ -44,7 +45,10 @@ def test_consolidates_legacy_thg_school_without_losing_roles(capsys):
         "Niedersachsen",
     )
     assert SchoolClass.objects.filter(pk=legacy.pk).exists() is False
-    assert RoleAssignment.objects.filter(user=user, school_class=active, role=Role.GUARDIAN).count() == 1
+    assert (
+        RoleAssignment.objects.filter(user=user, school_class=active, role=Role.GUARDIAN).count()
+        == 1
+    )
     test_class.refresh_from_db()
     assert (test_class.school_id, test_class.status, test_class.code) == (
         target.id,

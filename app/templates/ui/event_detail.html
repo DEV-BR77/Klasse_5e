@@ -35,5 +35,8 @@
   </dialog>
   {% endif %}
   {% endif %}
+  {% if is_organizer and food_query and not contribution_lists %}
+  <section class="event-contribution-list"><header class="event-contribution-heading"><div><p class="eyebrow">Mitbringliste</p><h2>Lebensmittel hinzufügen</h2></div></header>{% if food_error %}<p class="error-banner">{{ food_error }}</p>{% endif %}{% if food_results %}<div class="food-results">{% for food in food_results %}<article><div><strong>{{ food.name }}</strong><small>{% if food.provider == 'local' %}Schnellauswahl{% else %}Spoonacular{% endif %}</small></div><p class="muted">Lege zuerst eine Mitbringliste an, um diesen Vorschlag zu übernehmen.</p></article>{% endfor %}</div>{% endif %}</section>
+  {% endif %}
 </section>
 {% endblock %}
