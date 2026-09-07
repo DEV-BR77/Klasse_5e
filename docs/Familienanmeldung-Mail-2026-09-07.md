@@ -37,7 +37,16 @@ Fehlerlogs enthalten nur die Fehlerklasse, keine SMTP-Antworten oder Zugangsdate
 - Bewusste Testmail: `python manage.py check_email --recipient <eigene-adresse>`.
 - Der Befehl bestätigt nur die Annahme beim Versanddienst. Zustellung im Postfach
   beziehungsweise Resend-Zustellstatus zusätzlich prüfen.
-- Ausstehend: KlassID-Schlüssel mit Sending-Zugriff ausschließlich auf `klassid.de`
-  in Resend erzeugen, im HomeOps-Speicher sichern, deployen und echte Testmail senden.
-  Die Browsersteuerung wurde beim Erstellen des Schlüssels automatisch gestoppt.
-- Keine Schemaänderung oder Datenmigration erforderlich. Noch nicht produktiv ausgerollt.
+- KlassID-Versandsschlüssel sicher übernommen; SMTP-Anmeldung erfolgreich.
+- Image `klasse-5e-app:mail-chat-20260907` produktiv als `0.3.0b4` ausgerollt.
+- Eine Testmail an die Betreiberadresse wurde aus der laufenden App von Resend
+  angenommen. Der Betreiber hat den Eingang im Postfach am 07.09.2026 bestätigt.
+- 12 Familien-/Identitätstests und 8 Portalverwaltungs-/Chattests bestanden.
+- Chatfehler behoben: Die leere Aufbewahrungsoption wird als keine Regel behandelt,
+  ungültige Werte führen zu einer verständlichen Fehlermeldung statt HTTP 500.
+  Alle vier Darstellungsarten sind getestet. Zusätzlicher PostgreSQL-Livetest:
+  Chatraum erfolgreich angelegt und die Testtransaktion vollständig zurückgerollt.
+- Healthcheck und öffentliche Loginseite nach Rollout HTTP 200.
+- Keine Schemaänderung oder Datenmigration erforderlich.
+- Rückfallimage: `klasse-5e-app:before-mail-20260907`.
+- Backup: `D:/Backups/Klasse5e/before-mail-20260907-150738.dump`.
