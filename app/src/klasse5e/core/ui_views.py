@@ -799,8 +799,14 @@ def chat_overview(request):
         _require_portal_admin(request.user)
         title = request.POST.get("title", "").strip()[:120]
         if title:
+            retention_id = request.POST.get("retention_category", "").strip()
+            if retention_id and (not retention_id.isascii() or not retention_id.isdecimal() or len(retention_id) > 18):
+                messages.error(request, "Bitte wähle eine gültige Aufbewahrungsregel.")
+                return redirect("ui-chat")
             retention = ChatRetentionCategory.objects.filter(
-                pk=request.POST.get("retention_category"), is_active=True, intended_for_events=False
+                pk=int(retention_id) if retention_id else None,
+                is_active=True,
+                intended_for_events=False,
             ).first()
             appearance = request.POST.get("appearance", ChatRoom.Appearance.STANDARD)
             if appearance not in ChatRoom.Appearance.values:

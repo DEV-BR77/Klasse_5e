@@ -74,3 +74,30 @@ def test_class_admin_can_create_chat_room_and_event(client, guardian, school_cla
     )
     assert response.status_code == 302
     assert school_class.event_set.get().title == "Klassenfest"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("appearance", ["standard", "classic", "modern", "math"])
+def test_new_chat_with_no_automatic_deletion(client, admin_user, school_class, appearance):
+    from klasse5e.chat.models import ChatRoom
+
+    client.force_login(admin_user)
+    response = client.post("/chat/", {
+        "title": "Neuer Testraum", "appearance": appearance, "retention_category": "",
+    }, secure=True)
+    assert response.status_code == 302
+    room = ChatRoom.objects.get(school_class=school_class, title="Neuer Testraum")
+    assert room.appearance == appearance
+    assert room.retention_category is None
+
+
+@pytest.mark.django_db
+def test_new_chat_rejects_invalid_retention_without_server_error(client, admin_user, school_class):
+    from klasse5e.chat.models import ChatRoom
+
+    client.force_login(admin_user)
+    response = client.post("/chat/", {
+        "title": "Invalid retention", "appearance": "modern", "retention_category": "invalid",
+    }, secure=True)
+    assert response.status_code == 302
+    assert not ChatRoom.objects.filter(school_class=school_class, title="Invalid retention").exists()
