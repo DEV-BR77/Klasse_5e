@@ -101,3 +101,28 @@ def test_new_chat_rejects_invalid_retention_without_server_error(client, admin_u
     }, secure=True)
     assert response.status_code == 302
     assert not ChatRoom.objects.filter(school_class=school_class, title="Invalid retention").exists()
+
+
+@pytest.mark.django_db
+def test_admin_can_delete_a_chat_room_and_room_uses_selected_appearance(
+    client, admin_user, school_class
+):
+    from klasse5e.chat.models import ChatRoom
+
+    client.force_login(admin_user)
+    room = ChatRoom.objects.create(
+        school_class=school_class,
+        school_year=school_class.school_year,
+        title="Mathe-AG",
+        appearance=ChatRoom.Appearance.MATH,
+    )
+
+    page = client.get(f"/chat/{room.public_id}/ansicht/", secure=True)
+    assert page.status_code == 200
+    assert b"chat-room--math" in page.content
+    overview = client.get("/chat/", secure=True)
+    assert b"L\xc3\xb6schen" in overview.content
+
+    response = client.post("/chat/", {"action": "delete", "room_id": room.public_id}, secure=True)
+    assert response.status_code == 302
+    assert not ChatRoom.objects.filter(pk=room.pk).exists()

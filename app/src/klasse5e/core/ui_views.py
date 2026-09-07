@@ -797,6 +797,27 @@ def chat_overview(request):
     school_class = _class_or_404(request.user, request)
     if request.method == "POST":
         _require_portal_admin(request.user)
+        if request.POST.get("action") == "delete":
+            room = get_object_or_404(
+                ChatRoom.objects.prefetch_related("messages"),
+                public_id=request.POST.get("room_id"),
+                school_class=school_class,
+            )
+            for message in room.messages.all():
+                if message.attachment:
+                    message.attachment.delete(save=False)
+            room_id = str(room.public_id)
+            room_title = room.title
+            room.delete()
+            AuditEvent.objects.create(
+                actor=request.user,
+                action="chat.room.deleted",
+                target_type="chat_room",
+                target_id=room_id,
+                metadata={"title": room_title},
+            )
+            messages.success(request, "Der Chatraum wurde gelöscht.")
+            return redirect("ui-chat")
         title = request.POST.get("title", "").strip()[:120]
         if title:
             retention_id = request.POST.get("retention_category", "").strip()
