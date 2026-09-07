@@ -1,4 +1,5 @@
 from web_push_kit import DeliveryStatus, NotificationPayload, Subscription
+from django.db.models import Q
 
 from klasse5e.core.models import PushPreference, PushSubscription, UserNotification
 from klasse5e.webuntis.notifications import configured_sender
@@ -11,6 +12,8 @@ def notify_mentions(message_id, *, sender=None):
     target_url = f"/chat/{message.room.public_id}/ansicht/"
     recipients = list(message.mentions.all())
     for user in recipients:
+        if PushPreference.objects.filter(user=user, key="inapp_chat", enabled=False).exists():
+            continue
         UserNotification.objects.get_or_create(
             user=user,
             school_class=message.room.school_class,
@@ -28,7 +31,9 @@ def notify_mentions(message_id, *, sender=None):
     if sender is None:
         return len(recipients)
     enabled = PushPreference.objects.filter(
-        user__in=recipients, key="push_chat_mentions", enabled=True
+        user__in=recipients, enabled=True
+    ).filter(
+        Q(key="push_chat") | Q(key="push_chat_mentions")
     ).values_list("user_id", flat=True)
     for stored in PushSubscription.objects.filter(user_id__in=enabled, enabled=True):
         result = sender.send(

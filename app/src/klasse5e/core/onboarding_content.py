@@ -182,12 +182,12 @@ TUTORIAL_STEPS = (
         "action_label": "Veranstaltungen öffnen",
     },
     {
-        "title": "Wir fahren zusammen",
+        "title": "Fahrgemeinschaft",
         "body": "Familien können Fahrradgruppen und Fahrgemeinschaften finden. Öffentliche Karten zeigen nur einen ungefähren Bereich; genaue Treffpunkte werden erst nach Annahme geteilt.",
         "bullets": ("Fahrrad oder Auto", "Hin- und Rückfahrt", "Treffpunkte gemeinsam abstimmen"),
         "illustration": "mobility",
         "action_href": "/mehr/mobilitaet/",
-        "action_label": "Mobilität öffnen",
+        "action_label": "Fahrgemeinschaft öffnen",
     },
     {
         "title": "Chat und Absprachen",

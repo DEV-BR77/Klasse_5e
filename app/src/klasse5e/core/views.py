@@ -19,7 +19,8 @@ from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods, require_POST
@@ -37,6 +38,8 @@ from .models import (
     Invitation,
     Person,
     PushSubscription,
+    PushPreference,
+    PortalTheme,
     RegistrationApplication,
     Role,
     RoleAssignment,
@@ -359,7 +362,7 @@ def personal_profile(request):
         raise Http404
     person = request.user.person
     active_tab = request.GET.get("tab", "data")
-    if active_tab not in {"data", "appearance", "privacy", "account"}:
+    if active_tab not in {"data", "appearance", "themes", "notifications", "app", "account"}:
         active_tab = "data"
     if request.method == "POST":
         try:
@@ -376,11 +379,38 @@ def personal_profile(request):
             "active_tab": active_tab,
             "avatar_presets": PROFILE_AVATAR_PRESETS,
             "avatar_designer": avatar_designer_context(),
+            "themes": PortalTheme.objects.filter(is_active=True),
+            "notification_rows": _notification_rows(request.user),
+            "push_active": PushSubscription.objects.filter(user=request.user, enabled=True).exists(),
+            "vapid_configured": bool(settings.VAPID_PUBLIC_KEY),
+            "mfa_enabled": _mfa_enabled(request.user),
         },
     )
 
 
 def _save_personal_profile(request, person):
+        save_scope = request.POST.get("save_scope", "data")
+        if save_scope == "themes":
+            theme = get_object_or_404(PortalTheme.objects.filter(is_active=True), pk=request.POST.get("theme_id"))
+            request.user.selected_theme = theme
+            request.user.save(update_fields=["selected_theme"])
+            messages.success(request, f"Theme „{theme.name}“ ist jetzt aktiv.")
+            return redirect(f"{reverse('personal-profile')}?tab=themes")
+        if save_scope == "notifications":
+            categories = ("events", "timetable", "homework", "exams", "chat", "carpool")
+            for category in categories:
+                for channel in ("push", "inapp"):
+                    PushPreference.objects.update_or_create(
+                        user=request.user,
+                        key=f"{channel}_{category}",
+                        defaults={"enabled": request.POST.get(f"{channel}_{category}") == "on"},
+                    )
+            PushPreference.objects.update_or_create(
+                user=request.user, key="push_chat_mentions",
+                defaults={"enabled": request.POST.get("push_chat") == "on"},
+            )
+            messages.success(request, "Benachrichtigungseinstellungen gespeichert.")
+            return redirect(f"{reverse('personal-profile')}?tab=notifications")
         previous = (person.email_visibility, person.phone_visibility)
         text_fields = {
             "first_name": 100, "last_name": 100, "street": 180,
@@ -400,7 +430,14 @@ def _save_personal_profile(request, person):
             person.contribution_name_mode = (
                 mode if mode in {"family", "child", "personal"} else "family"
             )
-        if request.POST.get("save_scope") == "privacy":
+        if "email" in request.POST:
+            email = normalize_login_email(request.POST.get("email", ""))
+            validate_email(email)
+            if UserAccount.objects.exclude(pk=request.user.pk).filter(email__iexact=email).exists():
+                raise ValidationError("Diese E-Mail-Adresse wird bereits verwendet.")
+            request.user.email = email
+            request.user.save(update_fields=["email"])
+        if save_scope == "data":
             person.email_visibility = "members" if request.POST.get("share_email") == "yes" else "hidden"
             person.phone_visibility = "members" if request.POST.get("share_phone") == "yes" else "hidden"
         photo = request.FILES.get("profile_photo")
@@ -442,6 +479,32 @@ def _save_personal_profile(request, person):
         messages.success(request, "Dein Profil wurde gespeichert.")
         tab = request.POST.get("tab", "data")
         return redirect(f"{reverse('personal-profile')}?tab={tab}")
+
+
+def _notification_rows(user):
+    labels = (
+        ("events", "event", "Veranstaltung", "Neue oder geänderte Veranstaltung"),
+        ("timetable", "calendar", "Stundenplan", "Änderung, Vertretung oder Ausfall"),
+        ("homework", "document", "Hausaufgaben", "Neue Hausaufgabe"),
+        ("exams", "consent", "Prüfungen", "Neuer Test oder neue Prüfung"),
+        ("chat", "chat", "Chat", "Wenn du mit @ erwähnt wirst"),
+        ("carpool", "people", "Fahrgemeinschaft", "Ausfall oder Problem in deiner Fahrgemeinschaft"),
+    )
+    stored = {item.key: item.enabled for item in PushPreference.objects.filter(user=user)}
+    rows = [
+        {"key": key, "icon": icon, "label": label, "description": description,
+         "push": stored.get(f"push_{key}", False), "inapp": stored.get(f"inapp_{key}", True)}
+        for key, icon, label, description in labels
+    ]
+    for row in rows:
+        if row["key"] == "chat" and "push_chat" not in stored:
+            row["push"] = stored.get("push_chat_mentions", False)
+    return rows
+
+
+def _mfa_enabled(user):
+    from allauth.mfa.models import Authenticator
+    return Authenticator.objects.filter(user=user).exists()
 
 
 @login_required

@@ -20,7 +20,7 @@ def avatar_composite(seed, class_name=""):
         ("body", 13, 42, 70, 47),
         ("head", 33, 12, 42, 37),
         ("face", 47, 24, 25, 20),
-        ("facial-hair", 39, 29, 32, 25),
+        ("facial-hair", 42, 34, 26, 18),
         ("accessories", 37, 27, 35, 12),
     )
     images = []

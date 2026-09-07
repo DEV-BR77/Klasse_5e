@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#5558a6">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
-  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}?v=settings-v3">
+  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}?v=settings-v4">
   {% block extra_head %}{% endblock %}
   <title>{{ page_title|default:"Home" }} · KlassID</title>
 </head>
@@ -71,7 +71,7 @@
     {% if enabled_modules.mobility %}
     <a href="/mehr/mobilitaet/" class="app-bottom-nav__item" {% if active_section == "mobility" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="people" %}
-      <span class="app-bottom-nav__label">Mobilität</span>
+      <span class="app-bottom-nav__label">Fahrgemeinschaft</span>
     </a>
     {% endif %}
     <a href="/mehr/" class="app-bottom-nav__item" {% if active_section == "more" %}aria-current="page"{% endif %}>
@@ -93,7 +93,7 @@
 {% endif %}
 <div id="live-status" class="sr-only" aria-live="polite"></div>
 <script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
-  <script src="{% static 'app.js' %}?v=10" defer></script>
+  <script src="{% static 'app.js' %}?v=11" defer></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js')}</script>
 </body>
 </html>

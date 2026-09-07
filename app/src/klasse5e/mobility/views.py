@@ -129,7 +129,7 @@ def overview(request):
                 target_type="mobility_listing",
                 target_id=str(listing.public_id),
             )
-            messages.success(request, "Der Mobilitätseintrag wurde veröffentlicht.")
+            messages.success(request, "Der Fahrgemeinschaftseintrag wurde veröffentlicht.")
             return redirect("mobility-detail", public_id=listing.public_id)
     else:
         form = MobilityListingForm(
@@ -140,7 +140,7 @@ def overview(request):
         request,
         "mobility/overview.html",
         {
-            "page_title": "Mobilität",
+            "page_title": "Fahrgemeinschaft",
             "active_section": "mobility",
             "listings": listings,
             "form": form,
@@ -150,7 +150,15 @@ def overview(request):
             "map_bounds": MAP_BOUNDS,
             "map_school": _map_school(school_class.school),
             "has_home_area": request.user.person.home_latitude is not None and request.user.person.home_longitude is not None,
-            "map_listing_points": [
+            "map_listing_points": ([
+                {
+                    "latitude": float(request.user.person.home_latitude),
+                    "longitude": float(request.user.person.home_longitude),
+                    "label": "Dein Wohnbereich",
+                    "kind": "start",
+                    "radiusMeters": 700,
+                }
+            ] if request.user.person.home_latitude is not None and request.user.person.home_longitude is not None else []) + [
                 {
                     "latitude": float(item.start_latitude),
                     "longitude": float(item.start_longitude),

@@ -48,7 +48,8 @@ def test_owner_can_preview_a_saved_profile_photo_and_switch_to_an_avatar(client,
     page = client.get(f"{profile_url}?tab=appearance", secure=True)
     assert page.status_code == 200
     assert b"peep-63.svg" in page.content
-    assert b"data-profile-cropper" in page.content
+    assert b"data-profile-current-preview" in page.content
+    assert b"Avatar verwenden" in page.content
 
     response = client.post(
         profile_url,
@@ -89,6 +90,36 @@ def test_profile_home_area_persists_one_current_location(client, guardian):
     guardian.person.refresh_from_db()
     assert str(guardian.person.home_latitude) == "52.423991"
     assert str(guardian.person.home_longitude) == "10.786221"
+    page = client.get(reverse("personal-profile"), secure=True)
+    assert b"52.423991" in page.content
+    assert b"Wohnbereich gespeichert" in page.content
+
+
+@pytest.mark.django_db
+def test_profile_stores_contact_visibility_and_notification_preferences(client, guardian):
+    client.force_login(guardian)
+    response = client.post(
+        reverse("personal-profile"),
+        {
+            "tab": "data", "save_scope": "data", "first_name": "Alex", "last_name": "Beispiel",
+            "email": "new-address@example.test", "share_email": "yes", "share_phone": "yes",
+        },
+        secure=True,
+    )
+    assert response.status_code == 302
+    guardian.refresh_from_db()
+    guardian.person.refresh_from_db()
+    assert guardian.email == "new-address@example.test"
+    assert guardian.person.email_visibility == "members"
+    assert guardian.person.phone_visibility == "members"
+    response = client.post(
+        reverse("personal-profile"),
+        {"tab": "notifications", "save_scope": "notifications", "push_chat": "on", "inapp_carpool": "on"},
+        secure=True,
+    )
+    assert response.status_code == 302
+    page = client.get(f"{reverse('personal-profile')}?tab=notifications", secure=True)
+    assert b"Fahrgemeinschaft" in page.content
 
 
 @pytest.mark.django_db

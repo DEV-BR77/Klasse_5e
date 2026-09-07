@@ -673,7 +673,7 @@
   if (!data.components || !data.backgrounds) return;
   const svgNs = "http://www.w3.org/2000/svg";
   const keys = ["background", "body", "head", "face", "facial-hair", "accessories"];
-  const layers = {body: [13, 42, 70, 47], head: [33, 12, 42, 37], face: [47, 24, 25, 20], "facial-hair": [39, 29, 32, 25], accessories: [37, 27, 35, 12]};
+  const layers = {body: [13, 42, 70, 47], head: [33, 12, 42, 37], face: [47, 24, 25, 20], "facial-hair": [42, 34, 26, 18], accessories: [37, 27, 35, 12]};
   let target;
   let selected = {background: 0, body: 0, head: 0, face: 0, "facial-hair": 0, accessories: 0};
   const assetUrl = (category, filename) => `/static/vendor/avatar-atoms/${category}/${encodeURIComponent(filename)}`;
@@ -729,6 +729,8 @@
     const hiddenMode = form.querySelector('input[type="hidden"][name="profile_image_mode"]');
     if (avatarMode) avatarMode.checked = true;
     if (hiddenMode) hiddenMode.value = "avatar";
+    const currentPreview = form.querySelector("[data-profile-current-preview]");
+    if (currentPreview) currentPreview.replaceChildren(makeSvg());
     target.dispatchEvent(new Event("change", { bubbles: true }));
   });
   document.querySelectorAll("[data-avatar-open]").forEach((button) => button.addEventListener("click", () => {
@@ -741,5 +743,18 @@
       selected[key] = value >= 0 && value < limit ? value : 0;
     });
     draw(); dialog.showModal();
+  }));
+})();
+(() => {
+  document.querySelectorAll('[data-profile-photo-input]').forEach((input) => input.addEventListener('change', () => {
+    const file = input.files?.[0]; if (!file) return;
+    const form = input.closest('form'); const preview = form?.querySelector('[data-profile-current-preview]');
+    if (!preview) return;
+    const image = document.createElement('img'); image.src = URL.createObjectURL(file); image.alt = 'Vorschau des Profilfotos';
+    preview.replaceChildren(image); form.querySelector('[data-profile-image-mode]')?.setAttribute('value', 'photo');
+  }));
+  document.querySelectorAll('[data-toggle-column]').forEach((button) => button.addEventListener('click', () => {
+    const inputs = [...button.closest('form').querySelectorAll(`[data-notification-channel="${button.dataset.toggleColumn}"]`)];
+    const next = inputs.some((input) => !input.checked); inputs.forEach((input) => { input.checked = next; });
   }));
 })();

@@ -1648,29 +1648,14 @@ def more(request):
 def _menu_catalog():
     return {
         "events": ("Veranstaltungen & Mitbringen", "/mehr/veranstaltungen/", "event", "class"),
-        "mobility": ("Wir fahren zusammen", "/mehr/mobilitaet/", "people", "class"),
+        "mobility": ("Fahrgemeinschaft", "/mehr/mobilitaet/", "people", "class"),
         "news": ("Aktuelles", "/mehr/aktuelles/", "news", "class"),
         "gallery": ("Fotos & Galerie", "/mehr/fotos/", "photo", "class"),
         "meals": ("Speiseplan", "/mehr/speiseplan/", "event", "class"),
         "school_data": ("Kalender-Synchronisation", "/mehr/webuntis/", "calendar", "communication"),
-        "profile": ("Meine Daten", "/einstellungen/profil/", "people", "account"),
+        "profile": ("Mein Konto", "/einstellungen/profil/", "people", "account"),
         "family": ("Familien-Zentrale", "/mehr/familie/", "people", "account"),
-        "themes": ("Design & Themes", "/einstellungen/design/", "consent", "account"),
-        "consents": ("Datenschutz & Einwilligungen", "/mehr/einwilligungen/", "consent", "account"),
-        "notifications": (
-            "Benachrichtigungen & App",
-            "/mehr/benachrichtigungen/",
-            "bell",
-            "account",
-        ),
-        "security": ("Zwei-Faktor-Anmeldung", "/accounts/2fa/", "consent", "account"),
         "tutorial": ("Einführung", "/tutorial/", "home", "account"),
-        "delete_account": (
-            "Konto und Daten löschen",
-            "/einstellungen/konto-loeschen/",
-            "consent",
-            "account",
-        ),
     }
 
 
@@ -1737,40 +1722,7 @@ def menu_management(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def theme_settings(request):
-    can_manage_themes = (
-        request.user.is_superuser
-        or request.user.roleassignment_set.filter(
-            active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
-        ).exists()
-    )
-    if not can_manage_themes:
-        _class_or_404(request.user, request)
-    audience = (
-        PortalTheme.Audience.CHILDREN
-        if hasattr(request.user, "person")
-        and StudentProfile.objects.filter(person=request.user.person).exists()
-        else PortalTheme.Audience.ADULTS
-    )
-    themes = PortalTheme.objects.filter(is_active=True).filter(
-        Q(audience=PortalTheme.Audience.ALL) | Q(audience=audience)
-    )
-    if request.method == "POST":
-        selected = get_object_or_404(themes, pk=request.POST.get("theme_id"))
-        request.user.selected_theme = selected
-        request.user.save(update_fields=["selected_theme"])
-        messages.success(request, f"Theme „{selected.name}“ ist jetzt aktiv.")
-        return redirect("theme-settings")
-    context = _shared(request, "Design & Themes", "more")
-    context.update(
-        {
-            "themes": themes,
-            "audience": audience,
-            "can_manage_themes": can_manage_themes,
-            "template_catalog_count": len(TEMPLATE_PREVIEW_CATALOG),
-        }
-    )
-    return render(request, "ui/theme_settings.html", context)
-
+    return redirect(f"{reverse('personal-profile')}?tab=themes")
 
 @login_required
 def portal_theme_preview(request, theme_id, page):
