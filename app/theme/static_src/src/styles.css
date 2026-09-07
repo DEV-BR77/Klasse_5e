@@ -1065,4 +1065,27 @@ html[data-theme-mode="dark"] {
 .calendar-filter:has(input:checked)::after { content: "✓"; font-weight: 800; }
 .calendar-filter:has(input:focus-visible) { outline: 2px solid var(--color-primary); outline-offset: 3px; }
 .calendar-chip { color: var(--color-text); background: color-mix(in srgb, var(--calendar-category, var(--color-primary)) 18%, var(--color-surface)); }
+.family-section { margin: 2rem 0; }
+.family-section > header { margin-bottom: 1rem; }
+.family-person-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: 1rem; }
+.family-person-card { margin: 0; }
+.family-child-data { border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border)); }
+.family-person-head { display: flex; align-items: center; gap: .85rem; margin-bottom: 1rem; }
+.avatar-preview { width: 4.25rem; height: 4.25rem; flex: 0 0 4.25rem; overflow: hidden; border-radius: 50%; background: var(--color-surface-raised); }
+.avatar-preview svg { display: block; width: 100%; height: 100%; }
+.family-fields { display: grid; gap: .6rem; }
+.family-field { display: grid; grid-template-columns: minmax(0, 1fr) 6.2rem; gap: .6rem; align-items: end; }
+.family-field input { width: 100%; }
+.family-share { display: flex; align-items: center; gap: .3rem; min-height: 2.5rem; font-size: .75rem; }
+.family-share small { white-space: nowrap; }
+.profile-image-choice { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; }
+.profile-image-choice label { flex: 1 1 14rem; }
+.family-consents { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border); }
+.family-consents summary { cursor: pointer; font-weight: 700; }
+.inline-toggle-form { display: inline-flex; align-items: center; }
+.family-module-card { display: flex; gap: .75rem; align-items: center; justify-content: space-between; }
+.family-module-card .button { margin-left: auto; }
+.family-add-child { margin-top: 2rem; }
+.family-add-form { margin-top: 1rem; }
+@media(max-width: 42rem) { .family-field { grid-template-columns: 1fr; } .family-module-card { align-items: flex-start; flex-wrap: wrap; } .family-module-card .button { margin-left: 0; } }
 @media(max-width: 760px) { .calendar-timeline-day .calendar-timeline-head, .calendar-timeline-day .calendar-all-day, .calendar-timeline-day .calendar-timeline { min-width: 0; grid-template-columns: 5.5rem minmax(0, 1fr); } }

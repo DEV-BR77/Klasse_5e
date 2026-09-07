@@ -3,10 +3,10 @@ import csv
 import io
 import json
 import tempfile
+from pathlib import Path
 
 from django.conf import settings
-from django.contrib import admin
-from django.contrib import messages
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.core.mail import send_mail
 from django.db import models
@@ -20,6 +20,7 @@ from .models import (
     ActivationGrant,
     AuditEvent,
     BrandingAsset,
+    ChildJoinRequest,
     ClassDomain,
     ClassMembership,
     ConsentDecision,
@@ -337,6 +338,38 @@ class SchoolClassAdmin(admin.ModelAdmin):
             user=request.user, role="class_admin", active=True
         ).values("school_class_id")
         return query.filter(models.Q(school_id__in=school_ids) | models.Q(id__in=class_ids))
+
+
+@admin.register(ChildJoinRequest)
+class ChildJoinRequestAdmin(admin.ModelAdmin):
+    list_display = ("first_name", "last_name", "guardian", "school_class", "status", "created_at")
+    list_filter = ("status", "school_class__school")
+    search_fields = ("first_name", "last_name", "guardian__first_name", "guardian__last_name")
+    actions = ("approve_as_new_child",)
+
+    @admin.action(description="Ausgewählte Anfragen als neue Kinder bestätigen")
+    def approve_as_new_child(self, request, queryset):
+        approved = 0
+        for item in queryset.filter(status="pending").select_related("guardian", "school_class"):
+            child = Person.objects.create(first_name=item.first_name, last_name=item.last_name)
+            StudentProfile.objects.create(person=child)
+            ClassMembership.objects.create(
+                person=child, school_class=item.school_class,
+                valid_from=timezone.localdate(),
+            )
+            GuardianChildRelationship.objects.create(
+                guardian_person=item.guardian, student_person=child,
+                relationship_type="guardian", is_legal_guardian=True,
+                may_view_student_profile=True, may_manage_profile=True,
+                may_manage_general_consents=True, may_manage_photo_consents=True,
+                valid_from=timezone.localdate(), status="verified",
+                verified_by=request.user, verified_at=timezone.now(),
+            )
+            item.status = "approved"
+            item.reviewed_by = request.user
+            item.save(update_fields=["status", "reviewed_by"])
+            approved += 1
+        self.message_user(request, f"{approved} Kinder wurden bestätigt.")
 
 
 for model in [

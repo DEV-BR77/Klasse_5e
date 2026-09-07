@@ -17,6 +17,7 @@ from django.core.files.base import ContentFile
 from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.db import transaction
+from django.db.models import Q
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -465,7 +466,21 @@ def profile_photo(request, person_id):
             school_class=school_class, person=person, status="active"
         ).exists()
     )
-    if not person or not (own_photo or shared_class_photo):
+    family_photo = (
+        person
+        and hasattr(request.user, "person")
+        and GuardianChildRelationship.objects.filter(
+            guardian_person=request.user.person,
+            student_person=person,
+            status="verified",
+            verified_at__isnull=False,
+            may_view_student_profile=True,
+            valid_from__lte=timezone.localdate(),
+        ).filter(
+            Q(valid_until__isnull=True) | Q(valid_until__gte=timezone.localdate())
+        ).exists()
+    )
+    if not person or not (own_photo or shared_class_photo or family_photo):
         raise Http404
     response = FileResponse(person.profile_photo.open("rb"), content_type="image/webp")
     response["Cache-Control"] = "private, max-age=300"

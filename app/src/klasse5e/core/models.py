@@ -163,6 +163,9 @@ class Person(models.Model):
         max_length=12, choices=ProfileImageMode, default=ProfileImageMode.AVATAR
     )
     avatar_key = models.CharField(max_length=16, choices=PROFILE_AVATAR_PRESETS, default="peep-1")
+    avatar_seed = models.CharField(max_length=64, blank=True)
+    contact_email = models.EmailField(blank=True)
+    field_visibility = models.JSONField(default=dict, blank=True)
     email_visibility = models.CharField(
         max_length=16, choices=Visibility, default=Visibility.HIDDEN
     )
@@ -182,6 +185,19 @@ class Person(models.Model):
 class Household(models.Model):
     label = models.CharField(max_length=120)
     members = models.ManyToManyField(Person, related_name="households")
+
+
+class ChildJoinRequest(models.Model):
+    guardian = models.ForeignKey(Person, on_delete=models.CASCADE)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    school_class = models.ForeignKey("SchoolClass", on_delete=models.PROTECT)
+    status = models.CharField(max_length=16, default="pending", choices=[
+        ("pending", "Wartet auf Prüfung"), ("approved", "Bestätigt"),
+        ("rejected", "Abgelehnt"),
+    ])
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(UserAccount, null=True, blank=True, on_delete=models.SET_NULL)
 
 
 class SchoolYear(models.Model):

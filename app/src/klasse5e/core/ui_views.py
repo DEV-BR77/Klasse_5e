@@ -1569,7 +1569,7 @@ def _menu_catalog():
         "meals": ("Speiseplan", "/mehr/speiseplan/", "event", "class"),
         "school_data": ("Kalender-Synchronisation", "/mehr/webuntis/", "calendar", "communication"),
         "profile": ("Meine Daten", "/einstellungen/profil/", "people", "account"),
-        "family": ("Familie & Kinder", "/mehr/familie/", "people", "account"),
+        "family": ("Familien-Zentrale", "/mehr/familie/", "people", "account"),
         "themes": ("Design & Themes", "/einstellungen/design/", "consent", "account"),
         "consents": ("Datenschutz & Einwilligungen", "/mehr/einwilligungen/", "consent", "account"),
         "notifications": (
@@ -2412,11 +2412,39 @@ def _module_connection_url(module, student):
 @require_http_methods(["GET", "POST"])
 def family(request):
     _class_or_404(request.user, request)
+    from .family_settings import (
+        available_classes, person_card, request_child, save_consent, save_person,
+    )
+    from .models import ChildJoinRequest
+
     relationships = list(
         GuardianChildRelationship.objects.filter(guardian_person=request.user.person)
         .select_related("student_person")
         .order_by("student_person__first_name", "student_person__last_name")
     )
+    if request.method == "POST" and request.POST.get("action") in {"profile", "consent", "add_child"}:
+        try:
+            action = request.POST["action"]
+            if action == "add_child":
+                request_child(request)
+                messages.success(request, "Die Zuordnung wurde zur Prüfung eingereicht.")
+            else:
+                person_id = request.POST.get("person_id")
+                person = request.user.person if person_id == str(request.user.person.pk) else None
+                if person is None:
+                    relation = next((r for r in relationships if str(r.student_person_id) == person_id
+                                     and r.is_current() and r.may_manage_profile), None)
+                    if not relation:
+                        raise PermissionDenied
+                    person = relation.student_person
+                if action == "profile":
+                    save_person(request, person)
+                else:
+                    save_consent(request, person)
+                messages.success(request, "Die Änderungen wurden gespeichert.")
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+        return redirect("ui-family")
     if request.method == "POST":
         relationship = get_object_or_404(
             GuardianChildRelationship,
@@ -2481,10 +2509,21 @@ def family(request):
                 "relationship": relationship,
                 "membership": membership,
                 "modules": module_rows,
+                "card": person_card(relationship.student_person, request.user,
+                    relationship.is_current() and relationship.may_manage_profile),
             }
         )
-    context = _shared(request, "Familie & Profile", "more")
+    context = _shared(request, "Familien-Zentrale", "more")
     context["relationship_rows"] = relationship_rows
+    child_ids = [r.student_person_id for r in relationships if r.is_current() and r.may_view_student_profile]
+    other_parents = GuardianChildRelationship.objects.filter(student_person_id__in=child_ids).select_related("guardian_person")
+    parent_map = {request.user.person.pk: request.user.person}
+    for relation in other_parents:
+        if relation.is_current():
+            parent_map[relation.guardian_person_id] = relation.guardian_person
+    context["parent_cards"] = [person_card(p, request.user, p.pk == request.user.person.pk) for p in parent_map.values()]
+    context["join_requests"] = ChildJoinRequest.objects.filter(guardian=request.user.person).select_related("school_class__school")
+    context["available_classes"] = available_classes()
     return render(request, "ui/family.html", context)
 
 
@@ -2506,8 +2545,18 @@ def contacts(request):
         rows.append(
             {
                 "person": person,
+                "display_name": (
+                    f"{person.first_name} {person.last_name}"
+                    if person.field_visibility.get("first_name", True)
+                    and person.field_visibility.get("last_name", True)
+                    else "Mitglied"
+                ),
                 "children": [relationship.student_person for relationship in children],
-                "email": person.user.email if person.email_visibility == "members" else "",
+                "email": (
+                    person.contact_email or person.user.email
+                    if person.email_visibility == "members"
+                    else ""
+                ),
                 "phone": person.phone if person.phone_visibility == "members" else "",
             }
         )

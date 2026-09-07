@@ -665,3 +665,30 @@
     document.querySelector("[data-chat-retry]")?.addEventListener("click", poll);
   }
 })();
+
+(() => {
+  const dialog = document.querySelector("#avatar-designer");
+  if (!dialog) return;
+  let target;
+  const parts = [...dialog.querySelectorAll("[data-avatar-part]")];
+  const preview = dialog.querySelector("[data-avatar-preview]");
+  const seed = () => `v1:${parts.map((part) => part.value).join(":")}`;
+  const draw = () => {
+    const [background, hair, face, mouth] = parts.map((part) => Number(part.value));
+    const colours = ["#bae6fd", "#bbf7d0", "#fef08a", "#fbcfe8", "#fed7aa", "#ddd6fe", "#cbd5e1"];
+    const hairstyles = ["M12 42Q50 12 88 42", "M15 45Q10 20 35 25Q50 10 65 25Q90 20 85 45", "M12 42C25 20 75 15 88 42", "M20 42Q50 20 80 42", ""];
+    const glasses = ["<circle cx='35' cy='48' r='3'/><circle cx='65' cy='48' r='3'/>", "<rect x='23' y='38' width='22' height='18' rx='3' fill='none' stroke='#0f172a' stroke-width='4'/><rect x='55' y='38' width='22' height='18' rx='3' fill='none' stroke='#0f172a' stroke-width='4'/>", "<circle cx='35' cy='48' r='3'/><circle cx='65' cy='48' r='3'/>"];
+    const mouths = ["M36 68Q50 83 64 68", "M42 70Q52 75 60 66", "M36 66Q50 86 64 66Z"];
+    preview.innerHTML = `<svg viewBox='0 0 100 100' aria-hidden='true'><circle cx='50' cy='50' r='48' fill='${colours[background]}'/><path d='${hairstyles[hair]}' fill='none' stroke='#1e293b' stroke-width='12' stroke-linecap='round'/>${glasses[face]}<path d='${mouths[mouth]}' fill='none' stroke='#0f172a' stroke-width='4' stroke-linecap='round'/></svg>`;
+  };
+  parts.forEach((part) => part.addEventListener("change", draw));
+  dialog.querySelector("[data-avatar-random]").addEventListener("click", () => {
+    parts.forEach((part) => { part.value = String(Math.floor(Math.random() * part.options.length)); }); draw();
+  });
+  dialog.querySelector("[data-avatar-apply]").addEventListener("click", () => { if (target) target.value = seed(); });
+  document.querySelectorAll("[data-avatar-open]").forEach((button) => button.addEventListener("click", () => {
+    target = button.closest("form").querySelector("[data-avatar-seed]");
+    const values = target.value.split(":").slice(1);
+    parts.forEach((part, index) => { part.value = values[index] || "0"; }); draw(); dialog.showModal();
+  }));
+})();
