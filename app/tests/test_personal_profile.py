@@ -86,3 +86,24 @@ def test_profile_home_area_persists_one_current_location(client, guardian):
     guardian.person.refresh_from_db()
     assert str(guardian.person.home_latitude) == "52.423991"
     assert str(guardian.person.home_longitude) == "10.786221"
+
+
+@pytest.mark.django_db
+def test_profile_persists_a_designed_svg_avatar(client, guardian):
+    client.force_login(guardian)
+
+    response = client.post(
+        reverse("personal-profile"),
+        {
+            "first_name": "Alex", "last_name": "Beispiel", "contribution_name_mode": "family",
+            "profile_image_mode": "avatar", "avatar_key": "peep-1",
+            "avatar_seed": "v2:2:1:3:4:1:2",
+        },
+        secure=True,
+    )
+
+    assert response.status_code == 302
+    guardian.person.refresh_from_db()
+    assert guardian.person.avatar_seed == "v2:2:1:3:4:1:2"
+    page = client.get(reverse("personal-profile"), secure=True)
+    assert b"Avatar-Designer" in page.content

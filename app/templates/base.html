@@ -39,7 +39,7 @@
       </a>
       <details class="app-profile-menu">
         <summary aria-label="Profilmenü öffnen">
-          <span class="app-avatar" aria-hidden="true">{% if profile_image_mode == "photo" and profile_photo_person_id %}<img src="{% url 'profile-photo' profile_photo_person_id %}" alt="">{% else %}<img src="{% static profile_avatar_path %}" alt="">{% endif %}</span>
+          <span class="app-avatar" aria-hidden="true">{% if profile_image_mode == "photo" and profile_photo_person_id %}<img src="{% url 'profile-photo' profile_photo_person_id %}" alt="">{% elif profile_avatar_seed %}{% avatar_composite profile_avatar_seed %}{% else %}<img src="{% static profile_avatar_path %}" alt="">{% endif %}</span>
           <span class="app-profile-menu__name">{{ personal_display_name|default:request.user.email }}</span>
         </summary>
         <nav class="app-profile-menu__panel" aria-label="Profilmenü">
@@ -92,7 +92,7 @@
 {% endif %}
 <div id="live-status" class="sr-only" aria-live="polite"></div>
 <script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
-  <script src="{% static 'app.js' %}?v=9" defer></script>
+  <script src="{% static 'app.js' %}?v=10" defer></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js')}</script>
 </body>
 </html>

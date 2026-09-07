@@ -48,7 +48,7 @@ def test_family_centre_saves_only_the_guardians_own_profile(client, guardian, ma
         f"person-{person_id}-street": "Musterstraße 1", f"person-{person_id}-postal_code": "38440",
         f"person-{person_id}-city": "Wolfsburg", f"person-{person_id}-contact_email": "alex@example.test",
         f"person-{person_id}-phone": "05361 1", f"person-{person_id}-chat_display_name": "Alex",
-        "share_phone": "on", "avatar_seed": "v1:1:2:1:2", "profile_image_mode": "avatar",
+        "share_phone": "on", "avatar_seed": "v2:1:2:3:4:1:2", "profile_image_mode": "avatar",
     })
 
     assert response.status_code == 302
@@ -56,7 +56,7 @@ def test_family_centre_saves_only_the_guardians_own_profile(client, guardian, ma
     managed_child.refresh_from_db()
     assert guardian.person.street == "Musterstraße 1"
     assert guardian.person.phone_visibility == "members"
-    assert guardian.person.avatar_seed == "v1:1:2:1:2"
+    assert guardian.person.avatar_seed == "v2:1:2:3:4:1:2"
     assert managed_child.street == ""
 
 

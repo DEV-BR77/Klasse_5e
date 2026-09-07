@@ -2436,6 +2436,7 @@ def family(request):
     from .family_settings import (
         available_classes, person_card, request_child, save_consent, save_person,
     )
+    from .avatar_designer import avatar_designer_context
     from .models import ChildJoinRequest
 
     relationships = list(
@@ -2545,6 +2546,7 @@ def family(request):
     context["parent_cards"] = [person_card(p, request.user, p.pk == request.user.person.pk) for p in parent_map.values()]
     context["join_requests"] = ChildJoinRequest.objects.filter(guardian=request.user.person).select_related("school_class__school")
     context["available_classes"] = available_classes()
+    context["avatar_designer"] = avatar_designer_context()
     return render(request, "ui/family.html", context)
 
 

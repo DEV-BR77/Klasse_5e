@@ -8,6 +8,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 
+from .avatar_designer import validate_avatar_seed
 from .models import (
     AuditEvent,
     ChildJoinRequest,
@@ -62,13 +63,7 @@ def save_person(request, person):
     photo = request.FILES.get("profile_photo")
     encoded = sanitized_profile_photo(photo) if photo else None
     seed = request.POST.get("avatar_seed", "")
-    if seed:
-        parts = seed.split(":")
-        if len(parts) != 5 or parts[0] != "v1" or any(
-            not value.isascii() or not value.isdecimal() or int(value) >= limit
-            for value, limit in zip(parts[1:], (7, 5, 3, 3), strict=True)
-        ):
-            raise ValidationError("Bitte wähle einen gültigen Avatar.")
+    validate_avatar_seed(seed)
     with transaction.atomic():
         person = form.save(commit=False)
         person.field_visibility = {key: request.POST.get(f"share_{key}") == "on" for key in form.fields}

@@ -1,9 +1,41 @@
 import hashlib
 
 from django import template
+from django.contrib.staticfiles.storage import staticfiles_storage
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from klasse5e.core.avatar_designer import AVATAR_COMPONENTS, BACKGROUND_COLORS, parse_avatar_seed
+
 register = template.Library()
+
+
+@register.simple_tag
+def avatar_composite(seed, class_name=""):
+    """Render a saved SVG avatar from the local, curated Open Peeps atoms."""
+    config = parse_avatar_seed(seed)
+    if not config:
+        return ""
+    layers = (
+        ("body", 13, 42, 70, 47),
+        ("head", 33, 12, 42, 37),
+        ("face", 47, 24, 25, 20),
+        ("facial-hair", 43, 33, 24, 18),
+        ("accessories", 37, 27, 35, 12),
+    )
+    images = []
+    for category, x, y, width, height in layers:
+        filename = AVATAR_COMPONENTS[category][config[category]][0]
+        if filename:
+            url = staticfiles_storage.url(f"vendor/avatar-atoms/{category}/{filename}")
+            images.append(format_html(
+                '<image href="{}" x="{}%" y="{}%" width="{}%" height="{}%" preserveAspectRatio="xMidYMid meet" />',
+                url, x, y, width, height,
+            ))
+    return format_html(
+        '<svg viewBox="0 0 240 324" class="{}" role="img" aria-label="Individuell gestalteter Avatar" xmlns="http://www.w3.org/2000/svg"><rect width="240" height="324" rx="26" fill="{}" />{}</svg>',
+        class_name, BACKGROUND_COLORS[config["background"]], mark_safe("".join(images)),
+    )
 
 
 @register.simple_tag

@@ -1,0 +1,19 @@
+{% load static %}
+{{ avatar_designer|json_script:"avatar-designer-data" }}
+<dialog id="avatar-designer" class="app-dialog avatar-designer-dialog">
+  <form method="dialog" class="avatar-designer">
+    <header class="dialog-head"><div><p class="eyebrow">Avatar-Designer</p><h2>Deinen Avatar gestalten</h2><p class="muted">Wähle echte SVG-Bausteine. Die Vorschau ändert sich sofort.</p></div><button class="icon-button" value="cancel" aria-label="Schließen">×</button></header>
+    <div class="avatar-designer__layout">
+      <section class="avatar-designer__preview-panel"><div class="avatar-designer__preview" data-avatar-preview aria-label="Vorschau des Avatars"></div><p class="muted">Die Auswahl wird erst mit „Übernehmen“ in deinem Profil gespeichert.</p></section>
+      <section class="avatar-designer__choices" aria-label="Avatar-Bausteine">
+        <fieldset class="avatar-option-group"><legend>Hintergrund</legend><div class="avatar-swatch-grid" data-avatar-options="background"></div></fieldset>
+        <fieldset class="avatar-option-group"><legend>Körper &amp; Kleidung</legend><div class="avatar-option-grid" data-avatar-options="body"></div></fieldset>
+        <fieldset class="avatar-option-group"><legend>Kopf &amp; Haare</legend><div class="avatar-option-grid" data-avatar-options="head"></div></fieldset>
+        <fieldset class="avatar-option-group"><legend>Gesicht</legend><div class="avatar-option-grid" data-avatar-options="face"></div></fieldset>
+        <fieldset class="avatar-option-group"><legend>Bart</legend><div class="avatar-option-grid" data-avatar-options="facial-hair"></div></fieldset>
+        <fieldset class="avatar-option-group"><legend>Accessoires</legend><div class="avatar-option-grid" data-avatar-options="accessories"></div></fieldset>
+      </section>
+    </div>
+    <footer class="dialog-actions"><button class="button button-secondary" type="button" data-avatar-random>Zufällig</button><button class="button button-primary" value="default" data-avatar-apply>Übernehmen</button></footer>
+  </form>
+</dialog>

@@ -669,26 +669,63 @@
 (() => {
   const dialog = document.querySelector("#avatar-designer");
   if (!dialog) return;
+  const data = JSON.parse(document.querySelector("#avatar-designer-data")?.textContent || "{}");
+  if (!data.components || !data.backgrounds) return;
+  const svgNs = "http://www.w3.org/2000/svg";
+  const keys = ["background", "body", "head", "face", "facial-hair", "accessories"];
+  const layers = {body: [13, 42, 70, 47], head: [33, 12, 42, 37], face: [47, 24, 25, 20], "facial-hair": [43, 33, 24, 18], accessories: [37, 27, 35, 12]};
   let target;
-  const parts = [...dialog.querySelectorAll("[data-avatar-part]")];
-  const preview = dialog.querySelector("[data-avatar-preview]");
-  const seed = () => `v1:${parts.map((part) => part.value).join(":")}`;
-  const draw = () => {
-    const [background, hair, face, mouth] = parts.map((part) => Number(part.value));
-    const colours = ["#bae6fd", "#bbf7d0", "#fef08a", "#fbcfe8", "#fed7aa", "#ddd6fe", "#cbd5e1"];
-    const hairstyles = ["M12 42Q50 12 88 42", "M15 45Q10 20 35 25Q50 10 65 25Q90 20 85 45", "M12 42C25 20 75 15 88 42", "M20 42Q50 20 80 42", ""];
-    const glasses = ["<circle cx='35' cy='48' r='3'/><circle cx='65' cy='48' r='3'/>", "<rect x='23' y='38' width='22' height='18' rx='3' fill='none' stroke='#0f172a' stroke-width='4'/><rect x='55' y='38' width='22' height='18' rx='3' fill='none' stroke='#0f172a' stroke-width='4'/>", "<circle cx='35' cy='48' r='3'/><circle cx='65' cy='48' r='3'/>"];
-    const mouths = ["M36 68Q50 83 64 68", "M42 70Q52 75 60 66", "M36 66Q50 86 64 66Z"];
-    preview.innerHTML = `<svg viewBox='0 0 100 100' aria-hidden='true'><circle cx='50' cy='50' r='48' fill='${colours[background]}'/><path d='${hairstyles[hair]}' fill='none' stroke='#1e293b' stroke-width='12' stroke-linecap='round'/>${glasses[face]}<path d='${mouths[mouth]}' fill='none' stroke='#0f172a' stroke-width='4' stroke-linecap='round'/></svg>`;
+  let selected = {background: 0, body: 0, head: 0, face: 0, "facial-hair": 0, accessories: 0};
+  const assetUrl = (category, filename) => `/static/vendor/avatar-atoms/${category}/${encodeURIComponent(filename)}`;
+  const makeSvg = (compact = false) => {
+    const svg = document.createElementNS(svgNs, "svg");
+    svg.setAttribute("viewBox", "0 0 240 324");
+    svg.setAttribute("aria-hidden", "true");
+    const background = document.createElementNS(svgNs, "rect");
+    background.setAttribute("width", "240"); background.setAttribute("height", "324"); background.setAttribute("rx", "26");
+    background.setAttribute("fill", data.backgrounds[selected.background]); svg.append(background);
+    Object.entries(layers).forEach(([category, values]) => {
+      const filename = data.components[category][selected[category]][0];
+      if (!filename) return;
+      const image = document.createElementNS(svgNs, "image");
+      image.setAttribute("href", assetUrl(category, filename));
+      image.setAttribute("x", `${values[0]}%`); image.setAttribute("y", `${values[1]}%`);
+      image.setAttribute("width", `${values[2]}%`); image.setAttribute("height", `${values[3]}%`);
+      image.setAttribute("preserveAspectRatio", "xMidYMid meet"); svg.append(image);
+    });
+    if (compact) svg.classList.add("avatar-option-art");
+    return svg;
   };
-  parts.forEach((part) => part.addEventListener("change", draw));
-  dialog.querySelector("[data-avatar-random]").addEventListener("click", () => {
-    parts.forEach((part) => { part.value = String(Math.floor(Math.random() * part.options.length)); }); draw();
+  const draw = () => {
+    const preview = dialog.querySelector("[data-avatar-preview]");
+    preview.replaceChildren(makeSvg());
+    keys.forEach((key) => dialog.querySelectorAll(`[data-avatar-option="${key}"]`).forEach((button) => {
+      button.classList.toggle("is-selected", Number(button.dataset.avatarIndex) === selected[key]);
+      button.setAttribute("aria-pressed", String(Number(button.dataset.avatarIndex) === selected[key]));
+    }));
+  };
+  const optionButton = (key, index, label) => {
+    const button = document.createElement("button"); button.type = "button"; button.className = "avatar-option";
+    button.dataset.avatarOption = key; button.dataset.avatarIndex = String(index); button.setAttribute("aria-pressed", "false");
+    if (key === "background") { const swatch = document.createElement("span"); swatch.className = "avatar-color-swatch"; swatch.style.background = data.backgrounds[index]; button.append(swatch); }
+    else { const art = document.createElement("span"); art.className = "avatar-option-art"; const image = document.createElement("img"); const filename = data.components[key][index][0]; if (filename) { image.src = assetUrl(key, filename); image.alt = ""; } art.append(image); button.append(art); }
+    const text = document.createElement("span"); text.textContent = label; button.append(text);
+    button.addEventListener("click", () => { selected[key] = index; draw(); }); return button;
+  };
+  keys.forEach((key) => {
+    const holder = dialog.querySelector(`[data-avatar-options="${key}"]`); if (!holder) return;
+    const options = key === "background" ? data.backgrounds.map((_, index) => ["", `Farbe ${index + 1}`]) : data.components[key];
+    options.forEach((item, index) => holder.append(optionButton(key, index, item[1])));
   });
-  dialog.querySelector("[data-avatar-apply]").addEventListener("click", () => { if (target) target.value = seed(); });
+  dialog.querySelector("[data-avatar-random]").addEventListener("click", () => {
+    selected.background = Math.floor(Math.random() * data.backgrounds.length);
+    keys.slice(1).forEach((key) => { selected[key] = Math.floor(Math.random() * data.components[key].length); }); draw();
+  });
+  dialog.querySelector("[data-avatar-apply]").addEventListener("click", () => { if (target) target.value = `v2:${keys.map((key) => selected[key]).join(":")}`; });
   document.querySelectorAll("[data-avatar-open]").forEach((button) => button.addEventListener("click", () => {
     target = button.closest("form").querySelector("[data-avatar-seed]");
-    const values = target.value.split(":").slice(1);
-    parts.forEach((part, index) => { part.value = values[index] || "0"; }); draw(); dialog.showModal();
+    const values = target.value.split(":");
+    if (values[0] === "v2" && values.length === 7 && values.slice(1).every((value) => /^\d+$/.test(value))) keys.forEach((key, index) => { selected[key] = Number(values[index + 1]); });
+    draw(); dialog.showModal();
   }));
 })();

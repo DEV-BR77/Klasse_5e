@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static avatar_tags %}
 
 {% block content %}
 <section class="settings-page narrow-page">
@@ -25,6 +25,8 @@
         <div class="profile-image-preview" aria-label="Aktuelle Profilbildvorschau" data-profile-current-preview>
           {% if person.profile_photo and person.profile_image_mode == "photo" %}
             <img src="{% url 'profile-photo' person.pk %}" alt="Aktuelles Profilfoto">
+          {% elif person.avatar_seed %}
+            {% avatar_composite person.avatar_seed %}
           {% else %}
             <img src="{% static person.avatar_static_path %}" alt="Ausgewählter Avatar">
           {% endif %}
@@ -64,6 +66,7 @@
         </div>
       </header>
       <div class="settings-details-body form-stack">
+        <input type="hidden" name="avatar_seed" value="{{ person.avatar_seed }}" data-avatar-seed>
         <div class="image-mode-picker" role="radiogroup" aria-label="Art des Profilbildes">
           <label class="choice-card">
             <input type="radio" name="profile_image_mode" value="avatar" {% if person.profile_image_mode != "photo" %}checked{% endif %}>
@@ -74,7 +77,11 @@
             <span><strong>Profilfoto verwenden</strong><small>Nur verfügbar, wenn ein Foto ausgewählt oder gespeichert ist.</small></span>
           </label>
         </div>
-        <div class="avatar-choice-grid" aria-label="Avatare">
+        <div class="profile-avatar-designer-callout">
+          <div><strong>Eigenen Avatar gestalten</strong><small>Stelle Kleidung, Haare, Gesicht und Accessoires mit den vorhandenen SVG-Bausteinen zusammen.</small></div>
+          <button class="button button-primary" type="button" data-avatar-open>Avatar-Designer öffnen</button>
+        </div>
+        <details class="avatar-preset-details"><summary>Aus den vorhandenen Standard-Avataren wählen</summary><div class="avatar-choice-grid" aria-label="Standard-Avatare">
           {% for avatar_key, avatar_label in avatar_presets %}
             {% with avatar_path="vendor/open-peeps/"|add:avatar_key|add:".svg" %}
               <label class="avatar-choice">
@@ -84,7 +91,7 @@
               </label>
             {% endwith %}
           {% endfor %}
-        </div>
+        </div></details>
       </div>
     </article>
 
@@ -162,4 +169,5 @@
     </footer>
   </form>
 </section>
+{% include "ui/_avatar_designer.html" %}
 {% endblock %}

@@ -24,6 +24,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods, require_POST
 
+from .avatar_designer import avatar_designer_context, validate_avatar_seed
 from .models import (
     PROFILE_AVATAR_PRESETS,
     AccountDeletionRequest,
@@ -399,6 +400,9 @@ def personal_profile(request):
         avatar_key = request.POST.get("avatar_key")
         if avatar_key in dict(PROFILE_AVATAR_PRESETS):
             person.avatar_key = avatar_key
+        avatar_seed = request.POST.get("avatar_seed", "")
+        validate_avatar_seed(avatar_seed)
+        person.avatar_seed = avatar_seed
         if not person.profile_photo:
             person.profile_image_mode = Person.ProfileImageMode.AVATAR
         person.full_clean()
@@ -423,6 +427,7 @@ def personal_profile(request):
             "page_title": "Persönliches Profil",
             "person": person,
             "avatar_presets": PROFILE_AVATAR_PRESETS,
+            "avatar_designer": avatar_designer_context(),
         },
     )
 

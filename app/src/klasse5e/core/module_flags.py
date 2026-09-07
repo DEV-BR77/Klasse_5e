@@ -75,6 +75,7 @@ def module_context(request):
         "personal_display_name": person.first_name if person else "",
         "profile_image_mode": person.profile_image_mode if person else "avatar",
         "profile_avatar_path": person.avatar_static_path if person else "vendor/open-peeps/peep-1.svg",
+        "profile_avatar_seed": person.avatar_seed if person else "",
         "profile_photo_person_id": person.pk if person and person.profile_photo else None,
         "notification_unread_count": unread_count,
         "family_children": family_children,
