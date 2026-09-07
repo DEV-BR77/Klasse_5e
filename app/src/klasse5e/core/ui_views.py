@@ -1530,6 +1530,12 @@ def more(request):
                         "icon": "teacher",
                     },
                     {
+                        "key": "school_portal_adapters",
+                        "label": "Schulportaladapter",
+                        "url": reverse("portal-adapter-management"),
+                        "icon": "calendar",
+                    },
+                    {
                         "key": "family_invitations",
                         "label": "QR-Familieneinladungen",
                         "url": "/verwaltung/familien-einladungen/",

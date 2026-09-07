@@ -5,31 +5,14 @@
     <div>
       <p class="eyebrow">Nur für Administratoren</p>
       <h1>Portalverwaltung</h1>
-      <p class="lede">Schulen, Klassen, Einladungen und Portalbereiche an einer Stelle verwalten.</p>
+      <p class="lede">Design, Menüstruktur und weitere Portaleinstellungen verwalten.</p>
     </div>
     <a class="button button-secondary" href="{% url 'ui-more' %}">← Zum Menü</a>
   </header>
   <div class="card-grid">
-    <a class="content-card" href="{% url 'family-invitations' %}">
-      <h2>QR-Familieneinladungen</h2>
-      <p>Klasse und Anzahl wählen, auf Wunsch Familiennamen vormerken und das PDF direkt erzeugen.</p>
-    </a>
-    <a class="content-card" href="{% url 'portal-adapter-management' %}">
-      <h2>Schulportal-Adapter</h2>
-      <p>Portale, Adressen und einzeln freigegebene Abrufmodule pro Schule verwalten.</p>
-    </a>
-    <a class="content-card" href="{% url 'school-management' %}">
-      <h2>Schulen</h2>
-      <p>{{ schools }} eingerichtete Schulen · {{ classes }} aktive Klassen. Schule suchen, hinzufügen und Klassen direkt darunter anlegen.</p>
-    </a>
-    <a class="content-card" href="/admin/core/registrationapplication/">
-      <h2>Neue Registrierungen</h2>
-      <p>{{ review_pending }} warten auf Prüfung. Neue Anmeldungen erscheinen zusätzlich an der Glocke.</p>
-    </a>
     <a class="content-card" href="/admin/core/brandingasset/"><h2>Logos &amp; Branding</h2><p>Logos und Rechte verwalten.</p></a>
     <a class="content-card" href="{% url 'theme-management' %}"><h2>Themes</h2><p>Die vorbereiteten Designs prüfen und gezielt freigeben.</p></a>
     <a class="content-card" href="{% url 'menu-management' %}"><h2>Menüstruktur</h2><p>Gruppen, Sichtbarkeit, Texte und Reihenfolge anpassen.</p></a>
-    <a class="content-card" href="{% url 'presentation-poll-settings' %}"><h2>Terminumfrage</h2><p>Teams-Link speichern und die Präsentationsumfrage neu starten.</p></a>
     <a class="content-card" href="{% url 'chat-retention-settings' %}"><h2>Chat-Aufbewahrung</h2><p>Automatische Löschregeln bewusst aktivieren, ändern oder ganz ausschalten.</p></a>
     <a class="content-card" href="/admin/core/pilotreport/"><h2>Pilotmeldungen</h2><p>{{ pilot_reports }} offene Meldungen.</p></a>
     <a class="content-card" href="/praesentation/"><h2>Portal-Präsentation</h2><p>Interne Vorstellung des Portals öffnen.</p></a>

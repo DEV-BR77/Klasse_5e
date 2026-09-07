@@ -15,3 +15,11 @@ Datenquellen; bestehende Zugriffsprüfungen und CSRF bleiben erhalten.
 Ein zusätzlich geprüfter bestehender Familientest erwartet den aktuell fehlenden
 Bereich „Familie im Blick“ und schlägt weiterhin fehl. Browser-Sichtprüfung und
 produktive Bereitstellung sind noch nicht erfolgt.
+
+## Bereinigung der Portalverwaltung
+
+Schulportaladapter sind direkt in der administrativen Menügruppe erreichbar.
+Die Verwaltungsübersicht enthält keine doppelten Kacheln für Schulen/Klassen,
+Registrierungen, QR-Familieneinladungen oder Schulportaladapter mehr. Auch die
+separate Terminumfrage-Kachel entfällt; Veranstaltungen bleiben im Klassenleben.
+Die vorhandenen Zielseiten und Berechtigungsprüfungen bleiben erhalten.
