@@ -1,7 +1,7 @@
-{% extends "base.html" %}
+{% extends "allauth/layouts/base.html" %}
 {% block content %}
 <section class="family-registration">
-  <header><p class="eyebrow">Einladung {{ invitation.serial_number|stringformat:"02d" }}</p><h1>Kommt in unseren Klassentreff</h1><p>Legt eure Familie gemeinsam an. Erwachsene und Kinder erhalten jeweils einen eigenen persönlichen Login und ein eigenes Passwort.</p></header>
+  <header><p class="eyebrow">Einladung {{ invitation.serial_number|stringformat:"02d" }}</p><h1 id="auth-heading">Kommt in unseren Klassentreff</h1><p>Legt eure Familie gemeinsam an. Erwachsene und Kinder erhalten jeweils einen eigenen persönlichen Login und ein eigenes Passwort.</p></header>
   {% if error %}<div class="notice notice-error">{{ error }}</div>{% endif %}
   <form method="post" class="card form-stack">
     {% csrf_token %}

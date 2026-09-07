@@ -107,7 +107,10 @@ class OnboardingRequiredMiddleware:
             and not request.path.startswith(self.EXEMPT_PREFIXES)
         ):
             try:
-                if not onboarding_complete(request.user):
+                if not onboarding_complete(request.user) and not request.session.get(
+                    "setup_intro_seen"
+                ):
+                    request.session["setup_intro_seen"] = True
                     return redirect("onboarding-resume")
             except (OperationalError, ProgrammingError):
                 # Health and deployment stay available while migrations run.

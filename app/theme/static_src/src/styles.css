@@ -1131,3 +1131,5 @@ html[data-theme-mode="dark"] {
 @media(max-width: 42rem) { .chat-appearance-picker { grid-template-columns: 1fr; } .chat-room-list-item { align-items: stretch; flex-wrap: wrap; } .chat-room-list-item > .button { margin-left: auto; } }
 @media(max-width: 42rem) { .family-field { grid-template-columns: 1fr; } .family-module-card { align-items: flex-start; flex-wrap: wrap; } .family-module-card .button { margin-left: 0; } .profile-avatar-designer-callout { align-items: stretch; flex-direction: column; } .profile-avatar-designer-callout .button { width: 100%; } .avatar-designer__layout { grid-template-columns: 1fr; } .avatar-designer__preview-panel { padding: 1.2rem; border-right: 0; border-bottom: 1px solid var(--color-border); } .avatar-designer__preview { width: min(10rem, 55vw); } .avatar-option-grid, .avatar-swatch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media(max-width: 760px) { .calendar-timeline-day .calendar-timeline-head, .calendar-timeline-day .calendar-all-day, .calendar-timeline-day .calendar-timeline { min-width: 0; grid-template-columns: 5.5rem minmax(0, 1fr); } }
+
+@import "./settings.css";

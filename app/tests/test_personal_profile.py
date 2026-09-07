@@ -41,6 +41,9 @@ def test_owner_can_preview_a_saved_profile_photo_and_switch_to_an_avatar(client,
     image = client.get(reverse("profile-photo", args=[guardian.person.pk]), secure=True)
     assert image.status_code == 200
     assert image["Content-Type"] == "image/webp"
+    # On Windows the test client can otherwise retain the file handle while
+    # the following request removes the just-used profile image.
+    image.close()
 
     page = client.get(profile_url, secure=True)
     assert page.status_code == 200

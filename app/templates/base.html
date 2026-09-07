@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#5558a6">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
-  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}?v=tailwind-v2">
+  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}?v=settings-v3">
   {% block extra_head %}{% endblock %}
   <title>{{ page_title|default:"Home" }} · KlassID</title>
 </head>
@@ -82,6 +82,7 @@
   {% endif %}
   <main id="main-content" class="main-content" tabindex="-1">
     {% if messages %}<div class="toast-stack" aria-live="polite">{% for message in messages %}{% if 'success' not in message.tags %}<p class="status-banner">{{ message }}</p>{% endif %}{% endfor %}</div>{% endif %}
+    {% if request.user.is_authenticated and not request.user.onboardingstate.completed_at %}<aside class="kid-section-nav" aria-label="Starthilfe"><a href="{% url 'onboarding-resume' %}">Starthilfe: Familie, Klasse und Datenschutz einrichten</a></aside>{% endif %}
     {% block content %}{% endblock %}
   </main>
   {% if not request.user.is_authenticated %}{% include "includes/site_footer.html" %}{% endif %}

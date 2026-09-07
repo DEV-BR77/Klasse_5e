@@ -4,7 +4,7 @@
 {% block head_title %}Anmeldung{% endblock head_title %}
 
 {% block content %}
-    <h1 id="auth-heading" class="sr-only">Bei KlassID anmelden</h1>
+    <h1 id="auth-heading">Bei KlassID anmelden</h1>
 
     {% url 'account_login' as login_url %}
     {% element form form=form method="post" action=login_url tags="entrance,login" %}

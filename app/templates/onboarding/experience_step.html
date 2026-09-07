@@ -1,14 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="onboarding-v2">
+<section class="onboarding-v2 settings-page">{% include "ui/_settings_navigation.html" %}
   <header class="flow-head">
-    <div><p class="eyebrow">{{ guidance.kicker }}</p><p class="flow-progress">Schritt {{ step }} von {{ total_steps }}</p></div>
+    <div><p class="eyebrow">{{ guidance.kicker }}</p>{% if not editing %}<p class="flow-progress">Schritt {{ step }} von {{ total_steps }}</p>{% endif %}</div>
     {% if not editing %}<form method="post">{% csrf_token %}<button class="link-button" name="action" value="pause">Pausieren</button></form>{% endif %}
   </header>
-  <progress value="{{ step }}" max="{{ total_steps }}" aria-label="Fortschritt"></progress>
+  {% if not editing %}<progress value="{{ step }}" max="{{ total_steps }}" aria-label="Fortschritt"></progress>{% endif %}
   <div class="intro-grid">
     <div><h1>{{ title }}</h1><p class="lede">{{ guidance.lead }}</p>{% if guidance.bullets %}<ul class="check-list">{% for bullet in guidance.bullets %}<li>{{ bullet }}</li>{% endfor %}</ul>{% endif %}</div>
-    {% include "onboarding/_illustration.html" with illustration=guidance.illustration title=title %}
   </div>
   {% if error %}<div class="notice notice-error" role="alert">{{ error }}</div>{% endif %}
 
@@ -31,7 +30,7 @@
       <div class="consent-grid">{% for item in choices %}<fieldset class="consent-card" {% if not item.allowed %}disabled{% endif %}><legend>{{ item.guidance.display_label|default:item.type.label }}</legend><p>{{ item.guidance.summary|default:item.type.purpose }}</p><details><summary>Was bewirkt meine Wahl?</summary><dl><dt>Wenn aktiviert</dt><dd>{{ item.guidance.yes }}</dd><dt>Wenn aus</dt><dd>{{ item.guidance.no }}</dd><dt>Daten</dt><dd>{{ item.guidance.data }}</dd></dl></details>{% if item.allowed %}<div class="decision-options"><label><input type="radio" name="{{ item.type.key }}" value="denied" {% if item.decision == 'denied' or item.decision == 'revoked' %}checked{% endif %}> Aus lassen</label><label><input type="radio" name="{{ item.type.key }}" value="granted" {% if item.decision == 'granted' %}checked{% endif %}> Aktivieren</label></div>{% else %}<p class="locked-note">Derzeit technisch gesperrt und aus.</p><input type="hidden" name="{{ item.type.key }}" value="denied">{% endif %}</fieldset>{% endfor %}</div>
     {% endif %}
     {% if step == 2 %}<label class="confirm-box"><input type="checkbox" name="identity_confirmed" value="yes" {% if state.identity_confirmed_at %}checked{% endif %}> Ich bin als {{ request.user.email }} mit meinem persönlichen Konto angemeldet.</label>{% endif %}
-    <div class="flow-actions">{% if step > 1 and not editing %}<a class="button button-secondary" href="{% url 'onboarding-step' step=step|add:'-1' %}">Zurück</a>{% endif %}<button class="button button-primary" type="submit">{% if editing %}Änderungen speichern{% elif step == total_steps %}Einführung abschließen{% else %}Speichern und weiter{% endif %}</button></div>
+    <div class="flow-actions"><a class="button button-secondary" href="{% url 'ui-more' %}">Zum Portal</a>{% if step > 1 and not editing %}<a class="button button-secondary" href="{% url 'onboarding-step' step=step|add:'-1' %}">Zurück</a>{% endif %}<button class="button button-primary" type="submit">{% if editing %}Änderungen speichern{% elif step == total_steps %}Einführung abschließen{% else %}Speichern und weiter{% endif %}</button></div>
   </form>
 </section>
 {% endblock %}

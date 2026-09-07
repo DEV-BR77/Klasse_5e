@@ -64,7 +64,7 @@ def test_resume_uses_saved_step_and_pause_has_accessible_landing_page(client, gu
     client.force_login(guardian)
     response = client.get("/onboarding/")
     assert response.status_code == 200
-    assert "Schritt 4 von 10" in response.content.decode()
+    assert "In deinem Tempo startklar" in response.content.decode()
     response = client.post("/onboarding/schritt/4/", {"action": "pause"})
     assert response.url == "/onboarding/pausiert/"
     page = client.get(response.url)

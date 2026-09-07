@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block content %}
+{% block content %}{% include "ui/_settings_navigation.html" %}
 <section class="settings-page family-page">
   <header class="page-heading"><div><p class="eyebrow">Mein Konto</p><h1>👥 Familien-Zentrale</h1><p class="lede">Eltern, Kinder, Schulzuordnungen und persönliche Freigaben an einem Ort.</p></div><a class="button button-secondary" href="{% url 'ui-more' %}">← Hauptmenü</a></header>
   <section class="family-section"><header><p class="eyebrow">Die Eltern</p><h2>Erziehungsberechtigte</h2><p class="muted">Verknüpfte Eltern haben den gemeinsamen Blick auf bestätigte Kinder. Persönliche Daten und Freigaben bearbeitet jede erwachsene Person selbst.</p></header><div class="family-person-grid">{% for card in parent_cards %}{% include "ui/_family_person_card.html" with card=card %}{% endfor %}</div></section>

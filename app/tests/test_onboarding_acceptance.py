@@ -60,7 +60,7 @@ def test_student_login_gets_child_friendly_resumable_flow(client):
     client.force_login(user)
     response = client.get("/onboarding/")
     assert response.status_code == 200
-    assert "Schritt 1 von 10" in response.content.decode()
+    assert "In deinem Tempo startklar" in response.content.decode()
     assert OnboardingState.objects.get(user=user).current_step == 1
 
 

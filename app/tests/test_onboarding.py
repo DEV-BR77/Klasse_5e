@@ -73,7 +73,8 @@ def test_verified_new_guardian_is_sent_to_resumable_onboarding(client, guardian)
     assert response.url == "/onboarding/"
     page = client.get(response.url)
     assert page.status_code == 200
-    assert "Schritt 1 von 10" in page.content.decode()
+    assert "In deinem Tempo startklar" in page.content.decode()
+    assert "/onboarding/schritt/1/" in page.content.decode()
 
 
 @pytest.mark.django_db

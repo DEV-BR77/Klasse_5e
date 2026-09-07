@@ -721,9 +721,19 @@
     selected.background = Math.floor(Math.random() * data.backgrounds.length);
     keys.slice(1).forEach((key) => { selected[key] = Math.floor(Math.random() * data.components[key].length); }); draw();
   });
-  dialog.querySelector("[data-avatar-apply]").addEventListener("click", () => { if (target) target.value = `v2:${keys.map((key) => selected[key]).join(":")}`; });
+  dialog.querySelector("[data-avatar-apply]").addEventListener("click", () => {
+    if (!target) return;
+    target.value = `v2:${keys.map((key) => selected[key]).join(":")}`;
+    const form = target.closest("form");
+    const avatarMode = form.querySelector('[name="profile_image_mode"][value="avatar"]');
+    const hiddenMode = form.querySelector('input[type="hidden"][name="profile_image_mode"]');
+    if (avatarMode) avatarMode.checked = true;
+    if (hiddenMode) hiddenMode.value = "avatar";
+    target.dispatchEvent(new Event("change", { bubbles: true }));
+  });
   document.querySelectorAll("[data-avatar-open]").forEach((button) => button.addEventListener("click", () => {
     target = button.closest("form").querySelector("[data-avatar-seed]");
+    keys.forEach((key) => { selected[key] = 0; });
     const values = target.value.split(":");
     if (values[0] === "v2" && values.length === 7 && values.slice(1).every((value) => /^\d+$/.test(value))) keys.forEach((key, index) => {
       const value = Number(values[index + 1]);

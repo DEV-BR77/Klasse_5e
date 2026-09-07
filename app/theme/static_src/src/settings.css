@@ -1,0 +1,43 @@
+/* Shared Settings / Forms components. Loaded last to supersede legacy page patches. */
+.tailwind-shell .settings-page,.tailwind-shell .onboarding-v2 {width:min(100%,72rem);max-width:72rem;margin-inline:auto;padding:clamp(1rem,3vw,2rem);display:grid;gap:1.5rem}
+.tailwind-shell .settings-panel {min-width:0;margin:0;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface);box-shadow:none;overflow:visible}
+.tailwind-shell .settings-panel>header,.tailwind-shell .settings-details-body {padding:1.25rem}
+.tailwind-shell .settings-panel>header {border-bottom:1px solid var(--color-border)}
+.tailwind-shell .settings-panel h2 {font-size:1.15rem;margin:0}
+.tailwind-shell .settings-panel header p {margin:.5rem 0 0;color:var(--color-text-muted)}
+.kid-section-nav {display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem;border:1px solid var(--color-border);border-radius:.9rem;background:var(--color-surface)}
+.kid-section-nav a {padding:.65rem .85rem;border-radius:.65rem;color:var(--color-primary);font-weight:650;text-decoration:none}
+.kid-section-nav a:hover,.kid-section-nav a:focus-visible {background:var(--color-primary-light)}
+[id] {scroll-margin-top:5rem}
+.tailwind-shell .form-stack {display:grid;gap:1.25rem}
+.tailwind-shell .field-pair,.tailwind-shell .family-fields {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem}
+.tailwind-shell form label,.auth-page form label {color:var(--color-text);font-weight:600}
+.tailwind-shell form :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=range]):not([type=color]),select,textarea),.auth-page form :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select,textarea) {box-sizing:border-box;width:100%;max-width:100%;min-height:2.85rem;border:1px solid var(--color-border);border-radius:.65rem;background:var(--color-surface);color:var(--color-text);padding:.65rem .8rem;font:inherit;box-shadow:none}
+.tailwind-shell form :is(input,select,textarea):focus-visible,.auth-page form :is(input,select,textarea):focus-visible {outline:3px solid var(--color-primary);outline-offset:2px}
+.tailwind-shell form :is(input,select,textarea):disabled {opacity:.6;cursor:not-allowed}
+.tailwind-shell form :is(input,textarea,select)[aria-invalid=true],.tailwind-shell form :user-invalid,.auth-page form :user-invalid {border-color:#b42318}
+.tailwind-shell .errorlist,.auth-page .errorlist,.tailwind-shell .notice-error {padding:.75rem 1rem;border-left:3px solid #b42318;background:#fff1f0;color:#8a1c13;border-radius:.5rem}
+.tailwind-shell .switch input:focus-visible+span {outline:3px solid var(--color-primary);outline-offset:3px}
+.tailwind-shell .form-actions {display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.75rem;padding-block:1rem}
+.tailwind-shell .family-person-grid {display:grid;grid-template-columns:1fr;gap:1rem}
+.tailwind-shell .kid-person>summary {padding:1.2rem;display:flex;align-items:center;gap:1rem;cursor:pointer;list-style:none}
+.kid-expand {margin-left:auto}.kid-person[open]>.family-person-head .kid-expand {transform:rotate(180deg)}
+.tailwind-shell .kid-person>form,.tailwind-shell .kid-person>.family-consents {padding:1.25rem}
+.tailwind-shell .family-field {display:grid;grid-template-columns:1fr;gap:.5rem;align-items:start}
+.tailwind-shell .family-share {justify-self:start}
+.tailwind-shell .kid-person>.kid-section-nav {margin:0 1.25rem}
+.tailwind-shell .onboarding-v2 .intro-grid {display:block;max-width:52rem}
+.tailwind-shell .onboarding-v2 .intro-grid>svg,.tailwind-shell .onboarding-v2 .intro-grid>.onboarding-illustration {display:none}
+.tailwind-shell .onboarding-v2 .consent-grid {display:grid;grid-template-columns:1fr;gap:1rem}
+.tailwind-shell .onboarding-v2 .consent-card {border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface);padding:1.25rem;box-shadow:none}
+.tailwind-shell .onboarding-v2 progress {width:100%;height:.5rem;accent-color:var(--color-primary)}
+.auth-page {background:var(--color-background)}
+.auth-page .auth-logo {display:block;width:10rem}.auth-page .auth-logo img {width:100%;height:auto}
+.auth-page .auth-header {padding:1.5rem clamp(1rem,4vw,3rem)}
+.auth-page .auth-main {width:min(calc(100% - 2rem),72rem);grid-template-columns:minmax(0,1fr) minmax(0,1fr);border:1px solid var(--color-border);border-radius:var(--radius);box-shadow:var(--shadow-card);margin:1rem auto 2rem}
+.auth-page .auth-aside {background:linear-gradient(145deg,var(--color-primary-dark),var(--color-primary));padding:clamp(1.5rem,4vw,3rem)}
+.auth-page .auth-card {min-width:0;padding:clamp(1.5rem,4vw,3rem)}
+.auth-page .auth-card h1 {font-size:clamp(1.6rem,3vw,2.2rem);margin-bottom:1.5rem}
+.auth-page .auth-card form button {background:var(--color-primary);border-radius:.65rem;min-height:2.85rem;color:var(--color-on-primary)}
+@media(max-width:42rem) {.tailwind-shell .field-pair,.tailwind-shell .family-fields,.auth-page .auth-main {grid-template-columns:1fr}.kid-section-nav {gap:.2rem}.kid-section-nav a {padding:.5rem;font-size:.9rem}.auth-page .auth-aside {display:block}.tailwind-shell .form-actions>.button {flex:1 1 auto}}
+@media(prefers-reduced-motion:reduce) {.kid-person *, .auth-page * {transition:none!important}}

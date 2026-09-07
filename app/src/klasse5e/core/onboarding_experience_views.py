@@ -52,11 +52,7 @@ def _subject_or_404(user, step, value=None):
 
 
 def _is_editing(request, state):
-    return bool(
-        state.completed_at
-        and state.completed_policy_version == current_policy_version()
-        and (request.GET.get("mode") == "settings" or request.POST.get("mode") == "settings")
-    )
+    return bool(request.GET.get("mode") == "settings" or request.POST.get("mode") == "settings")
 
 
 @login_required
@@ -69,10 +65,14 @@ def onboarding_step(request, step=None):
             status=409,
         )
     state, _ = OnboardingState.objects.get_or_create(user=request.user)
-    if step is None:
-        if state.completed_at and state.completed_policy_version == current_policy_version():
-            return redirect("ui-consents")
-        step = state.current_step
+    if step is None and request.method == "GET":
+        request.session["setup_intro_seen"] = True
+        return render(
+            request,
+            "onboarding/overview.html",
+            {"state": state, "page_title": "Gut starten", "active_section": "more"},
+        )
+    step = step or state.current_step
     if step < 1 or step > TOTAL_ONBOARDING_STEPS:
         raise Http404
     editing = _is_editing(request, state)
@@ -87,6 +87,7 @@ def onboarding_step(request, step=None):
         action = request.POST.get("action", "continue")
         if action == "pause" and not editing:
             state.current_step = step
+            request.session["setup_intro_seen"] = True
             state.save(update_fields=["current_step", "updated_at"])
             return redirect("onboarding-paused")
         if step == 2 and request.POST.get("identity_confirmed") != "yes":
@@ -142,7 +143,11 @@ def onboarding_step(request, step=None):
         state.completed_at = None
         state.save()
         return redirect("onboarding-step", step=state.current_step)
-    if state.completed_at and state.completed_policy_version == current_policy_version() and not editing:
+    if (
+        state.completed_at
+        and state.completed_policy_version == current_policy_version()
+        and not editing
+    ):
         return redirect("ui-consents")
     return _render_step(request, state, step, subject, subjects, editing)
 
