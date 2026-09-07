@@ -107,3 +107,17 @@ def test_profile_persists_a_designed_svg_avatar(client, guardian):
     assert guardian.person.avatar_seed == "v2:2:1:3:4:1:2"
     page = client.get(reverse("personal-profile"), secure=True)
     assert b"Avatar-Designer" in page.content
+
+
+@pytest.mark.django_db
+def test_profile_rejects_invalid_avatar_without_a_server_error(client, guardian):
+    client.force_login(guardian)
+    response = client.post(
+        reverse("personal-profile"),
+        {
+            "first_name": "Alex", "last_name": "Beispiel", "contribution_name_mode": "family",
+            "profile_image_mode": "avatar", "avatar_seed": "v2:99:99:99:99:99:99",
+        },
+        secure=True,
+    )
+    assert response.status_code == 302

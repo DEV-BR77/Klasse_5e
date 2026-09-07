@@ -18,6 +18,7 @@ AVATAR_COMPONENTS = {
     ),
     "face": (
         ("Smile.svg", "Lächeln"), ("Smile Big.svg", "Großes Lächeln"),
+        ("Angry with Fang.svg", "Vampirzähne"),
         ("Calm.svg", "Ruhig"), ("Cheeky.svg", "Frech"), ("Cute.svg", "Niedlich"),
         ("Driven.svg", "Entschlossen"), ("Eyes Closed.svg", "Augen zu"),
         ("Serious.svg", "Ernst"), ("Suspicious.svg", "Neugierig"),

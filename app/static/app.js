@@ -673,7 +673,7 @@
   if (!data.components || !data.backgrounds) return;
   const svgNs = "http://www.w3.org/2000/svg";
   const keys = ["background", "body", "head", "face", "facial-hair", "accessories"];
-  const layers = {body: [13, 42, 70, 47], head: [33, 12, 42, 37], face: [47, 24, 25, 20], "facial-hair": [43, 33, 24, 18], accessories: [37, 27, 35, 12]};
+  const layers = {body: [13, 42, 70, 47], head: [33, 12, 42, 37], face: [47, 24, 25, 20], "facial-hair": [39, 29, 32, 25], accessories: [37, 27, 35, 12]};
   let target;
   let selected = {background: 0, body: 0, head: 0, face: 0, "facial-hair": 0, accessories: 0};
   const assetUrl = (category, filename) => `/static/vendor/avatar-atoms/${category}/${encodeURIComponent(filename)}`;
@@ -725,7 +725,11 @@
   document.querySelectorAll("[data-avatar-open]").forEach((button) => button.addEventListener("click", () => {
     target = button.closest("form").querySelector("[data-avatar-seed]");
     const values = target.value.split(":");
-    if (values[0] === "v2" && values.length === 7 && values.slice(1).every((value) => /^\d+$/.test(value))) keys.forEach((key, index) => { selected[key] = Number(values[index + 1]); });
+    if (values[0] === "v2" && values.length === 7 && values.slice(1).every((value) => /^\d+$/.test(value))) keys.forEach((key, index) => {
+      const value = Number(values[index + 1]);
+      const limit = key === "background" ? data.backgrounds.length : data.components[key].length;
+      selected[key] = value >= 0 && value < limit ? value : 0;
+    });
     draw(); dialog.showModal();
   }));
 })();

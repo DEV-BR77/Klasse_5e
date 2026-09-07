@@ -359,6 +359,24 @@ def personal_profile(request):
         raise Http404
     person = request.user.person
     if request.method == "POST":
+        try:
+            return _save_personal_profile(request, person)
+        except ValidationError as error:
+            messages.error(request, " ".join(error.messages))
+            return redirect("personal-profile")
+    return render(
+        request,
+        "ui/personal_profile.html",
+        {
+            "page_title": "Persönliches Profil",
+            "person": person,
+            "avatar_presets": PROFILE_AVATAR_PRESETS,
+            "avatar_designer": avatar_designer_context(),
+        },
+    )
+
+
+def _save_personal_profile(request, person):
         previous = (person.email_visibility, person.phone_visibility)
         person.first_name = request.POST.get("first_name", "").strip()[:100]
         person.last_name = request.POST.get("last_name", "").strip()[:100]
@@ -420,16 +438,6 @@ def personal_profile(request):
             )
         messages.success(request, "Dein Profil wurde gespeichert.")
         return redirect("personal-profile")
-    return render(
-        request,
-        "ui/personal_profile.html",
-        {
-            "page_title": "Persönliches Profil",
-            "person": person,
-            "avatar_presets": PROFILE_AVATAR_PRESETS,
-            "avatar_designer": avatar_designer_context(),
-        },
-    )
 
 
 @login_required
