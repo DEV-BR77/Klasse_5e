@@ -144,7 +144,11 @@ def family_register(request, token):
             {
                 int(match.group(1))
                 for key in request.POST
-                if (match := re.fullmatch(r"child_(\d+)_(?:first_name|last_name|email|password)", key))
+                if (
+                    match := re.fullmatch(
+                        r"child_(\d+)_(?:first_name|last_name|email|password)", key
+                    )
+                )
             }
         )
         submitted["children"] = [
@@ -200,15 +204,16 @@ def family_register(request, token):
         second_email = normalize_login_email(request.POST.get("adult_2_email", ""))
         second_first = request.POST.get("adult_2_first_name", "").strip()[:100]
         second_last = request.POST.get("adult_2_last_name", "").strip()[:100]
-        if any((second_email, second_first, second_last)) and not all(
-            (second_email, second_first, second_last)
+        second_password = request.POST.get("adult_2_password", "")
+        if any((second_email, second_first, second_last, second_password)) and not all(
+            (second_email, second_first, second_last, second_password)
         ):
             return render(
                 request,
                 "core/family_register.html",
                 {
                     "invitation": invitation,
-                    "error": "Bitte fülle für die zweite erwachsene Person alle drei Felder aus oder lasse sie vollständig leer.",
+                    "error": "Bitte fülle für die zweite erwachsene Person Name, E-Mail-Adresse und Passwort aus oder lasse sie vollständig leer.",
                     "submitted": submitted,
                 },
                 status=400,
@@ -218,6 +223,17 @@ def family_register(request, token):
                 {"email": second_email, "first_name": second_first, "last_name": second_last}
             )
         try:
+            if adults:
+                validate_email(second_email)
+                validate_password(second_password)
+                if (
+                    UserAccount.objects.filter(email__iexact=second_email).exists()
+                    or RegistrationApplication.objects.filter(email__iexact=second_email).exists()
+                ):
+                    raise ValidationError(
+                        "Für die zweite erwachsene Person besteht bereits ein Zugang oder Antrag. Bitte verwende den vorhandenen Zugang oder schließe den Antrag ab."
+                    )
+                adults[0]["password_hash"] = make_password(second_password)
             if request.POST.get("privacy_ack") != "yes":
                 raise ValidationError("Bitte bestätige die Datenschutzinformationen.")
             if not children:
@@ -276,16 +292,16 @@ def family_register(request, token):
                 locked.submitted_at = timezone.now()
                 locked.use_count += 1
                 locked.save(update_fields=["submitted_at", "use_count"])
-                link = (
-                    f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/registrieren/email/{email_token}/"
-                )
-                send_mail(
+                link = f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/registrieren/email/{email_token}/"
+                sent = send_mail(
                     "E-Mail-Adresse für KlassID bestätigen",
                     f"Öffne diesen einmaligen Link innerhalb von 24 Stunden: {link}",
                     settings.DEFAULT_FROM_EMAIL,
                     [item.email],
                     fail_silently=False,
                 )
+                if sent != 1:
+                    raise RuntimeError("Confirmation email was not accepted by the mail backend")
             return render(request, "core/family_registration_received.html", status=202)
         except ValidationError as exc:
             return render(
@@ -298,8 +314,10 @@ def family_register(request, token):
                 },
                 status=400,
             )
-        except Exception:
-            logger.exception("Family registration email could not be sent")
+        except Exception as exc:
+            logger.error(
+                "Family registration failed (%s); transaction rolled back", type(exc).__name__
+            )
             return render(
                 request,
                 "core/family_register.html",
@@ -316,9 +334,7 @@ def family_register(request, token):
         {
             "invitation": invitation,
             "submitted": {
-                "children": [
-                    {"index": 1, "first_name": "", "last_name": "", "email": ""}
-                ]
+                "children": [{"index": 1, "first_name": "", "last_name": "", "email": ""}]
             },
         },
     )
@@ -442,9 +458,13 @@ def profile_photo(request, person_id):
     school_class = active_class_for_user(request.user)
     person = Person.objects.filter(pk=person_id, profile_photo__gt="").first()
     own_photo = hasattr(request.user, "person") and request.user.person.pk == person_id
-    shared_class_photo = school_class and person and ClassMembership.objects.filter(
-        school_class=school_class, person=person, status="active"
-    ).exists()
+    shared_class_photo = (
+        school_class
+        and person
+        and ClassMembership.objects.filter(
+            school_class=school_class, person=person, status="active"
+        ).exists()
+    )
     if not person or not (own_photo or shared_class_photo):
         raise Http404
     response = FileResponse(person.profile_photo.open("rb"), content_type="image/webp")
@@ -507,26 +527,47 @@ def dashboard(request):
 
 @csrf_protect
 @require_http_methods(["GET", "POST"])
+@transaction.atomic
 def accept_invitation(request, token):
-    if request.method == "GET":
-        return render(request, "core/accept_invitation.html")
-    password = request.POST.get("password", "")
-    try:
-        validate_password(password)
-    except Exception:
-        return HttpResponse("Passwort erfüllt die Anforderungen nicht", status=400)
-    invitation = Invitation.consume(token)
-    if invitation is None:
+    invitation = (
+        Invitation.objects.select_for_update()
+        .select_related("family_request")
+        .filter(token_hash=hashlib.sha256(token.encode()).hexdigest())
+        .first()
+    )
+    if invitation is None or invitation.used_at or invitation.expires_at <= timezone.now():
         return HttpResponse("Einladung ungültig oder abgelaufen", status=410)
+    prepared_hash = ""
+    if invitation.family_request_id:
+        prepared_hash = next(
+            (
+                adult.get("password_hash", "")
+                for adult in invitation.family_request.additional_adults
+                if adult.get("email") == invitation.email
+            ),
+            "",
+        )
+    if request.method == "GET":
+        return render(
+            request, "core/accept_invitation.html", {"password_prepared": bool(prepared_hash)}
+        )
+    password = request.POST.get("password", "")
+    if password or not prepared_hash:
+        try:
+            validate_password(password)
+        except ValidationError:
+            return HttpResponse("Passwort erfüllt die Anforderungen nicht", status=400)
+        prepared_hash = make_password(password)
     User = get_user_model()
-    user = User.objects.filter(email__iexact=invitation.email).first()
+    user = User.objects.select_for_update().filter(email__iexact=invitation.email).first()
     if user and user.is_active:
         return HttpResponse("Konto existiert bereits", status=409)
     if user is None:
-        user = User.objects.create_user(email=invitation.email, password=password, is_active=True)
-    else:
-        user.set_password(password)
-        user.is_active = True
+        user = User(email=invitation.email)
+    user.password = prepared_hash
+    user.is_active = True
+    invitation.used_at = timezone.now()
+    invitation.save(update_fields=["used_at"])
     user.email_verified_at = invitation.used_at
     user.save()
     if invitation.school_class_id:
@@ -574,6 +615,14 @@ def accept_invitation(request, token):
                         "verified_at": timezone.now(),
                     },
                 )
+    if invitation.family_request_id:
+        family = FamilyRegistrationRequest.objects.select_for_update().get(
+            pk=invitation.family_request_id
+        )
+        for adult in family.additional_adults:
+            if adult.get("email") == invitation.email:
+                adult.pop("password_hash", None)
+        family.save(update_fields=["additional_adults"])
     AuditEvent.objects.create(
         actor=user, action="invitation.accepted", target_type="user", target_id=str(user.pk)
     )

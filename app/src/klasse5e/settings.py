@@ -217,3 +217,17 @@ MOBILITY_DATA_ENCRYPTION_KEY = os.environ.get(
 DATA_UPLOAD_MAX_MEMORY_SIZE = max(DATA_UPLOAD_MAX_MEMORY_SIZE, 100 * 1024 * 1024)
 # django-tailwind compiles the single browser-facing stylesheet from theme/.
 TAILWIND_APP_NAME = "theme"
+# Explicit SMTP configuration: never pretend console output is a delivered email.
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.resend.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "resend")
+EMAIL_HOST_PASSWORD = os.environ.get("RESEND_API_KEY", "")
+EMAIL_USE_TLS = True
+EMAIL_TIMEOUT = 15
+
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 12}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]

@@ -6,6 +6,7 @@ $ErrorActionPreference = "Stop"
 
 $secretTool = "C:\Users\Bjoern\.homeops\tools\Get-HomeOpsSecret.ps1"
 $secretMap = [ordered]@{
+    RESEND_API_KEY = "providers/resend/klassid_api_key"
     POSTGRES_PASSWORD = "projects/klasse-5e/postgres_password"
     DJANGO_SECRET_KEY = "projects/klasse-5e/django_secret_key"
     VISION_SERVICE_TOKEN = "projects/klasse-5e/vision_service_token"

@@ -13,6 +13,7 @@ services:
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-https://klassid.de,https://5e.klassid.de}
       APP_BASE_URL: ${APP_BASE_URL:-https://5e.klassid.de}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-KlassID <noreply@klassid.de>}
+      RESEND_API_KEY: ${RESEND_API_KEY:?Provide KlassID Resend sending key}
       MEDIA_ROOT: /data/media
       VISION_BASE_URL: http://klasse-5e-vision:8000
       VISION_SERVICE_TOKEN: ${VISION_SERVICE_TOKEN:?Provide Vision secret}

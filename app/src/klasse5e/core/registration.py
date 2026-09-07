@@ -259,9 +259,7 @@ def activate(token):
                     child_user.password = child_setup.password_hash
                     child_user.email_verified_at = app.email_verified_at or timezone.now()
                     child_user.is_active = True
-                    child_user.save(
-                        update_fields=["password", "email_verified_at", "is_active"]
-                    )
+                    child_user.save(update_fields=["password", "email_verified_at", "is_active"])
             child = Person.objects.create(
                 user=child_user,
                 first_name=child_data["first_name"][:100],
@@ -343,7 +341,11 @@ def activate(token):
             link = f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/invitation/{family_token}/"
             send_mail(
                 "Dein persönlicher KlassID-Familienzugang",
-                f"Lege über diesen einmaligen Link innerhalb von 7 Tagen dein eigenes Passwort fest: {link}",
+                (
+                    f"Bestätige über diesen einmaligen Link innerhalb von 7 Tagen deine E-Mail-Adresse und aktiviere deinen Zugang mit dem bereits gewählten Passwort: {link}"
+                    if adult.get("password_hash")
+                    else f"Lege über diesen einmaligen Link innerhalb von 7 Tagen dein eigenes Passwort fest: {link}"
+                ),
                 settings.DEFAULT_FROM_EMAIL,
                 [invitation.email],
             )
