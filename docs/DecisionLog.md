@@ -414,3 +414,16 @@ späteren gemeinsamen Browserdurchlauf ausgeführt; automatische Browseraktionen
 und API-Schreibzugriffe werden nicht implementiert. Persönliche Zugriffe
 erfordern aktuelle Beziehung, Klasse und Einwilligung. Details und Grenzen
 stehen in [Abwesenheiten](Abwesenheiten.md).
+
+## ADR-029: Private Nachrichten als paarweise geschützter Chat
+
+Private Nachrichten verwenden Nachrichten, Anhänge, Lesestand und Filter des
+bestehenden Chatmoduls. Eine eigene Zuordnung verbindet genau zwei persönliche
+Konten, eine Klasse und einen Chatraum. Rollen wie Portaladministration oder
+Moderation gewähren keinen Zugriff auf den Verlauf. Moderation beginnt erst mit
+einer Meldung und legt keine durchsuchbare Ansicht aller privaten Gespräche an.
+
+Für private Verläufe gilt eine automatische Aufbewahrung von 180 Tagen. Offene
+Meldungen verhindern die Löschung bis zur menschlichen Prüfung. In-App- und
+Push-Hinweise enthalten weder Absender noch Nachrichtentext oder Kindernamen.
+Details und Abnahmekriterien stehen in [Private Nachrichten](Private-Nachrichten.md).

@@ -4,10 +4,10 @@
   {{ mention_names|json_script:"chat-mention-names" }}
   <header class="chat-room-head">
     <a class="icon-button" href="/chat/" aria-label="Zurück zur Chatübersicht">←</a>
-    <span class="conversation-avatar">{{ room.title|first }}</span>
+    <span class="conversation-avatar">{{ room_title|first }}</span>
     <div>
-      <h1>{{ room.title }}</h1>
-      <small>{% if room.is_open %}{% if room.retention_category and room.retention_category.automatic_deletion_enabled %}Automatische Löschung nach {{ room.retention_category.retention_days }} Tagen{% else %}Keine automatische Löschung{% endif %}{% else %}Nur noch lesbar{% endif %}</small>
+      <h1>{{ room_title }}</h1>
+      <small>{% if is_direct %}Private Unterhaltung · {% endif %}{% if room.is_open %}{% if room.retention_category and room.retention_category.automatic_deletion_enabled %}Automatische Löschung nach {{ room.retention_category.retention_days }} Tagen{% else %}Keine automatische Löschung{% endif %}{% else %}Nur noch lesbar{% endif %}</small>
     </div>
   </header>
 
@@ -20,17 +20,34 @@
             <strong>{{ message.author.person.chat_display_name|default:message.author.person.first_name|default:message.author.email }}</strong>
             <time>{{ message.created_at|date:"d.m., H:i" }}</time>
           </header>
-          {% if message.body %}<p>{{ message.body }}</p>{% endif %}
-          {% if message.language_filter_hits %}<small class="safety-note">🛡 Direkte Beleidigung automatisch verdeckt</small>{% endif %}
-          {% if message.attachment %}
-            {% if message.attachment_content_type|slice:":6" == "image/" and message.attachment_safety_status != "approved" %}
-              <div class="chat-image-quarantine"><span>▦</span><strong>{% if message.attachment_safety_status == 'blocked' %}Bild aus Schutzgründen gesperrt{% else %}Bild wird vor der Anzeige geprüft{% endif %}</strong><small>Ungeeignete Bildinhalte werden nicht direkt angezeigt.</small></div>
-            {% elif message.attachment_content_type|slice:":6" == "audio/" %}
-              <audio controls preload="metadata" src="{% url 'ui-chat-attachment' message.public_id %}"></audio>
-            {% elif message.attachment_content_type|slice:":6" == "image/" %}
-              <a href="{% url 'ui-chat-attachment' message.public_id %}" target="_blank"><img class="chat-image" src="{% url 'ui-chat-attachment' message.public_id %}" alt="Gesendetes Bild"></a>
-            {% else %}
-              <a class="chat-attachment" href="{% url 'ui-chat-attachment' message.public_id %}">📎 {{ message.attachment_name }}</a>
+          {% if message.hidden_at %}
+            <p class="muted">Diese Nachricht wurde von der Moderation ausgeblendet.</p>
+          {% elif message.withdrawn_at %}
+            <p class="muted">Diese Nachricht wurde zurückgezogen.</p>
+          {% else %}
+            {% if message.body %}<p>{{ message.body }}</p>{% endif %}
+            {% if message.language_filter_hits %}<small class="safety-note">🛡 Direkte Beleidigung automatisch verdeckt</small>{% endif %}
+            {% if message.attachment %}
+              {% if message.attachment_content_type|slice:":6" == "image/" and message.attachment_safety_status != "approved" %}
+                <div class="chat-image-quarantine"><span>▦</span><strong>{% if message.attachment_safety_status == 'blocked' %}Bild aus Schutzgründen gesperrt{% else %}Bild wird vor der Anzeige geprüft{% endif %}</strong><small>Ungeeignete Bildinhalte werden nicht direkt angezeigt.</small></div>
+              {% elif message.attachment_content_type|slice:":6" == "audio/" %}
+                <audio controls preload="metadata" src="{% url 'ui-chat-attachment' message.public_id %}"></audio>
+              {% elif message.attachment_content_type|slice:":6" == "image/" %}
+                <a href="{% url 'ui-chat-attachment' message.public_id %}" target="_blank"><img class="chat-image" src="{% url 'ui-chat-attachment' message.public_id %}" alt="Gesendetes Bild"></a>
+              {% else %}
+                <a class="chat-attachment" href="{% url 'ui-chat-attachment' message.public_id %}">📎 {{ message.attachment_name }}</a>
+              {% endif %}
+            {% endif %}
+            {% if message.author_id != request.user.id %}
+              <details class="message-report">
+                <summary>Nachricht melden</summary>
+                <form method="post" action="{% url 'chat-report' message.public_id %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="return_to" value="room">
+                  <label>Grund<select name="reason"><option value="inappropriate">Ungeeignet</option><option value="privacy">Datenschutz</option><option value="other">Sonstiges</option></select></label>
+                  <button class="button button-secondary button-compact" type="submit">An Moderation senden</button>
+                </form>
+              </details>
             {% endif %}
           {% endif %}
         </article>

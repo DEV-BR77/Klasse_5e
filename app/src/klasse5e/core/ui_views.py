@@ -798,8 +798,14 @@ def homework_progress(request, homework_id):
 
 
 def _unread_count(user, school_class):
+    from klasse5e.chat.services import require_room_access
+
     total = 0
     for room in ChatRoom.objects.filter(school_class=school_class):
+        try:
+            require_room_access(user, room)
+        except PermissionDenied:
+            continue
         state = ChatReadState.objects.filter(room=room, user=user).first()
         query = room.messages.exclude(author=user)
         if state:
@@ -860,7 +866,9 @@ def chat_overview(request):
         _require_portal_admin(request.user)
         if request.POST.get("action") == "delete":
             room = get_object_or_404(
-                ChatRoom.objects.prefetch_related("messages"),
+                ChatRoom.objects.filter(direct_conversation__isnull=True).prefetch_related(
+                    "messages"
+                ),
                 public_id=request.POST.get("room_id"),
                 school_class=school_class,
             )
@@ -909,9 +917,16 @@ def chat_overview(request):
             )
             messages.success(request, "Der Chatraum wurde angelegt.")
         return redirect("ui-chat")
-    from klasse5e.chat.services import require_room_access
+    from klasse5e.chat.services import require_room_access, room_title_for_user
 
-    rooms = ChatRoom.objects.filter(school_class=school_class).order_by("event_id", "title")
+    rooms = (
+        ChatRoom.objects.filter(school_class=school_class)
+        .select_related(
+            "direct_conversation__participant_one__person",
+            "direct_conversation__participant_two__person",
+        )
+        .order_by("event_id", "title")
+    )
     room_rows = []
     for room in rooms:
         try:
@@ -925,6 +940,8 @@ def chat_overview(request):
         room_rows.append(
             {
                 "room": room,
+                "display_title": room_title_for_user(room, request.user),
+                "is_direct": bool(getattr(room, "direct_conversation", None)),
                 "unread": unread.count(),
                 "last_message": room.messages.select_related("author__person")
                 .order_by("-created_at")
@@ -945,7 +962,7 @@ def chat_overview(request):
 @require_http_methods(["GET", "POST"])
 def chat_room(request, room_id):
     room = get_object_or_404(ChatRoom, public_id=room_id)
-    from klasse5e.chat.services import require_room_access
+    from klasse5e.chat.services import require_room_access, room_title_for_user
 
     try:
         require_room_access(request.user, room)
@@ -961,28 +978,48 @@ def chat_room(request, room_id):
     ChatReadState.objects.update_or_create(
         room=room, user=request.user, defaults={"last_read_at": timezone.now()}
     )
-    context = _shared(request, room.title, "chat")
+    direct = getattr(room, "direct_conversation", None)
+    mention_names = []
+    if not direct:
+        mention_names = [
+            display or first
+            for display, first in Person.objects.filter(
+                classmembership__school_class=room.school_class,
+                classmembership__status="active",
+                user__isnull=False,
+            )
+            .exclude(user=request.user)
+            .values_list("chat_display_name", "first_name")
+            .distinct()
+        ]
+    context = _shared(request, room_title_for_user(room, request.user), "chat")
     context.update(
         {
             "room": room,
+            "room_title": room_title_for_user(room, request.user),
+            "is_direct": bool(direct),
             "chat_messages": room.messages.select_related("author__person", "reply_to").order_by(
                 "created_at"
             )[:200],
             "emojis": "😀 😄 😂 😊 😍 🥳 😎 🤔 👍 👏 🙌 💪 ❤️ 🎉 🚲 ⚽ 📚 ✏️".split(),
-            "mention_names": [
-                display or first
-                for display, first in Person.objects.filter(
-                    classmembership__school_class=room.school_class,
-                    classmembership__status="active",
-                    user__isnull=False,
-                )
-                .exclude(user=request.user)
-                .values_list("chat_display_name", "first_name")
-                .distinct()
-            ],
+            "mention_names": mention_names,
         }
     )
     return render(request, "ui/chat_room.html", context)
+
+
+@login_required
+@require_POST
+def start_direct_conversation(request, person_id):
+    school_class = _class_or_404(request.user, request)
+    target = get_object_or_404(Person.objects.select_related("user"), pk=person_id)
+    from klasse5e.chat.services import get_or_create_direct_conversation
+
+    try:
+        conversation = get_or_create_direct_conversation(request.user, target, school_class)
+    except PermissionDenied:
+        raise Http404 from None
+    return redirect("ui-chat-room", room_id=conversation.room.public_id)
 
 
 @login_required
@@ -996,7 +1033,7 @@ def chat_attachment(request, message_id):
         require_room_access(request.user, message.room)
     except PermissionDenied:
         raise Http404 from None
-    if not message.attachment:
+    if not message.attachment or message.withdrawn_at or message.hidden_at:
         raise Http404
     if (
         message.attachment_content_type.startswith("image/")
@@ -2979,13 +3016,24 @@ def family(request):
 @login_required
 def contacts(request):
     school_class = _class_or_404(request.user, request)
+    today = timezone.localdate()
     relationships = list(
         GuardianChildRelationship.objects.filter(
             status="verified",
+            verified_at__isnull=False,
+            may_view_student_profile=True,
+            valid_from__lte=today,
             student_person__classmembership__school_class=school_class,
             student_person__classmembership__status="active",
+            student_person__classmembership__valid_from__lte=today,
             guardian_person__user__isnull=False,
-        ).select_related("guardian_person__user", "student_person")
+        )
+        .filter(
+            Q(valid_until__isnull=True) | Q(valid_until__gte=today),
+            Q(student_person__classmembership__valid_until__isnull=True)
+            | Q(student_person__classmembership__valid_until__gte=today),
+        )
+        .select_related("guardian_person__user", "student_person")
     )
     guardians = {
         relationship.guardian_person_id: relationship.guardian_person
@@ -2996,6 +3044,15 @@ def contacts(request):
         children_by_guardian.setdefault(relationship.guardian_person_id, []).append(
             relationship.student_person
         )
+
+    from klasse5e.chat.services import may_start_direct_conversation
+
+    def message_targets(adults):
+        return [
+            adult
+            for adult in adults
+            if may_start_direct_conversation(request.user, adult, school_class)
+        ]
 
     rows = []
     assigned_guardians = set()
@@ -3033,6 +3090,7 @@ def contacts(request):
                     children, key=lambda child: (child.last_name.lower(), child.first_name.lower())
                 ),
                 "person": representative,
+                "message_targets": message_targets(adults),
                 "emails": list(dict.fromkeys(emails)),
                 "phones": list(dict.fromkeys(phones)),
             }
@@ -3049,6 +3107,7 @@ def contacts(request):
                     children, key=lambda child: (child.last_name.lower(), child.first_name.lower())
                 ),
                 "person": guardian,
+                "message_targets": message_targets([guardian]),
                 "emails": [guardian.contact_email or guardian.user.email]
                 if guardian.email_visibility == "members"
                 else [],

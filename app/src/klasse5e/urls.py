@@ -98,6 +98,11 @@ urlpatterns = [
     path("kontakte/", ui_views.contacts, name="ui-contacts"),
     path("schueler/", ui_views.students, name="ui-students"),
     path("chat/", ui_views.chat_overview, name="ui-chat"),
+    path(
+        "chat/direkt/<int:person_id>/starten/",
+        ui_views.start_direct_conversation,
+        name="direct-conversation-start",
+    ),
     path("chat/<uuid:room_id>/ansicht/", ui_views.chat_room, name="ui-chat-room"),
     path(
         "chat/nachricht/<uuid:message_id>/anhang/",
