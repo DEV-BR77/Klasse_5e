@@ -2,6 +2,17 @@
 
 Kurze ADRs; Status **angenommen**, sofern nicht anders markiert.
 
+## ADR-029: Zentraler Inaktivitäts-Logout
+
+Sitzungen enden nach einer global konfigurierbaren Inaktivitätszeit; der
+Default beträgt 15 Minuten. Portaladministratoren können nur den gemeinsamen
+Wert von 1 bis 120 Minuten einstellen. Browser-Timer sorgen für die sichtbare
+Rückkehr zur Anmeldung, Django setzt zusätzlich ein serverseitiges
+Sitzungsablaufdatum und prüft den Zeitpunkt auf jeder Anfrage. Hintergrundjobs
+und Polling gelten nicht als Bedienung. Das hält einen verlorenen oder
+unbeaufsichtigten Gerätezugang kurz und vermeidet eine je Klasse unterschiedlich
+schwache Sicherheitsgrenze. Details: [Automatische Abmeldung](Automatische-Abmeldung.md).
+
 ## ADR-001: Modularer Monolith
 
 **Entscheidung:** Django und Wagtail bilden einen Prozess und ein Deployment

@@ -133,3 +133,10 @@ Opt-in-In-App-Hinweise und einen lokalen Meldeprototyp. Die frühere Zurückstel
 von Krankmeldungen wird ausschließlich für diesen Prototyp aufgehoben.
 [Abnahme und Betriebsvertrag](Abwesenheiten.md); Übertragung ausschließlich
 später gemeinsam per Browser, keine automatische Schreibintegration.
+
+## Freigegebener Folgeauftrag: automatische Abmeldung
+
+Der Auftrag vom 08.09.2026 ergänzt eine global einstellbare Inaktivitätsgrenze
+für alle Websitzungen. Standard sind 15 Minuten; die Einstellung ist
+administratorgeführt, auditiert und serverseitig erzwungen.
+[Abnahme und Betriebsvertrag](Automatische-Abmeldung.md).

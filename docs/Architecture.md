@@ -195,6 +195,11 @@ Collection und umfassen Crops, Vergleichsdaten, Referenzen, Matches und Jobs.
   Echtzeitverteilung eingeführt. Bis dahin sind DB-gestützte Jobs oder direkte
   kurze Tasks vorzuziehen.
 
+Die zentrale Inaktivitätsgrenze für alle Websitzungen ist serverseitige
+Sicherheitslogik im Modul `core`. Sie endet zusätzlich im Browser sichtbar und
+wird durch Hintergrund-Polling nicht verlängert. Der Betriebsvertrag steht in
+[Automatische Abmeldung](Automatische-Abmeldung.md).
+
 ## Reproduzierbarer Docker-Betrieb und Portabilität
 
 Alle Bestandteile bilden langfristig genau ein transportierbares
