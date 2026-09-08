@@ -6,7 +6,7 @@ from wagtail.admin import urls as wagtailadmin_urls
 from klasse5e.biometrics import views as biometric_views
 from klasse5e.chat import views as chat_views
 from klasse5e.content import views as content_views
-from klasse5e.core import onboarding_experience_views, onboarding_views, ui_views, views
+from klasse5e.core import onboarding_experience_views, onboarding_views, role_views, ui_views, views
 from klasse5e.events import views as event_views
 from klasse5e.itslearning import views as itslearning_views
 from klasse5e.itslearning.webdav import webdav
@@ -102,6 +102,7 @@ urlpatterns = [
         ui_views.chat_attachment,
         name="ui-chat-attachment",
     ),
+    path("verwaltung/rollen/", role_views.role_management, name="role-management"),
     path("verwaltung/", ui_views.portal_management, name="portal-management"),
     path("verwaltung/schulen/", ui_views.school_management, name="school-management"),
     path(

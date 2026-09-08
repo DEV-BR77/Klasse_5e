@@ -91,6 +91,9 @@ def create_message(room, user, body, reply_to=None, attachment=None):
         from .notifications import notify_mentions
 
         transaction.on_commit(lambda: notify_mentions(message.pk))
+    from .notifications import notify_parent_representatives
+
+    notify_parent_representatives(message)
     return message
 
 

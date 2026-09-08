@@ -10,6 +10,7 @@
     <a class="button button-secondary" href="{% url 'ui-more' %}">← Zum Menü</a>
   </header>
   <div class="card-grid">
+    {% if can_manage_roles %}<a class="content-card" href="{% url 'role-management' %}"><h2>Rollenverwaltung</h2><p>Portal-Admins, Elternvertretungen und den zugehörigen Chat verwalten.</p></a>{% endif %}
     <a class="content-card" href="/admin/core/brandingasset/"><h2>Logos &amp; Branding</h2><p>Logos und Rechte verwalten.</p></a>
     <a class="content-card" href="{% url 'theme-management' %}"><h2>Themes</h2><p>Die vorbereiteten Designs prüfen und gezielt freigeben.</p></a>
     <a class="content-card" href="{% url 'menu-management' %}"><h2>Menüstruktur</h2><p>Gruppen, Sichtbarkeit, Texte und Reihenfolge anpassen.</p></a>

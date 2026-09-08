@@ -49,3 +49,23 @@ def notify_mentions(message_id, *, sender=None):
         if result.status == DeliveryStatus.STALE:
             stored.delete()
     return len(recipients)
+
+
+def notify_parent_representatives(message):
+    from klasse5e.core.role_management import parent_representatives
+
+    if not message.room.parent_representative_chat:
+        return
+    for user in parent_representatives(message.room.school_class):
+        if user.pk == message.author_id:
+            continue
+        UserNotification.objects.get_or_create(
+            user=user, school_class=message.room.school_class,
+            object_type="chat_representative", object_id=str(message.public_id), revision="created",
+            defaults={
+                "category": "chat_representative",
+                "title": "Neuer Beitrag im Elternvertreter-Chat",
+                "summary": "Im Chat deiner Klasse wartet ein neuer Beitrag.",
+                "target_url": f"/chat/{message.room.public_id}/ansicht/",
+            },
+        )

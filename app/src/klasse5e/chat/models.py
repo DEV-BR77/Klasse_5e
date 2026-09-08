@@ -41,8 +41,18 @@ class ChatRoom(models.Model):
     appearance = models.CharField(
         max_length=16, choices=Appearance.choices, default=Appearance.STANDARD
     )
+    parent_representative_chat = models.BooleanField(default=False)
     is_open = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school_class"],
+                condition=models.Q(parent_representative_chat=True),
+                name="unique_parent_representative_chat_per_class",
+            ),
+        ]
 
     def clean(self):
         if self.event_id and (
