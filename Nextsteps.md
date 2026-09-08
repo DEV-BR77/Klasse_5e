@@ -869,9 +869,14 @@ kein vollständiger Fachabruf und kein Formular zum Melden einer Abwesenheit.
 
 ## Einstieg und Testbarkeit
 
-Geplanter Einstieg: **Familien-Zentrale → Kind → Schulzugänge → WebUntis →
-Abwesenheit melden**. Das ausgewählte Kind muss im Formular und in der Bestätigung
-klar erkennbar bleiben. Einen synthetischen Testablauf mit simuliertem WebUntis anbieten;
+Verbindlicher Einstieg: **Dashboard → Schnellzugriff „Abwesenheit melden“**.
+Der Button steht oben in der Übersicht neben Stundenplan, Hausaufgaben, Aktuelles
+und Speiseplan und öffnet das Meldeformular direkt. Kurzfristige Krankmeldungen
+müssen ohne Umweg durch Familienverwaltung oder Schulzugänge erreichbar sein.
+Das im Dashboard ausgewählte Kind wird übernommen und im Formular sowie in der
+Bestätigung klar angezeigt; bei mehreren Kindern ist eine eindeutige Auswahl möglich.
+Die Einrichtung der persönlichen Zugangsdaten bleibt beim Kind unter Schulzugänge.
+Einen synthetischen Testablauf mit simuliertem WebUntis anbieten;
 Tests dürfen keine erfundenen Fehlzeiten in produktive Schulkonten schreiben.
 Ein echter End-to-End-Test erfordert einen ausdrücklich vorgesehenen Testzugang oder
 eine reale, bewusst freigegebene Abwesenheitsmeldung.
@@ -898,6 +903,8 @@ eine reale, bewusst freigegebene Abwesenheitsmeldung.
 
 ## Fehlerverhalten und Abnahme
 
+- Den Dashboard-Schnellzugriff auf Mobiltelefon und Desktop prüfen: Formular mit
+  einem Aufruf erreichbar, korrektes Kind vorausgewählt, Kindwechsel eindeutig.
 - Während der Rückprüfung „Bestätigung wird geprüft“ anzeigen. Verzögerte Sichtbarkeit
   mit wenigen begrenzten Lese-Wiederholungen berücksichtigen; keine Endlosschleife.
 - Bei Timeout ist der Übermittlungsstatus möglicherweise unklar. Nicht behaupten,
