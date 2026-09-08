@@ -859,3 +859,58 @@ Verbindungen und werden protokolliert.
 - Tests für vollständigen Ablauf, Schul-/Familienisolation, übergeordnete Sperren,
   Pflichtzugang, fehlende/falsche Zugangsdaten, Widerruf und Bestandsmigration.
 - Kurze Betriebsdokumentation, Sicherheitsprüfung und Abschlussgate vor Veröffentlichung.
+
+
+# Aufgabe 17 – Abwesenheit melden und unmittelbar bei WebUntis rückprüfen
+
+**Status:** offen; als Folgeaufgabe ausdrücklich beauftragt. Baut auf Aufgabe 16 auf.
+Aktuell existieren nur die vorbereitete Einwilligung und ein technischer Lese-Endpunkt;
+kein vollständiger Fachabruf und kein Formular zum Melden einer Abwesenheit.
+
+## Einstieg und Testbarkeit
+
+Geplanter Einstieg: **Familien-Zentrale → Kind → Schulzugänge → WebUntis →
+Abwesenheit melden**. Das ausgewählte Kind muss im Formular und in der Bestätigung
+klar erkennbar bleiben. Einen synthetischen Testablauf mit simuliertem WebUntis anbieten;
+Tests dürfen keine erfundenen Fehlzeiten in produktive Schulkonten schreiben.
+Ein echter End-to-End-Test erfordert einen ausdrücklich vorgesehenen Testzugang oder
+eine reale, bewusst freigegebene Abwesenheitsmeldung.
+
+## Ablauf im Live-Betrieb
+
+1. Berechtigter Benutzer trägt die Abwesenheit für sein ausgewähltes Kind ein und
+   sendet sie ausdrücklich ab. Schule, aktiver Adapter, persönliche Zugangspflicht,
+   bestätigte Beziehung und erforderliche Freigaben werden serverseitig geprüft.
+2. Der Adapter übermittelt die Meldung über eine zuvor geprüfte, unterstützte
+   WebUntis-Schreibschnittstelle. Der bisher ausschließlich lesende Adapter erhält
+   dafür eine eng begrenzte, gesondert geprüfte Schreibfunktion.
+3. Direkt danach wird automatisch ein frischer Abruf der Abwesenheiten ausgelöst;
+   weder der lokale Datensatz noch eine erfolgreiche HTTP-Antwort genügen als Bestätigung.
+4. Den zurückgelesenen Eintrag eindeutig dem Kind und der gerade gemeldeten Abwesenheit
+   zuordnen: externe ID, soweit vorhanden, sowie Zeitraum und relevante übermittelte Felder.
+   Bereits vorhandene ähnliche Einträge dürfen keine falsche Bestätigung erzeugen.
+5. Nur bei erfolgreicher Rückprüfung anzeigen: **„Abwesenheit ist angemeldet.“**
+6. Bei fehlendem Eintrag oder Fehler anzeigen: **„Die Abwesenheit konnte nicht bestätigt
+   werden. Bitte logge dich direkt bei WebUntis ein und prüfe die Meldung.“**
+   Dazu die Schaltflächen **„Zu WebUntis“** und **„Abbrechen“** anbieten.
+   Der WebUntis-Link führt zum freigegebenen Portal der ausgewählten Schule und enthält
+   weder Zugangsdaten noch Abwesenheitsinformationen.
+
+## Fehlerverhalten und Abnahme
+
+- Während der Rückprüfung „Bestätigung wird geprüft“ anzeigen. Verzögerte Sichtbarkeit
+  mit wenigen begrenzten Lese-Wiederholungen berücksichtigen; keine Endlosschleife.
+- Bei Timeout ist der Übermittlungsstatus möglicherweise unklar. Nicht behaupten,
+  die Meldung sei sicher fehlgeschlagen, und nicht automatisch erneut schreiben.
+- Doppelklicks und wiederholtes Absenden dürfen keine doppelten Abwesenheiten erzeugen.
+- „Abbrechen“ schließt den Ablauf; eine möglicherweise bereits übermittelte Meldung
+  wird dadurch nicht stillschweigend zurückgenommen. Dies im unklaren Fehlerfall erläutern.
+- Abruf und Bestätigung unterliegen denselben Personen-, Schul- und Zugangsgrenzen;
+  keine fremden Kinder oder fremden Benutzerzugänge lesen oder verwenden.
+- Tests: erfolgreiches Melden mit Rücklesen, fehlender Eintrag, verzögerter Eintrag,
+  falsches Kind/Zeitraum, bereits vorhandener Eintrag, Schreib-/Lesefehler,
+  Timeout nach Übermittlung, Doppelabsenden, fehlende Rechte und deaktivierter Adapter.
+- Datensparsame Auditierung ohne Freitexte, Diagnosen, Zugangsdaten oder Rohantworten.
+- Schnittstellenfähigkeit und schulische Berechtigung vor Implementierung prüfen;
+  fehlende WebUntis-Unterstützung ausdrücklich ausweisen, keinen Erfolg simulieren.
+- Dokumentierter Testweg und Qualitätsgate vor produktiver Freigabe.
