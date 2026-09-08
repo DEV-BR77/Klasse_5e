@@ -47,7 +47,9 @@ Abnahmetests.
   Entzug, Hinweise, Meldung, Moderation und Aufbewahrung ab.
 - [ ] **Kontaktliste als Familienansicht.** Familienname einmal zeigen,
   darunter Vornamen der Erwachsenen und Kinder; keine doppelte Bezeichnung
-  wie „Familie Familie Radke“.
+  wie „Familie Familie Radke“. Die Freigabeschalter für Erwachsene und Kinder
+  müssen einheitlich gestaltet und bedienbar sein; das gilt für Adresse,
+  Telefonnummer, E-Mail und weitere freigebbare Kontaktdaten.
 - [ ] **Kontaktkarte.** Einen deutlich beschrifteten Kontakt-Button anbieten;
   Details in einer mittigen Kachel öffnen. Freigegebene Telefon- und
   E-Mail-Adressen müssen `tel:` beziehungsweise `mailto:` verwenden.
