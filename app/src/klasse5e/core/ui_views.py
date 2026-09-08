@@ -2505,7 +2505,7 @@ def family(request):
                             for r in relationships
                             if str(r.student_person_id) == person_id
                             and r.is_current()
-                            and r.may_manage_profile
+                            and (action == "consent" or r.may_manage_profile)
                         ),
                         None,
                     )

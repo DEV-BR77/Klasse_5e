@@ -18,7 +18,7 @@ from .models import (
     Person,
     SchoolClass,
 )
-from .onboarding import active_decision, latest_text, may_decide, record_decision
+from .onboarding import active_decision, latest_text, may_decide, record_decision, withdraw_decision
 from .registration import sanitized_profile_photo
 
 
@@ -43,16 +43,18 @@ def person_card(person, user, editable):
                   person.phone_visibility == "members" if key == "phone" else
                   person.field_visibility.get(key, key in {"first_name", "last_name"}))
         fields.append({"field": field, "shared": shared})
+    from .policies import consent_state
+
     consents = []
-    if editable:
-        for consent in ConsentType.objects.order_by("category", "label"):
-            text = latest_text(consent)
-            if not text or not may_decide(user, person, consent):
-                continue
-            decision = active_decision(consent, person, user.person)
-            consents.append({"type": consent, "text": text,
-                "enabled": bool(decision and decision.decision == ConsentDecision.Decision.GRANTED),
-                "disabled": consent.key == "biometric_face_search" and not settings.BIOMETRIC_SEARCH_ENABLED})
+    for consent in ConsentType.objects.order_by("category", "label"):
+        text = latest_text(consent)
+        if not text or not may_decide(user, person, consent):
+            continue
+        decision = active_decision(consent, person, user.person)
+        consents.append({"type": consent, "text": text, "decision": decision,
+            "effective": consent_state(consent, person) == "allowed",
+            "enabled": bool(decision and decision.decision == ConsentDecision.Decision.GRANTED),
+            "disabled": consent.key == "biometric_face_search" and not settings.BIOMETRIC_SEARCH_ENABLED})
     return {"person": person, "fields": fields, "editable": editable, "consents": consents}
 
 
@@ -86,9 +88,16 @@ def save_consent(request, person):
     consent = ConsentType.objects.filter(key=request.POST.get("consent_key")).first()
     if not consent or not latest_text(consent):
         raise ValidationError("Diese Einwilligung ist nicht verfügbar.")
-    record_decision(user=request.user, subject=person, key=consent.key,
-                    decision="granted" if request.POST.get("enabled") == "on" else "denied",
-                    source="settings")
+    decision = request.POST.get("decision")
+    if decision is None:
+        decision = "granted" if request.POST.get("enabled") == "on" else "denied"
+    if decision == "revoked":
+        withdraw_decision(user=request.user, subject=person, key=consent.key)
+    elif decision in {"granted", "denied"}:
+        record_decision(user=request.user, subject=person, key=consent.key,
+                        decision=decision, source="settings")
+    else:
+        raise ValidationError("Bitte eine gültige Entscheidung auswählen.")
 
 
 @transaction.atomic
