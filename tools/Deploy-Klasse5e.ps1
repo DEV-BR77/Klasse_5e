@@ -35,15 +35,58 @@ try {
             [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
         }
     }
-    $arguments = @("compose", "up", "-d")
+    $runningContainer = (& docker compose ps -q klasse-5e-app).Trim()
+    if ($runningContainer) {
+        $runningImage = (& docker inspect --format '{{.Image}}' $runningContainer).Trim()
+        $rollbackTag = "klasse-5e-app:rollback-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        & docker image tag $runningImage $rollbackTag
+        if ($LASTEXITCODE -ne 0) {
+            throw "Could not create rollback tag for the running app image."
+        }
+        Write-Host "Rollback image retained as $rollbackTag"
+    }
+
     if (-not $NoBuild) {
-        $arguments += "--build"
+        # Build and load only the application image.  Building all services made
+        # Compose recreate Vision as a side effect, which can interrupt a healthy
+        # rollout after the app image was already exported.
+        & docker compose build --progress plain klasse-5e-app
+        if ($LASTEXITCODE -ne 0) {
+            throw "Application image build failed with exit code $LASTEXITCODE."
+        }
     }
-    & docker @arguments
+
+    & docker image inspect klasse-5e-app:0.3.0b4 | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        throw "Docker deployment failed with exit code $LASTEXITCODE."
+        throw "The application image was not loaded after the build."
     }
-    & docker compose ps
+
+    # Do not restart PostgreSQL or Vision.  --force-recreate is necessary when
+    # the release image keeps the same tag as the preceding build.
+    & docker compose up -d --no-deps --no-build --force-recreate klasse-5e-app
+    if ($LASTEXITCODE -ne 0) {
+        throw "Application rollout failed with exit code $LASTEXITCODE."
+    }
+
+    $deployedContainer = (& docker compose ps -q klasse-5e-app).Trim()
+    if (-not $deployedContainer) {
+        throw "Compose did not create the application container."
+    }
+    $health = "starting"
+    for ($attempt = 1; $attempt -le 45; $attempt++) {
+        $health = (& docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' $deployedContainer).Trim()
+        if ($health -eq "healthy") {
+            break
+        }
+        if ($health -eq "unhealthy" -or $health -eq "exited") {
+            break
+        }
+        Start-Sleep -Seconds 2
+    }
+    if ($health -ne "healthy") {
+        throw "Application container is not healthy after rollout (state: $health)."
+    }
+    & docker compose ps klasse-5e-app klasse-5e-db klasse-5e-vision
 }
 finally {
     foreach ($name in $secretMap.Keys) {

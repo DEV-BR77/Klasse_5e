@@ -21,7 +21,11 @@ Abnahmetests.
 - [ ] **Hängenden Docker-Image-Export beheben.** Das fertig gebaute Image mit
   der Familienfreigabe muss zuverlässig geladen und ausschließlich der
   App-Container neu gestartet werden. Anschließend Zugriff mit einem zweiten
-  Sorgeberechtigten prüfen.
+  Sorgeberechtigten prüfen. **In Arbeit am 08.09.2026:** Der Rollout-Skript
+  baut und prüft nun nur das App-Image, legt zuvor ein Rollback-Tag an und
+  startet per `--no-deps --no-build --force-recreate` ausschließlich den
+  App-Container. Produktionsbuild, Gesundheitsprüfung und Zugriffstest mit
+  einem zweiten Sorgeberechtigten stehen noch aus.
 
 ## Kommunikation und Kontakte
 
