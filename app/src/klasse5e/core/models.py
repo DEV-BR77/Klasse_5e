@@ -578,6 +578,7 @@ class Role(models.TextChoices):
     MODERATOR = "moderator", "Moderator"
     ORGANIZER = "organizer", "Organisator"
     GUARDIAN = "guardian", "Elternteil"
+    PARENT_REPRESENTATIVE = "parent_representative", "Elternvertretung"
     PUSH_SUBSCRIBER = "push_subscriber", "Benachrichtigungs-Abonnent"
 
 

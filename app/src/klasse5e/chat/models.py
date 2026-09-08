@@ -30,6 +30,7 @@ class ChatRoom(models.Model):
         GENERAL = "general", "Alle Klassenmitglieder"
         GUARDIANS = "guardians", "Nur Eltern"
         STUDENTS = "students", "Nur Schülerinnen und Schüler"
+        PARENT_REPRESENTATIVES = "parent_representatives", "Nur Elternvertretung"
 
     class Appearance(models.TextChoices):
         STANDARD = "standard", "Standard"
@@ -44,7 +45,7 @@ class ChatRoom(models.Model):
     retention_category = models.ForeignKey(ChatRetentionCategory, null=True, blank=True, on_delete=models.PROTECT)
     title = models.CharField(max_length=120)
     audience = models.CharField(
-        max_length=16, choices=Audience.choices, default=Audience.GENERAL
+        max_length=24, choices=Audience.choices, default=Audience.GENERAL
     )
     appearance = models.CharField(
         max_length=16, choices=Appearance.choices, default=Appearance.STANDARD

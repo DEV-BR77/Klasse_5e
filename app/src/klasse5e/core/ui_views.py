@@ -83,10 +83,12 @@ from .models import (
     PushSubscription,
     RegistrationApplication,
     Role,
+    RoleAssignment,
     School,
     SchoolClass,
     SchoolYear,
     StudentProfile,
+    UserAccount,
     UserNotification,
 )
 from .policies import active_roles, family_label
@@ -338,6 +340,12 @@ def _may_manage_school_catalog(user):
             active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
         ).exists()
     )
+
+
+def _may_manage_roles(user):
+    return user.is_superuser or user.roleassignment_set.filter(
+        active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+    ).exists()
 
 
 def _membership(user, request=None):
@@ -1013,6 +1021,105 @@ def portal_management(request):
         }
     )
     return render(request, "ui/portal_management.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def role_management(request):
+    """Assign only the two roles that are intentionally delegated in the portal UI."""
+
+    if not _may_manage_roles(request.user):
+        raise Http404
+    manageable_classes = _manageable_classes(request.user)
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "revoke":
+            assignment = get_object_or_404(
+                RoleAssignment,
+                pk=request.POST.get("assignment_id"),
+                role__in=[Role.DEPUTY_ADMIN, Role.PARENT_REPRESENTATIVE],
+                active=True,
+            )
+            assignment.active = False
+            assignment.save(update_fields=["active"])
+            AuditEvent.objects.create(
+                actor=request.user,
+                action="role.revoked",
+                target_type="role_assignment",
+                target_id=str(assignment.pk),
+                metadata={"role": assignment.role, "user_id": assignment.user_id},
+            )
+            messages.success(request, "Die Rolle wurde entzogen.")
+            return redirect("role-management")
+        if action != "assign":
+            raise Http404
+        role = request.POST.get("role")
+        user = get_object_or_404(UserAccount, pk=request.POST.get("user_id"), is_active=True)
+        school_class = None
+        if role == Role.PARENT_REPRESENTATIVE:
+            school_class = get_object_or_404(manageable_classes, pk=request.POST.get("school_class_id"))
+            today = timezone.localdate()
+            eligible = GuardianChildRelationship.objects.filter(
+                guardian_person=user.person,
+                student_person__classmembership__school_class=school_class,
+                student_person__classmembership__status="active",
+                student_person__classmembership__valid_from__lte=today,
+                status="verified",
+                verified_at__isnull=False,
+                may_view_student_profile=True,
+                valid_from__lte=today,
+            ).filter(
+                Q(valid_until__isnull=True) | Q(valid_until__gte=today),
+                Q(student_person__classmembership__valid_until__isnull=True)
+                | Q(student_person__classmembership__valid_until__gte=today),
+            ).exists()
+            if not eligible:
+                messages.error(request, "Elternvertretungen müssen aktive, bestätigte Sorgeberechtigte der Klasse sein.")
+                return redirect("role-management")
+        elif role != Role.DEPUTY_ADMIN:
+            raise Http404
+        assignment, created = RoleAssignment.objects.get_or_create(
+            user=user,
+            school_class=school_class,
+            role=role,
+            defaults={"assigned_by": request.user, "active": True},
+        ) if school_class else RoleAssignment.objects.get_or_create(
+            user=user,
+            school_class__isnull=True,
+            school__isnull=True,
+            role=role,
+            defaults={"school_class": None, "school": None, "assigned_by": request.user, "active": True},
+        )
+        if not created and not assignment.active:
+            assignment.active = True
+            assignment.assigned_by = request.user
+            assignment.save(update_fields=["active", "assigned_by"])
+        AuditEvent.objects.create(
+            actor=request.user,
+            action="role.assigned",
+            target_type="role_assignment",
+            target_id=str(assignment.pk),
+            metadata={"role": role, "user_id": user.pk, "school_class_id": school_class.pk if school_class else None},
+        )
+        messages.success(request, "Die Rolle wurde zugewiesen.")
+        return redirect("role-management")
+    active_assignments = RoleAssignment.objects.filter(
+        active=True, role__in=[Role.DEPUTY_ADMIN, Role.PARENT_REPRESENTATIVE]
+    ).select_related("user__person", "school_class__school", "assigned_by")
+    guardian_users = UserAccount.objects.filter(
+        person__guardian_relationships__status="verified",
+        is_active=True,
+    ).select_related("person").distinct().order_by("person__last_name", "person__first_name")
+    context = _shared(request, "Rollen & Elternvertretung", "management")
+    context.update(
+        {
+            "assignments": active_assignments,
+            "portal_admin_candidates": UserAccount.objects.filter(is_active=True).select_related("person").order_by("email"),
+            "guardian_candidates": guardian_users,
+            "manageable_classes": manageable_classes,
+        }
+    )
+    return render(request, "ui/role_management.html", context)
 
 
 @login_required

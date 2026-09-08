@@ -16,6 +16,7 @@ from klasse5e.core.models import (
     SchoolYear,
     StudentProfile,
     UserAccount,
+    UserNotification,
 )
 
 
@@ -182,3 +183,38 @@ def test_guardian_and_student_rooms_enforce_their_audience(client, room):
     client.force_login(other_member)
     assert client.get(f"/chat/rooms/{guardian_room.public_id}/messages/").status_code == 404
     assert client.get(f"/chat/rooms/{student_room.public_id}/messages/").status_code == 404
+
+
+@pytest.mark.django_db(transaction=True)
+def test_parent_representative_room_is_role_protected_and_notifies_other_representatives(client, room):
+    author = member(room, "representative-author@example.test")
+    recipient = member(room, "representative-recipient@example.test")
+    outsider = member(room, "representative-outsider@example.test")
+    RoleAssignment.objects.create(
+        user=author,
+        school_class=room.school_class,
+        role="parent_representative",
+    )
+    RoleAssignment.objects.create(
+        user=recipient,
+        school_class=room.school_class,
+        role="parent_representative",
+    )
+    representative_room = ChatRoom.objects.create(
+        school_class=room.school_class,
+        school_year=room.school_year,
+        title="Elternvertretung",
+        audience=ChatRoom.Audience.PARENT_REPRESENTATIVES,
+    )
+
+    client.force_login(author)
+    response = client.post(
+        f"/chat/rooms/{representative_room.public_id}/messages/", {"body": "Abstimmung morgen"}
+    )
+    assert response.status_code == 201
+    notification = UserNotification.objects.get(user=recipient)
+    assert notification.category == "chat"
+    assert str(representative_room.public_id) in notification.target_url
+
+    client.force_login(outsider)
+    assert client.get(f"/chat/rooms/{representative_room.public_id}/messages/").status_code == 404

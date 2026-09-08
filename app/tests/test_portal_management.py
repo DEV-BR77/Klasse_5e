@@ -1,9 +1,19 @@
+from datetime import date
+
 import pytest
 from allauth.mfa.models import Authenticator
 from django.utils import timezone
 
 from klasse5e.chat.models import ChatMessage
-from klasse5e.core.models import OnboardingState, PilotReport, RoleAssignment
+from klasse5e.core.models import (
+    ClassMembership,
+    GuardianChildRelationship,
+    OnboardingState,
+    Person,
+    PilotReport,
+    RoleAssignment,
+    StudentProfile,
+)
 from klasse5e.core.onboarding import current_policy_version
 
 
@@ -126,3 +136,46 @@ def test_admin_can_delete_a_chat_room_and_room_uses_selected_appearance(
     response = client.post("/chat/", {"action": "delete", "room_id": room.public_id}, secure=True)
     assert response.status_code == 302
     assert not ChatRoom.objects.filter(pk=room.pk).exists()
+
+
+@pytest.mark.django_db
+def test_portal_admin_assigns_and_revokes_parent_representative(client, admin_user, guardian, school_class):
+    child_person = Person.objects.create(first_name="Kind", last_name="Beispiel")
+    StudentProfile.objects.create(person=child_person)
+    ClassMembership.objects.create(
+        person=child_person, school_class=school_class, valid_from=date(2026, 8, 1)
+    )
+    GuardianChildRelationship.objects.create(
+        guardian_person=guardian.person,
+        student_person=child_person,
+        relationship_type="guardian",
+        is_legal_guardian=True,
+        may_view_student_profile=True,
+        valid_from=date(2026, 8, 1),
+        status="verified",
+        verified_by=admin_user,
+        verified_at=timezone.now(),
+    )
+    client.force_login(admin_user)
+    response = client.post(
+        "/verwaltung/rollen/",
+        {
+            "action": "assign",
+            "role": "parent_representative",
+            "user_id": guardian.pk,
+            "school_class_id": school_class.pk,
+        },
+        secure=True,
+    )
+    assert response.status_code == 302
+    assignment = RoleAssignment.objects.get(
+        user=guardian, school_class=school_class, role="parent_representative"
+    )
+    assert assignment.active
+
+    response = client.post(
+        "/verwaltung/rollen/", {"action": "revoke", "assignment_id": assignment.pk}, secure=True
+    )
+    assert response.status_code == 302
+    assignment.refresh_from_db()
+    assert not assignment.active
