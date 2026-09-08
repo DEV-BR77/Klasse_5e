@@ -33,6 +33,7 @@ from .models import (
     ClassMembership,
     FamilyAccessCode,
     FamilyChildAccount,
+    FamilyPhoto,
     FamilyRegistrationRequest,
     GuardianChildRelationship,
     Invitation,
@@ -613,6 +614,21 @@ def profile_photo(request, person_id):
     if not person or not (own_photo or shared_class_photo or family_photo):
         raise Http404
     response = FileResponse(person.profile_photo.open("rb"), content_type="image/webp")
+    response["Cache-Control"] = "private, max-age=300"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@login_required
+def family_photo(request, photo_id):
+    from .family_photos import family_photo_is_visible
+
+    photo = get_object_or_404(
+        FamilyPhoto.objects.select_related("school_class").prefetch_related("subjects"), pk=photo_id
+    )
+    if active_class_for_user(request.user) != photo.school_class or not family_photo_is_visible(photo):
+        raise Http404
+    response = FileResponse(photo.image.open("rb"), content_type="image/webp")
     response["Cache-Control"] = "private, max-age=300"
     response["X-Content-Type-Options"] = "nosniff"
     return response

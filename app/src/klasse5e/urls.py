@@ -83,6 +83,7 @@ urlpatterns = [
     path("einstellungen/konto-loeschen/", views.delete_account, name="delete-account"),
     path("praesentation/", ui_views.presentation, name="presentation"),
     path("profile/<int:person_id>/foto/", views.profile_photo, name="profile-photo"),
+    path("familie/foto/<int:photo_id>/", views.family_photo, name="family-photo"),
     path("benachrichtigungen/", views.notification_list, name="notification-list"),
     path(
         "benachrichtigungen/<int:notification_id>/lesen/",

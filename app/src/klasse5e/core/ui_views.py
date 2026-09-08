@@ -72,6 +72,7 @@ from .models import (
     ClassMembership,
     ConsentDecision,
     ConsentType,
+    FamilyPhoto,
     GuardianChildRelationship,
     Household,
     Person,
@@ -92,7 +93,7 @@ from .models import (
     UserAccount,
     UserNotification,
 )
-from .policies import active_roles, family_label, visible_student_people
+from .policies import active_roles, consent_state, family_label, visible_student_people
 from .registration import sanitized_profile_photo
 from .school_import import EXPECTED_FIELDS, detect_encoding, import_schools
 from .session_security import (
@@ -2831,7 +2832,7 @@ def _module_connection_url(module, student):
 @login_required
 @require_http_methods(["GET", "POST"])
 def family(request):
-    _class_or_404(request.user, request)
+    school_class = _class_or_404(request.user, request)
     from .avatar_designer import avatar_designer_context
     from .family_settings import (
         available_classes,
@@ -2847,6 +2848,7 @@ def family(request):
         .select_related("student_person")
         .order_by("student_person__first_name", "student_person__last_name")
     )
+    photo_households = Household.objects.filter(members=request.user.person).distinct()
     active_tab = request.GET.get("tab", "overview")
     if active_tab not in {"overview", "data", "privacy", "modules", "add-child"}:
         active_tab = "overview"
@@ -2859,12 +2861,34 @@ def family(request):
         "profile",
         "consent",
         "add_child",
+        "family_photo",
     }:
         try:
             action = request.POST["action"]
             if action == "add_child":
                 request_child(request)
                 messages.success(request, "Die Zuordnung wurde zur Prüfung eingereicht.")
+            elif action == "family_photo":
+                household = get_object_or_404(photo_households, pk=request.POST.get("household_id"))
+                from .family_photos import remove_family_photo, save_family_photo
+
+                photo = FamilyPhoto.objects.filter(
+                    household=household, school_class=school_class
+                ).first()
+                if request.POST.get("remove") == "yes":
+                    if not photo:
+                        raise ValidationError("Für diese Familie ist kein Bild hinterlegt.")
+                    remove_family_photo(user=request.user, photo=photo)
+                    messages.success(request, "Das Familienbild wurde entfernt.")
+                else:
+                    save_family_photo(
+                        user=request.user,
+                        household=household,
+                        school_class=school_class,
+                        upload=request.FILES.get("family_photo"),
+                        subject_ids=request.POST.getlist("subject_ids"),
+                    )
+                    messages.success(request, "Das Familienbild wurde gespeichert.")
             else:
                 person_id = request.POST.get("person_id")
                 person = request.user.person if person_id == str(request.user.person.pk) else None
@@ -3010,8 +3034,43 @@ def family(request):
     ).select_related("school_class__school")
     context["available_classes"] = available_classes()
     context["avatar_designer"] = avatar_designer_context()
+    from .family_photos import family_photo_is_visible, family_photo_people, may_manage_family_photo
+
+    photo_consent = ConsentType.objects.filter(key="photo_gallery").first()
+    context["family_photo_rows"] = []
+    for household in photo_households.prefetch_related("members", "photos__subjects"):
+        if not may_manage_family_photo(request.user, household, school_class):
+            continue
+        photo = next(
+            (item for item in household.photos.all() if item.school_class_id == school_class.pk), None
+        )
+        people = list(family_photo_people(household, school_class))
+        context["family_photo_rows"].append(
+            {
+                "household": household,
+                "stored_photo": photo,
+                "photo": photo if photo and family_photo_is_visible(photo) else None,
+                "people": [
+                    {
+                        "person": person,
+                        "photo_allowed": bool(
+                            photo_consent and consent_state(photo_consent, person) == "allowed"
+                        ),
+                    }
+                    for person in people
+                ],
+                "may_upload": bool(
+                    photo_consent
+                    and any(consent_state(photo_consent, person) == "allowed" for person in people)
+                ),
+            }
+        )
     template_name = (
-        "ui/family_child_data.html" if active_tab == "data" and context["active_row"] else "ui/family.html"
+        "ui/family_child_data.html"
+        if active_tab == "data" and context["active_row"]
+        else "ui/family_overview.html"
+        if active_tab == "overview"
+        else "ui/family.html"
     )
     return render(request, template_name, context)
 
@@ -3050,6 +3109,8 @@ def contacts(request):
 
     from klasse5e.chat.services import may_start_direct_conversation
 
+    from .family_photos import family_photo_is_visible
+
     def message_targets(adults):
         return [
             adult
@@ -3063,6 +3124,10 @@ def contacts(request):
             return name[8:].strip()
         return name
 
+    def family_initials(value):
+        words = normalized_family_name(value).split()
+        return "".join(word[0] for word in words[:2]).upper() or "?"
+
     def shared_address(person):
         fields = ("street", "postal_code", "city")
         if not all(person.field_visibility.get(field, False) for field in fields):
@@ -3074,7 +3139,9 @@ def contacts(request):
     rows = []
     assigned_guardians = set()
     households = (
-        Household.objects.filter(members__in=guardians).prefetch_related("members__user").distinct()
+        Household.objects.filter(members__in=guardians)
+        .prefetch_related("members__user", "photos__subjects")
+        .distinct()
     )
     for household in households:
         adults = [member for member in household.members.all() if member.pk in guardians]
@@ -3088,6 +3155,9 @@ def contacts(request):
         representative = next((person for person in adults if person.profile_photo), adults[0])
         family_name = normalized_family_name(household.label) or (
             children[0].last_name if children else adults[0].last_name
+        )
+        family_photo = next(
+            (item for item in household.photos.all() if item.school_class_id == school_class.pk), None
         )
         emails = [
             person.contact_email or person.user.email
@@ -3103,6 +3173,8 @@ def contacts(request):
         rows.append(
             {
                 "family_name": family_name,
+                "family_initials": family_initials(family_name),
+                "family_photo": family_photo if family_photo and family_photo_is_visible(family_photo) else None,
                 "adults": adults,
                 "children": sorted(
                     children, key=lambda child: (child.last_name.lower(), child.first_name.lower())
@@ -3121,6 +3193,8 @@ def contacts(request):
         rows.append(
             {
                 "family_name": guardian.last_name,
+                "family_initials": family_initials(guardian.last_name),
+                "family_photo": None,
                 "adults": [guardian],
                 "children": sorted(
                     children, key=lambda child: (child.last_name.lower(), child.first_name.lower())

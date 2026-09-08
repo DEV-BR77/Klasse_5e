@@ -188,6 +188,22 @@ class Household(models.Model):
     members = models.ManyToManyField(Person, related_name="households")
 
 
+class FamilyPhoto(models.Model):
+    household = models.ForeignKey(Household, on_delete=models.CASCADE, related_name="photos")
+    school_class = models.ForeignKey("SchoolClass", on_delete=models.CASCADE)
+    image = models.ImageField(upload_to="families/opaque/")
+    subjects = models.ManyToManyField(Person, related_name="family_photos")
+    uploaded_by = models.ForeignKey(UserAccount, null=True, on_delete=models.SET_NULL)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["household", "school_class"], name="unique_family_photo_per_class"
+            )
+        ]
+
+
 class ChildJoinRequest(models.Model):
     guardian = models.ForeignKey(Person, on_delete=models.CASCADE)
     first_name = models.CharField(max_length=100)
