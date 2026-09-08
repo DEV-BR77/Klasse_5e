@@ -151,6 +151,9 @@ def test_contacts_show_one_clean_family_name_and_only_shared_address(
     guardian.person.postal_code = "38440"
     guardian.person.city = "Wolfsburg"
     guardian.person.field_visibility = {"street": True, "postal_code": True, "city": True}
+    guardian.person.phone = "+49 5361 1"
+    guardian.person.phone_visibility = "members"
+    guardian.person.email_visibility = "members"
     guardian.person.save()
     household = Household.objects.create(label="Familie Beispiel")
     household.members.add(guardian.person)
@@ -163,6 +166,9 @@ def test_contacts_show_one_clean_family_name_and_only_shared_address(
     assert "Familie Beispiel" in body
     assert "Familie Familie Beispiel" not in body
     assert "Musterstraße 1 · 38440 Wolfsburg" in body
+    assert 'aria-label="Kontaktkarte für Familie Beispiel öffnen"' in body
+    assert 'href="tel:+49 5361 1"' in body
+    assert 'href="mailto:guardian@example.test"' in body
 
     guardian.person.field_visibility["city"] = False
     guardian.person.save(update_fields=["field_visibility"])
