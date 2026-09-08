@@ -26,6 +26,10 @@ def validate_configuration_value(key, value, *, scope):
             raise ValidationError("Der Textwert ist ungültig oder zu lang.")
         if any(token in value.lower() for token in ("<script", "javascript:", "{%", "{{")):
             raise ValidationError("Aktive Inhalte sind nicht erlaubt.")
+    if key.value_type == PortalConfigurationKey.ValueType.INTEGER and (
+        isinstance(value, bool) or not isinstance(value, int)
+    ):
+        raise ValidationError("Der Wert muss eine ganze Zahl sein.")
 
 
 def resolve_configuration(key_name, school_class=None):

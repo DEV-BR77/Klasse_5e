@@ -5,6 +5,7 @@ from django.http import Http404
 from .family_context import active_child_context, active_child_school_class
 from .models import AuditEvent, PortalModule, PortalModuleOverride, Role, UserNotification
 from .policies import active_class_for_user
+from .session_security import idle_timeout_minutes
 
 MODULE_PATHS = {
     "/documents/": "pdf_forms",
@@ -89,6 +90,7 @@ def module_context(request):
             active=True,
             role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.SCHOOL_ADMIN, Role.CLASS_ADMIN],
         ).exists(),
+        "idle_session_timeout_seconds": idle_timeout_minutes() * 60,
     }
 
 

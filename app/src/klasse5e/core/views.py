@@ -385,7 +385,9 @@ def personal_profile(request):
                 active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
             ).exists(),
             "notification_rows": _notification_rows(request.user),
-            "push_active": PushSubscription.objects.filter(user=request.user, enabled=True).exists(),
+            "push_active": PushSubscription.objects.filter(
+                user=request.user, enabled=True
+            ).exists(),
             "vapid_configured": bool(settings.VAPID_PUBLIC_KEY),
             "mfa_enabled": _mfa_enabled(request.user),
         },
@@ -393,97 +395,111 @@ def personal_profile(request):
 
 
 def _save_personal_profile(request, person):
-        save_scope = request.POST.get("save_scope", "data")
-        if save_scope == "themes":
-            theme = get_object_or_404(PortalTheme.objects.filter(is_active=True), pk=request.POST.get("theme_id"))
-            request.user.selected_theme = theme
-            request.user.save(update_fields=["selected_theme"])
-            messages.success(request, f"Theme „{theme.name}“ ist jetzt aktiv.")
-            return redirect(f"{reverse('personal-profile')}?tab=themes")
-        if save_scope == "notifications":
-            categories = ("events", "timetable", "homework", "exams", "chat", "carpool", "absences")
-            for category in categories:
-                for channel in ("push", "inapp"):
-                    PushPreference.objects.update_or_create(
-                        user=request.user,
-                        key=f"{channel}_{category}",
-                        defaults={"enabled": request.POST.get(f"{channel}_{category}") == "on"
-                                  and not (category == "absences" and channel == "push")},
-                    )
-            PushPreference.objects.update_or_create(
-                user=request.user, key="push_chat_mentions",
-                defaults={"enabled": request.POST.get("push_chat") == "on"},
-            )
-            messages.success(request, "Benachrichtigungseinstellungen gespeichert.")
-            return redirect(f"{reverse('personal-profile')}?tab=notifications")
-        previous = (person.email_visibility, person.phone_visibility)
-        text_fields = {
-            "first_name": 100, "last_name": 100, "street": 180,
-            "postal_code": 10, "city": 120, "phone": 50, "chat_display_name": 80,
-        }
-        for field, limit in text_fields.items():
-            if field in request.POST:
-                setattr(person, field, request.POST[field].strip()[:limit])
-        if "home_latitude" in request.POST or "home_longitude" in request.POST:
-            try:
-                person.home_latitude = request.POST.get("home_latitude") or None
-                person.home_longitude = request.POST.get("home_longitude") or None
-            except (TypeError, ValueError):
-                person.home_latitude = person.home_longitude = None
-        if "contribution_name_mode" in request.POST:
-            mode = request.POST.get("contribution_name_mode", "family")
-            person.contribution_name_mode = (
-                mode if mode in {"family", "child", "personal"} else "family"
-            )
-        if "email" in request.POST:
-            email = normalize_login_email(request.POST.get("email", ""))
-            validate_email(email)
-            if UserAccount.objects.exclude(pk=request.user.pk).filter(email__iexact=email).exists():
-                raise ValidationError("Diese E-Mail-Adresse wird bereits verwendet.")
-            request.user.email = email
-            request.user.save(update_fields=["email"])
-        if save_scope == "data":
-            person.email_visibility = "members" if request.POST.get("share_email") == "yes" else "hidden"
-            person.phone_visibility = "members" if request.POST.get("share_phone") == "yes" else "hidden"
-        photo = request.FILES.get("profile_photo")
-        if photo:
-            encoded = sanitized_profile_photo(photo)
-            person.profile_photo.save(
-                f"{secrets.token_urlsafe(18)}.webp", ContentFile(encoded), save=False
-            )
-            person.profile_image_mode = Person.ProfileImageMode.PHOTO
-        elif request.POST.get("remove_profile_photo") == "yes" and person.profile_photo:
-            person.profile_photo.delete(save=False)
-            person.profile_photo = ""
-            person.profile_image_mode = Person.ProfileImageMode.AVATAR
-        else:
-            requested_image_mode = request.POST.get("profile_image_mode")
-            if requested_image_mode in Person.ProfileImageMode.values:
-                person.profile_image_mode = requested_image_mode
-        avatar_key = request.POST.get("avatar_key")
-        if avatar_key in dict(PROFILE_AVATAR_PRESETS):
-            person.avatar_key = avatar_key
-        avatar_seed = request.POST.get("avatar_seed", "")
-        validate_avatar_seed(avatar_seed)
-        person.avatar_seed = avatar_seed
-        if not person.profile_photo:
-            person.profile_image_mode = Person.ProfileImageMode.AVATAR
-        person.full_clean()
-        person.save()
-        if previous != (person.email_visibility, person.phone_visibility):
-            AuditEvent.objects.create(
-                actor=request.user,
-                action="profile.contact_sharing.changed",
-                target_type="person",
-                target_id=str(person.pk),
-                metadata={
-                    "email_shared": person.email_visibility == "members",
-                    "phone_shared": person.phone_visibility == "members",
-                },
-            )
-        messages.success(request, "Dein Profil wurde gespeichert.")
-        tab = request.POST.get("tab", "data")
-        return redirect(f"{reverse('personal-profile')}?tab={tab}")
+    save_scope = request.POST.get("save_scope", "data")
+    if save_scope == "themes":
+        theme = get_object_or_404(
+            PortalTheme.objects.filter(is_active=True), pk=request.POST.get("theme_id")
+        )
+        request.user.selected_theme = theme
+        request.user.save(update_fields=["selected_theme"])
+        messages.success(request, f"Theme „{theme.name}“ ist jetzt aktiv.")
+        return redirect(f"{reverse('personal-profile')}?tab=themes")
+    if save_scope == "notifications":
+        categories = ("events", "timetable", "homework", "exams", "chat", "carpool", "absences")
+        for category in categories:
+            for channel in ("push", "inapp"):
+                PushPreference.objects.update_or_create(
+                    user=request.user,
+                    key=f"{channel}_{category}",
+                    defaults={
+                        "enabled": request.POST.get(f"{channel}_{category}") == "on"
+                        and not (category == "absences" and channel == "push")
+                    },
+                )
+        PushPreference.objects.update_or_create(
+            user=request.user,
+            key="push_chat_mentions",
+            defaults={"enabled": request.POST.get("push_chat") == "on"},
+        )
+        messages.success(request, "Benachrichtigungseinstellungen gespeichert.")
+        return redirect(f"{reverse('personal-profile')}?tab=notifications")
+    previous = (person.email_visibility, person.phone_visibility)
+    text_fields = {
+        "first_name": 100,
+        "last_name": 100,
+        "street": 180,
+        "postal_code": 10,
+        "city": 120,
+        "phone": 50,
+        "chat_display_name": 80,
+    }
+    for field, limit in text_fields.items():
+        if field in request.POST:
+            setattr(person, field, request.POST[field].strip()[:limit])
+    if "home_latitude" in request.POST or "home_longitude" in request.POST:
+        try:
+            person.home_latitude = request.POST.get("home_latitude") or None
+            person.home_longitude = request.POST.get("home_longitude") or None
+        except (TypeError, ValueError):
+            person.home_latitude = person.home_longitude = None
+    if "contribution_name_mode" in request.POST:
+        mode = request.POST.get("contribution_name_mode", "family")
+        person.contribution_name_mode = (
+            mode if mode in {"family", "child", "personal"} else "family"
+        )
+    if "email" in request.POST:
+        email = normalize_login_email(request.POST.get("email", ""))
+        validate_email(email)
+        if UserAccount.objects.exclude(pk=request.user.pk).filter(email__iexact=email).exists():
+            raise ValidationError("Diese E-Mail-Adresse wird bereits verwendet.")
+        request.user.email = email
+        request.user.save(update_fields=["email"])
+    if save_scope == "data":
+        person.email_visibility = (
+            "members" if request.POST.get("share_email") == "yes" else "hidden"
+        )
+        person.phone_visibility = (
+            "members" if request.POST.get("share_phone") == "yes" else "hidden"
+        )
+    photo = request.FILES.get("profile_photo")
+    if photo:
+        encoded = sanitized_profile_photo(photo)
+        person.profile_photo.save(
+            f"{secrets.token_urlsafe(18)}.webp", ContentFile(encoded), save=False
+        )
+        person.profile_image_mode = Person.ProfileImageMode.PHOTO
+    elif request.POST.get("remove_profile_photo") == "yes" and person.profile_photo:
+        person.profile_photo.delete(save=False)
+        person.profile_photo = ""
+        person.profile_image_mode = Person.ProfileImageMode.AVATAR
+    else:
+        requested_image_mode = request.POST.get("profile_image_mode")
+        if requested_image_mode in Person.ProfileImageMode.values:
+            person.profile_image_mode = requested_image_mode
+    avatar_key = request.POST.get("avatar_key")
+    if avatar_key in dict(PROFILE_AVATAR_PRESETS):
+        person.avatar_key = avatar_key
+    avatar_seed = request.POST.get("avatar_seed", "")
+    validate_avatar_seed(avatar_seed)
+    person.avatar_seed = avatar_seed
+    if not person.profile_photo:
+        person.profile_image_mode = Person.ProfileImageMode.AVATAR
+    person.full_clean()
+    person.save()
+    if previous != (person.email_visibility, person.phone_visibility):
+        AuditEvent.objects.create(
+            actor=request.user,
+            action="profile.contact_sharing.changed",
+            target_type="person",
+            target_id=str(person.pk),
+            metadata={
+                "email_shared": person.email_visibility == "members",
+                "phone_shared": person.phone_visibility == "members",
+            },
+        )
+    messages.success(request, "Dein Profil wurde gespeichert.")
+    tab = request.POST.get("tab", "data")
+    return redirect(f"{reverse('personal-profile')}?tab={tab}")
 
 
 def _notification_rows(user):
@@ -494,12 +510,23 @@ def _notification_rows(user):
         ("homework", "document", "Hausaufgaben", "Neue Hausaufgabe"),
         ("exams", "consent", "Prüfungen", "Neuer Test oder neue Prüfung"),
         ("chat", "chat", "Chat", "Wenn du mit @ erwähnt wirst"),
-        ("carpool", "people", "Fahrgemeinschaft", "Ausfall oder Problem in deiner Fahrgemeinschaft"),
+        (
+            "carpool",
+            "people",
+            "Fahrgemeinschaft",
+            "Ausfall oder Problem in deiner Fahrgemeinschaft",
+        ),
     )
     stored = {item.key: item.enabled for item in PushPreference.objects.filter(user=user)}
     rows = [
-        {"key": key, "icon": icon, "label": label, "description": description,
-         "push": stored.get(f"push_{key}", False), "inapp": stored.get(f"inapp_{key}", key != "absences")}
+        {
+            "key": key,
+            "icon": icon,
+            "label": label,
+            "description": description,
+            "push": stored.get(f"push_{key}", False),
+            "inapp": stored.get(f"inapp_{key}", key != "absences"),
+        }
         for key, icon, label, description in labels
     ]
     for row in rows:
@@ -510,6 +537,7 @@ def _notification_rows(user):
 
 def _mfa_enabled(user):
     from allauth.mfa.models import Authenticator
+
     return Authenticator.objects.filter(user=user).exists()
 
 
@@ -562,9 +590,9 @@ def profile_photo(request, person_id):
             verified_at__isnull=False,
             may_view_student_profile=True,
             valid_from__lte=timezone.localdate(),
-        ).filter(
-            Q(valid_until__isnull=True) | Q(valid_until__gte=timezone.localdate())
-        ).exists()
+        )
+        .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=timezone.localdate()))
+        .exists()
     )
     if not person or not (own_photo or shared_class_photo or family_photo):
         raise Http404
@@ -580,9 +608,15 @@ def _notification_class(request):
 
     school_class = active_child_school_class(request) or active_class_for_user(request.user)
     if school_class is None:
-        classes = {child.school_class for child in available_child_contexts(request.user) if child.school_class}
+        classes = {
+            child.school_class
+            for child in available_child_contexts(request.user)
+            if child.school_class
+        }
         school_class = next(iter(classes)) if len(classes) == 1 else None
-    return school_class if school_class and has_active_membership(request.user, school_class) else None
+    return (
+        school_class if school_class and has_active_membership(request.user, school_class) else None
+    )
 
 
 @login_required
@@ -757,6 +791,15 @@ def revoke_all_sessions(request):
         target_id=str(request.user.pk),
     )
     return JsonResponse({"revoked": True})
+
+
+@login_required
+@require_POST
+def end_idle_session(request):
+    """Called by the browser timer; a CSRF-protected logout clears the session."""
+
+    logout(request)
+    return HttpResponse(status=204)
 
 
 @login_required

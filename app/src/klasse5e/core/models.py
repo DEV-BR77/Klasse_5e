@@ -419,6 +419,7 @@ class PortalConfigurationKey(models.Model):
     class ValueType(models.TextChoices):
         BOOLEAN = "boolean", "Ja/Nein"
         STRING = "string", "Text"
+        INTEGER = "integer", "Ganze Zahl"
 
     key = models.SlugField(unique=True)
     version = models.PositiveSmallIntegerField(default=1)

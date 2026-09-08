@@ -7,6 +7,7 @@
     <h1 id="auth-heading">Bei KlassID anmelden</h1>
 
     {% url 'account_login' as login_url %}
+    {% if request.GET.timeout %}<p class="status-banner">Deine Sitzung wurde wegen Inaktivität beendet. Bitte melde dich erneut an.</p>{% endif %}
     {% element form form=form method="post" action=login_url tags="entrance,login" %}
         {% slot body %}
             {% csrf_token %}

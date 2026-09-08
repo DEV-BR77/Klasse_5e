@@ -1,4 +1,5 @@
 import hashlib
+from time import time
 
 from allauth.mfa.models import Authenticator
 from django.conf import settings
@@ -8,9 +9,11 @@ from django.core.management import call_command
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import HttpResponse
 from django.shortcuts import redirect
+from django.urls import reverse
 
 from .onboarding import onboarding_complete
 from .policies import PRIVILEGED_ROLES, active_roles
+from .session_security import idle_timeout_minutes
 
 
 class ActiveAccessMiddleware:
@@ -25,6 +28,41 @@ class ActiveAccessMiddleware:
                 cache.delete("privacy-retention-reconcile")
         if request.user.is_authenticated and (not request.user.is_active or request.user.locked_at):
             logout(request)
+        return self.get_response(request)
+
+
+class IdleSessionTimeoutMiddleware:
+    """Expire server sessions after true user inactivity, including on a lost device."""
+
+    EXEMPT_PREFIXES = (
+        "/accounts/logout/",
+        "/health/",
+        "/static/",
+        "/service-worker.js",
+        "/manifest.webmanifest",
+        "/sessions/revoke-all/",
+        "/sessions/idle-timeout/",
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated and not request.path.startswith(self.EXEMPT_PREFIXES):
+            timeout_seconds = idle_timeout_minutes() * 60
+            now = time()
+            previous = request.session.get("idle_session_last_activity")
+            if (
+                not isinstance(previous, bool)
+                and isinstance(previous, int | float)
+                and now - previous >= timeout_seconds
+            ):
+                logout(request)
+                return redirect(f"{reverse('account_login')}?timeout=1")
+            # Background polls must not prolong a session while the device is unattended.
+            if request.headers.get("X-KlassID-Background-Poll") != "1":
+                request.session["idle_session_last_activity"] = now
+                request.session.set_expiry(timeout_seconds)
         return self.get_response(request)
 
 

@@ -2,6 +2,23 @@
   const live = document.querySelector("#live-status");
   const announce = (text) => { if (live) live.textContent = text; };
   const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || "";
+  const timeoutSeconds = Number(document.body.dataset.idleSessionTimeout || 0);
+  if (Number.isFinite(timeoutSeconds) && timeoutSeconds > 0) {
+    let timeoutId;
+    const endSession = () => {
+      fetch("/sessions/idle-timeout/", {
+        method: "POST", headers: {"X-CSRFToken": csrf()}, credentials: "same-origin", keepalive: true,
+      }).finally(() => window.location.replace("/accounts/login/?timeout=1"));
+    };
+    const resetIdleTimer = () => {
+      window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(endSession, timeoutSeconds * 1000);
+    };
+    ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
+      window.addEventListener(eventName, resetIdleTimer, {passive: true});
+    });
+    resetIdleTimer();
+  }
   document.querySelectorAll("[data-dashboard-tabs]").forEach((switcher) => {
     const tabs = [...switcher.querySelectorAll("[data-dashboard-tab]")];
     const panels = [...switcher.querySelectorAll("[data-dashboard-panel]")];
@@ -670,7 +687,7 @@
     let latest = chat.dataset.latest || "";
     const poll = async () => {
       try {
-        const response = await fetch(`${chat.dataset.chatPoll}${latest ? `?since=${encodeURIComponent(latest)}` : ""}`, {headers: {Accept: "application/json"}});
+        const response = await fetch(`${chat.dataset.chatPoll}${latest ? `?since=${encodeURIComponent(latest)}` : ""}`, {headers: {Accept: "application/json", "X-KlassID-Background-Poll": "1"}});
         if (!response.ok) throw new Error();
         const data = await response.json();
         if (data.messages?.length) window.location.reload();

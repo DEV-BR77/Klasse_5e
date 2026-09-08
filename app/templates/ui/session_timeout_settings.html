@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page narrow-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Portalverwaltung</p>
+      <h1>Automatische Abmeldung</h1>
+      <p class="lede">Ungenutzte Sitzungen werden auf allen Geräten beendet.</p>
+    </div>
+    <a class="button button-secondary" href="{% url 'portal-management' %}">← Zur Verwaltung</a>
+  </header>
+  <form method="post" class="settings-panel form-stack">
+    {% csrf_token %}
+    <label>Inaktivität bis zur Abmeldung
+      <input name="idle_timeout_minutes" type="number" min="{{ minimum_idle_timeout_minutes }}" max="{{ maximum_idle_timeout_minutes }}" value="{{ idle_timeout_minutes }}" required inputmode="numeric">
+      <small>Erlaubt sind {{ minimum_idle_timeout_minutes }} bis {{ maximum_idle_timeout_minutes }} Minuten. Standard: {{ default_idle_timeout_minutes }} Minuten.</small>
+    </label>
+    <p>Nach Ablauf ohne Bedienung endet die Sitzung serverseitig. Das Portal zeigt wieder die Anmeldung; geöffnete Geräte können nicht weiter auf geschützte Inhalte zugreifen.</p>
+    <footer class="form-actions"><a class="button button-secondary" href="{% url 'portal-management' %}">Abbrechen</a><button class="button button-primary">Speichern</button></footer>
+  </form>
+</section>
+{% endblock %}

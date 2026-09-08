@@ -65,6 +65,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "klasse5e.core.middleware.ActiveAccessMiddleware",
+    "klasse5e.core.middleware.IdleSessionTimeoutMiddleware",
     "klasse5e.core.module_flags.ModuleGateMiddleware",
     "klasse5e.core.middleware.OnboardingRequiredMiddleware",
     "klasse5e.core.middleware.LoginRateLimitMiddleware",
