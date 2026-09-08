@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page family-page">
+  <header class="page-heading"><div><p class="eyebrow">Mein Konto</p><h1>Familien-Zentrale</h1><p class="lede">Profile, Freigaben und Schulzugänge deiner Familie.</p></div></header>
+  <nav class="settings-tabs" aria-label="Familien-Zentrale"><a href="?tab=overview">Übersicht</a>{% for row in relationship_rows %}<a href="?tab=data&amp;child={{ row.relationship.pk }}" {% if active_relationship and active_relationship.pk == row.relationship.pk %}aria-current="page"{% endif %}>{{ row.relationship.student_person.first_name }}</a>{% endfor %}<a href="?tab=add-child">Kind hinzufügen</a></nav>
+  <header class="family-child-heading"><div><p class="eyebrow">Kind</p><h2>{{ active_row.relationship.student_person.first_name }} {{ active_row.relationship.student_person.last_name }}</h2><p class="muted">{% if active_row.membership %}{{ active_row.membership.school_class.school.name }} · {{ active_row.membership.school_class.display_name|default:active_row.membership.school_class.name }}{% else %}Noch keiner Klasse zugeordnet{% endif %}</p></div><span class="status {% if active_row.relationship.status == 'verified' %}status-success{% else %}status-warning{% endif %}">{{ active_row.relationship.get_status_display }}</span></header>
+  <nav class="settings-subtabs" aria-label="Bereiche für {{ active_row.relationship.student_person.first_name }}"><a href="?tab=data&amp;child={{ active_row.relationship.pk }}" aria-current="page">Stammdaten</a><a href="?tab=privacy&amp;child={{ active_row.relationship.pk }}">Datenschutz</a><a href="?tab=modules&amp;child={{ active_row.relationship.pk }}">Schulzugänge</a></nav>
+  <form method="post" enctype="multipart/form-data" class="form-stack">
+    {% csrf_token %}<input type="hidden" name="action" value="profile"><input type="hidden" name="person_id" value="{{ active_row.card.person.pk }}"><input type="hidden" name="tab" value="data"><input type="hidden" name="child" value="{{ active_row.relationship.pk }}"><input type="hidden" name="avatar_seed" value="{{ active_row.card.person.avatar_seed }}" data-avatar-seed>
+    <article class="settings-panel"><header><div><h2>Stammdaten und Kontaktfreigaben</h2><p>Die Freigaben funktionieren für Kinder genauso wie für Erwachsene und gelten nur für aktive Klassenmitglieder.</p></div></header><div class="settings-details-body family-fields">
+      {% for item in active_row.card.fields %}
+        <div class="profile-field {% if item.field.name == 'contact_email' or item.field.name == 'phone' %}profile-field--sharing{% endif %}"><label for="{{ item.field.id_for_label }}">{{ item.field.label }}</label>{{ item.field }}
+          {% if item.field.name == 'city' %}<label class="sharing-toggle" for="share-child-address"><span class="sharing-toggle__text">Adresse im Portal anzeigen</span><span class="switch"><input id="share-child-address" type="checkbox" name="share_address" {% if active_row.card.address_shared %}checked{% endif %}><span></span></span></label>{% endif %}
+          {% if item.field.name == 'contact_email' or item.field.name == 'phone' %}<label class="sharing-toggle" for="share-child-{{ item.field.name }}"><span class="sharing-toggle__text">Im Portal anzeigen</span><span class="switch"><input id="share-child-{{ item.field.name }}" type="checkbox" name="share_{{ item.field.name }}" {% if item.shared %}checked{% endif %}><span></span></span></label>{% endif %}
+        </div>
+      {% endfor %}
+      <div class="profile-field"><label for="child-school-class">Schule und Klasse</label><select id="child-school-class" name="school_class" required><option value="">Bitte auswählen</option>{% for school_class in active_row.school_classes %}<option value="{{ school_class.pk }}" {% if active_row.membership and active_row.membership.school_class_id == school_class.pk %}selected{% endif %}>{{ school_class.school.name }} · {{ school_class.display_name|default:school_class.name }}</option>{% endfor %}</select></div>
+    </div></article>
+    <footer class="form-actions"><button class="button button-primary">Angaben speichern</button></footer>
+  </form>
+</section>
+{% endblock %}

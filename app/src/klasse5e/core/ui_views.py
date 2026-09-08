@@ -3010,7 +3010,10 @@ def family(request):
     ).select_related("school_class__school")
     context["available_classes"] = available_classes()
     context["avatar_designer"] = avatar_designer_context()
-    return render(request, "ui/family.html", context)
+    template_name = (
+        "ui/family_child_data.html" if active_tab == "data" and context["active_row"] else "ui/family.html"
+    )
+    return render(request, template_name, context)
 
 
 @login_required
@@ -3054,6 +3057,20 @@ def contacts(request):
             if may_start_direct_conversation(request.user, adult, school_class)
         ]
 
+    def normalized_family_name(value):
+        name = " ".join((value or "").split())
+        if name.casefold().startswith("familie "):
+            return name[8:].strip()
+        return name
+
+    def shared_address(person):
+        fields = ("street", "postal_code", "city")
+        if not all(person.field_visibility.get(field, False) for field in fields):
+            return ""
+        return " · ".join(
+            part for part in (person.street, " ".join((person.postal_code, person.city)).strip()) if part
+        )
+
     rows = []
     assigned_guardians = set()
     households = (
@@ -3069,7 +3086,7 @@ def contacts(request):
             children.extend(children_by_guardian.get(adult.pk, []))
         children = list({child.pk: child for child in children}.values())
         representative = next((person for person in adults if person.profile_photo), adults[0])
-        family_name = household.label or (
+        family_name = normalized_family_name(household.label) or (
             children[0].last_name if children else adults[0].last_name
         )
         emails = [
@@ -3082,6 +3099,7 @@ def contacts(request):
             for person in adults
             if person.phone_visibility == "members" and person.phone
         ]
+        addresses = [address for person in adults if (address := shared_address(person))]
         rows.append(
             {
                 "family_name": family_name,
@@ -3093,6 +3111,7 @@ def contacts(request):
                 "message_targets": message_targets(adults),
                 "emails": list(dict.fromkeys(emails)),
                 "phones": list(dict.fromkeys(phones)),
+                "addresses": list(dict.fromkeys(addresses)),
             }
         )
     for guardian_id, guardian in guardians.items():
@@ -3113,6 +3132,9 @@ def contacts(request):
                 else [],
                 "phones": [guardian.phone]
                 if guardian.phone_visibility == "members" and guardian.phone
+                else [],
+                "addresses": [address]
+                if (address := shared_address(guardian))
                 else [],
             }
         )

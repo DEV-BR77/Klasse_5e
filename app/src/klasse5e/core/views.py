@@ -372,7 +372,7 @@ def personal_profile(request):
             return redirect("personal-profile")
     return render(
         request,
-        "ui/personal_profile.html",
+        "ui/personal_profile_data.html" if active_tab == "data" else "ui/personal_profile.html",
         {
             "page_title": "Persönliches Profil",
             "person": person,
@@ -423,7 +423,12 @@ def _save_personal_profile(request, person):
         )
         messages.success(request, "Benachrichtigungseinstellungen gespeichert.")
         return redirect(f"{reverse('personal-profile')}?tab=notifications")
-    previous = (person.email_visibility, person.phone_visibility)
+    address_fields = ("street", "postal_code", "city")
+    previous = (
+        person.email_visibility,
+        person.phone_visibility,
+        all(person.field_visibility.get(field, False) for field in address_fields),
+    )
     text_fields = {
         "first_name": 100,
         "last_name": 100,
@@ -461,6 +466,11 @@ def _save_personal_profile(request, person):
         person.phone_visibility = (
             "members" if request.POST.get("share_phone") == "yes" else "hidden"
         )
+        field_visibility = dict(person.field_visibility)
+        address_shared = request.POST.get("share_address") == "yes"
+        for field in address_fields:
+            field_visibility[field] = address_shared
+        person.field_visibility = field_visibility
     photo = request.FILES.get("profile_photo")
     if photo:
         encoded = sanitized_profile_photo(photo)
@@ -486,7 +496,12 @@ def _save_personal_profile(request, person):
         person.profile_image_mode = Person.ProfileImageMode.AVATAR
     person.full_clean()
     person.save()
-    if previous != (person.email_visibility, person.phone_visibility):
+    current_sharing = (
+        person.email_visibility,
+        person.phone_visibility,
+        all(person.field_visibility.get(field, False) for field in address_fields),
+    )
+    if previous != current_sharing:
         AuditEvent.objects.create(
             actor=request.user,
             action="profile.contact_sharing.changed",
@@ -495,6 +510,7 @@ def _save_personal_profile(request, person):
             metadata={
                 "email_shared": person.email_visibility == "members",
                 "phone_shared": person.phone_visibility == "members",
+                "address_shared": current_sharing[2],
             },
         )
     messages.success(request, "Dein Profil wurde gespeichert.")

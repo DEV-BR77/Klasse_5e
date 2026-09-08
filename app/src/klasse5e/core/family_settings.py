@@ -55,7 +55,16 @@ def person_card(person, user, editable):
             "effective": consent_state(consent, person) == "allowed",
             "enabled": bool(decision and decision.decision == ConsentDecision.Decision.GRANTED),
             "disabled": consent.key == "biometric_face_search" and not settings.BIOMETRIC_SEARCH_ENABLED})
-    return {"person": person, "fields": fields, "editable": editable, "consents": consents}
+    return {
+        "person": person,
+        "fields": fields,
+        "address_shared": all(
+            person.field_visibility.get(key, False)
+            for key in ("street", "postal_code", "city")
+        ),
+        "editable": editable,
+        "consents": consents,
+    }
 
 
 def save_person(request, person):
@@ -68,7 +77,12 @@ def save_person(request, person):
     validate_avatar_seed(seed)
     with transaction.atomic():
         person = form.save(commit=False)
-        person.field_visibility = {key: request.POST.get(f"share_{key}") == "on" for key in form.fields}
+        person.field_visibility = {
+            key: request.POST.get(f"share_{key}") == "on" for key in form.fields
+        }
+        address_shared = request.POST.get("share_address") == "on"
+        for key in ("street", "postal_code", "city"):
+            person.field_visibility[key] = address_shared
         person.email_visibility = "members" if person.field_visibility["contact_email"] else "hidden"
         person.phone_visibility = "members" if person.field_visibility["phone"] else "hidden"
         person.avatar_seed = seed

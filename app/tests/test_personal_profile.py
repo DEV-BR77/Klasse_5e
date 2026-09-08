@@ -102,7 +102,9 @@ def test_profile_stores_contact_visibility_and_notification_preferences(client, 
         reverse("personal-profile"),
         {
             "tab": "data", "save_scope": "data", "first_name": "Alex", "last_name": "Beispiel",
+            "street": "Musterstraße 1", "postal_code": "38440", "city": "Wolfsburg",
             "email": "new-address@example.test", "share_email": "yes", "share_phone": "yes",
+            "share_address": "yes",
         },
         secure=True,
     )
@@ -112,6 +114,12 @@ def test_profile_stores_contact_visibility_and_notification_preferences(client, 
     assert guardian.email == "new-address@example.test"
     assert guardian.person.email_visibility == "members"
     assert guardian.person.phone_visibility == "members"
+    assert all(
+        guardian.person.field_visibility[field]
+        for field in ("street", "postal_code", "city")
+    )
+    page = client.get(f"{reverse('personal-profile')}?tab=data", secure=True)
+    assert page.content.decode().count('class="sharing-toggle"') == 3
     response = client.post(
         reverse("personal-profile"),
         {"tab": "notifications", "save_scope": "notifications", "push_chat": "on", "inapp_carpool": "on"},
