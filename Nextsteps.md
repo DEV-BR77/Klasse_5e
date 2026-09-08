@@ -812,3 +812,50 @@ Liefere:
 ## Abschlussbedingung
 
 Das Qualitätsgate darf nicht allein deshalb als bestanden gelten, weil Dokumente vorhanden sind. Widerruf, Rechteisolation, Löschung und Sperrung biometrischer Funktionen müssen technisch nachgewiesen sein.
+
+# Aufgabe 16 – Zentraler Adapterkatalog, Schulzuordnung und persönliche Zugänge
+
+**Status:** offen; am 08.09.2026 ausdrücklich als Folgeaufgabe beauftragt.
+Diese Aufgabe wird separat umgesetzt; die derzeitige schulgebundene Adapterverwaltung
+ist noch kein vollständiger zentraler Katalog.
+
+## Ziel und Ablauf
+
+1. Portal-Admins legen Adapter einmal im zentralen Katalog an und bearbeiten sie dort.
+2. Schulen ordnen vorhandene Katalogadapter zu und schalten sie sowie ihre Module
+   für die Schule beziehungsweise zulässige Klassen an oder aus.
+3. Unter Familien-Zentrale → Kind → Schulzugänge erscheinen ausschließlich die
+   für die Schule/Klasse freigegebenen Adapter. Berechtigte Benutzer entscheiden
+   dort persönlich, welche Funktionen sie für dieses Kind verwenden möchten.
+4. Zugangsdaten lassen sich direkt in diesem Bereich beim ausgewählten Kind
+   anlegen, ändern, prüfen und entfernen; kein Wechsel in einen unzugeordneten
+   globalen Zugangsdialog. Aktivierungsstatus und Verbindungsstatus sind getrennt sichtbar.
+
+## Verbindlicher Schalter am Adapter
+
+Beim Anlegen und Bearbeiten gibt es einen Toggle **„Persönlichen Zugang erfordern“**.
+Ist er aktiv, darf der Adapter ausschließlich mit dem persönlichen, dem jeweiligen
+Kind und berechtigten Benutzer zugeordneten Zugang verwendet werden. Ohne vollständig
+hinterlegte erforderliche Zugangsdaten bleibt die Nutzung gesperrt; die Oberfläche
+zeigt „Zugangsdaten erforderlich“. Ein gemeinsamer Schulzugang oder globaler Fallback
+darf diese Pflicht nicht umgehen. Änderungen der Pflicht gelten auch für bestehende
+Verbindungen und werden protokolliert.
+
+## Abnahme
+
+- Echte Trennung von Katalogdefinition, Schulfreigabe und persönlicher Einstellung;
+  bestehende Adapter, Module und verschlüsselte Zugänge migrationssicher übernehmen.
+- Deaktivierung im Katalog oder in der Schule sperrt auch direkte URLs, APIs und
+  Synchronisationen. Persönliche Aktivierung kann eine übergeordnete Sperre nicht aufheben.
+- Zugangsdaten und persönliche Feinsteuerung sind je Benutzer und Kind isoliert;
+  Geschwister, getrennte Sorgeberechtigte und andere Schulen erhalten keinen fremden Zugang.
+- Zugangspflicht wird bei Speichern, Verbinden und Synchronisieren serverseitig geprüft.
+- Geheimnisse verschlüsselt speichern, niemals zurückanzeigen oder protokollieren;
+  sichere Ersetzung und Löschung. Nur synthetische Zugangsdaten in Tests.
+- Bearbeitungsrechte folgen der aktuellen bestätigten Beziehung und Schulzuordnung;
+  Entzug wirkt unmittelbar. Freiwillige Einwilligungen bleiben getrennte Entscheidungen.
+- Verständliche Tabelle und Formulare am Kind, mit sichtbaren Speichern-/Prüfen-Aktionen,
+  auch per Tastatur und ohne JavaScript bedienbar.
+- Tests für vollständigen Ablauf, Schul-/Familienisolation, übergeordnete Sperren,
+  Pflichtzugang, fehlende/falsche Zugangsdaten, Widerruf und Bestandsmigration.
+- Kurze Betriebsdokumentation, Sicherheitsprüfung und Abschlussgate vor Veröffentlichung.
