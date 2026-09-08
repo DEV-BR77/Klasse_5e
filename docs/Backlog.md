@@ -1,6 +1,6 @@
 # Offene Aufgaben
 
-Stand: 08.09.2026. Diese Liste hält die vom Betreiber bestätigten
+Stand: 09.09.2026. Diese Liste hält die vom Betreiber bestätigten
 Folgeaufträge fest. `docs/Backlog.md` ist die zentrale Datei für die nächsten
 abzuarbeitenden Aufgaben; neue offene Folgeaufträge werden hier gepflegt. Sie ersetzt keine Berechtigungsprüfung und keine
 Abnahmetests.
@@ -77,6 +77,23 @@ Abnahmetests.
   **Abgeschlossen am 09.09.2026:** Auf ausdrückliche Erweiterung der
   Familienansicht umgesetzt. Der Schalter setzt alle drei Adressfelder
   gemeinsam und zeigt die vollständige Adresse nur in der Kontaktkarte.
+
+## Kinderschutz im Chat und bei Bildanhängen
+
+- [ ] **Kinderschutz: Sprache maskieren und Bildanhänge pixeln.** Den bestehenden
+  Chatfilter zu einer überprüfbaren Kinderschutzfunktion erweitern: erkannte
+  Schimpf- und beleidigende Wörter werden in der sichtbaren Nachricht mit
+  Punkten maskiert; Bildanhänge mit erkannten problematischen Inhalten werden
+  vor der Auslieferung verpixelt oder gesperrt. Für die spätere Umsetzung sind
+  `profanity-check` für die Sprachbewertung und FalconsAI für die
+  Bildbewertung vorgesehen. Flask, Flask-SocketIO für einen möglichen
+  Echtzeitkanal und deren Betrieb dürfen erst nach einer Architekturentscheidung
+  eingesetzt werden, weil der aktuelle Chat bewusst im Django-Monolithen per
+  Polling arbeitet. Die Aufgabe umfasst eine deutschsprachige Qualitätsprüfung,
+  Modell- und Lizenzprüfung, keine Speicherung von Rohbewertungen oder
+  Klartext-Moderationsprotokollen, sichtbare Kennzeichnung, menschliche
+  Meldung/Überprüfung, unmittelbaren Zugriffsentzug und Regressionstests für
+  Fehlklassifikation, Umgehungsversuche, Klassenisolation sowie Widerruf.
 
 ## Mobile Startseite und Navigation
 
@@ -244,3 +261,32 @@ eine reale, bewusst freigegebene Abwesenheitsmeldung.
 - Schnittstellenfähigkeit und schulische Berechtigung vor Implementierung prüfen;
   fehlende WebUntis-Unterstützung ausdrücklich ausweisen, keinen Erfolg simulieren.
 - Dokumentierter Testweg und Qualitätsgate vor produktiver Freigabe.
+
+
+### BL-18 – Schulmanager Online: persönlicher Playwright-Adapter für Nachrichten und Elternbriefe
+
+**Status:** offen; am 09.09.2026 als Folgeaufgabe erfasst. Baut auf BL-16 auf.
+
+Schulmanager Online besitzt keine verwendbare API. Der Adapter verwendet daher
+Playwright ausschließlich als kontrollierten, persönlichen Browseradapter.
+Die Adapter-Modulverwaltung erhält eine Schulmanager-Online-Definition mit
+benötigten Feldern für Benutzername und Passwort. Zugangsdaten werden je
+berechtigtem Benutzer und Kind verschlüsselt gespeichert, nie erneut angezeigt,
+in Logs geschrieben oder mit Benachrichtigungen übertragen. Ein fehlender,
+abgelaufener oder falscher Zugang bleibt ein sichtbarer Verbindungsfehler.
+
+Der Adapter liest nur Nachrichten und Elternbriefe, ordnet sie dem gewählten
+Kind zu und erzeugt dafür neutrale In-App-Benachrichtigungen. Hinweise enthalten
+keinen Nachrichtentext, keine Namen und keine Zugangsdaten; Inhalte sind nur
+nach der bestehenden Kind-, Klassen-, Beziehungs- und Adapterprüfung sichtbar.
+Der Abruf muss idempotent sein, Duplikate verhindern, Quelländerungen
+nachvollziehbar behandeln und darf weder Formulare absenden noch andere
+Schulmanager-Daten verändern.
+
+Vor Umsetzung sind Nutzungsbedingungen, schulische Freigabe, technische
+Stabilität der Browserstrecke, Verschlüsselung, Löschfristen und ein manueller
+Fallback zu prüfen. Tests verwenden ausschließlich synthetische Playwright-
+Antworten und Zugangsdaten; sie decken Familien- und Schultrennung,
+Zugangstausch/-löschung, deaktivierte Adapter, doppelte Imports, fehlende
+Nachrichten und sichere Fehlerbehandlung ab. Betriebsdokumentation,
+Sicherheitsprüfung und Abschlussgate sind vor einer Veröffentlichung Pflicht.
