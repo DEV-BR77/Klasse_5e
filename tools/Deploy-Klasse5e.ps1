@@ -50,7 +50,7 @@ try {
         # Build and load only the application image.  Building all services made
         # Compose recreate Vision as a side effect, which can interrupt a healthy
         # rollout after the app image was already exported.
-        & docker compose build --progress plain klasse-5e-app
+        & docker compose --progress plain build klasse-5e-app
         if ($LASTEXITCODE -ne 0) {
             throw "Application image build failed with exit code $LASTEXITCODE."
         }

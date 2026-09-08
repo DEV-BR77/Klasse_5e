@@ -18,14 +18,18 @@ Abnahmetests.
   Zugangsdaten, Synchronisation und Kursverwaltung bleiben beim jeweiligen
   Verbindungsinhaber. Die Regressionstests decken Kind, zweiten
   Sorgeberechtigten, Fremdzugriff und unmittelbaren Beziehungswiderruf ab.
-- [ ] **Hängenden Docker-Image-Export beheben.** Das fertig gebaute Image mit
+- [x] **Hängenden Docker-Image-Export beheben.** Das fertig gebaute Image mit
   der Familienfreigabe muss zuverlässig geladen und ausschließlich der
   App-Container neu gestartet werden. Anschließend Zugriff mit einem zweiten
-  Sorgeberechtigten prüfen. **In Arbeit am 08.09.2026:** Der Rollout-Skript
-  baut und prüft nun nur das App-Image, legt zuvor ein Rollback-Tag an und
-  startet per `--no-deps --no-build --force-recreate` ausschließlich den
-  App-Container. Produktionsbuild, Gesundheitsprüfung und Zugriffstest mit
-  einem zweiten Sorgeberechtigten stehen noch aus.
+  Sorgeberechtigten prüfen. **Abgeschlossen am 09.09.2026:** Der Rollout-Skript
+  baut, exportiert und prüft nur das App-Image, legt zuvor ein Rollback-Tag an
+  und startet per `--no-deps --no-build --force-recreate` ausschließlich den
+  App-Container. Der Build exportierte in 83 Sekunden und lud das Image in 27
+  Sekunden. App, Datenbank und Vision waren danach gesund; die öffentlichen
+  Health- und Login-Endpunkte lieferten HTTP 200. Ein isolierter, vollständig
+  zurückgerollter Produktionscheck bestätigte den Lesezugriff eines zweiten
+  Sorgeberechtigten auf die Schuldaten des Kindes sowie den sofortigen Entzug
+  nach Widerruf.
 
 ## Kommunikation und Kontakte
 
