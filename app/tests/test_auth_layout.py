@@ -10,8 +10,13 @@ def test_login_uses_branded_invitation_layout(client):
     assert 'class="auth-page"' in content
     assert "/static/css/dist/styles.css" in content
     assert "/static/auth.css" not in content
-    assert "Termine und Stundenplan im Blick" in content
-    assert "Speiseplan und Mitbringlisten gemeinsam planen" in content
+    assert 'branding/klassid-main.png' not in content
+    assert "Deine Klasse, alles im Blick." in content
+    assert "Hausaufgaben, Stundenplan, Speiseplan, Mitteilungen, Abwesenheiten." in content
+    assert "Klar, geschützt, alles an einem Ort." in content
+    assert "DSGVO-konform und lokal" in content
+    assert "Keine Cookies, keine Werbe-Tracker" in content
+    assert "Du entscheidest, was angezeigt wird." in content
     assert "Du hast einen Einladungscode erhalten?" in content
     assert "/einladung/" in content
     assert "auth-project-card" in content

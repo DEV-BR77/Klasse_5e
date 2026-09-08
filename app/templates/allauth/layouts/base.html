@@ -13,11 +13,6 @@
 <body class="auth-page">
     <a class="skip-link" href="#main-content">Zum Inhalt springen</a>
     <div class="auth-shell">
-        <header class="auth-header">
-            <a class="auth-logo" href="/" aria-label="KlassID – Startseite">
-                <img src="{% static 'branding/klassid-main.png' %}" alt="KlassID – deine Klasse, alles im Blick">
-            </a>
-        </header>
         <main id="main-content" class="auth-main" tabindex="-1">
             <section class="auth-card" aria-labelledby="auth-heading">
                 {% if messages %}
@@ -30,13 +25,13 @@
                 {% block content %}{% endblock content %}
             </section>
             <aside class="auth-aside" aria-label="Das bietet KlassID">
-                <p class="eyebrow">Der Treffpunkt für Schule und Familie</p>
-                <h2>Alles Wichtige für euren Schulalltag an einem Ort.</h2>
-                <p>Termine, Stundenplan, Speiseplan und Klassenleben – klar, geschützt und gemeinsam organisiert.</p>
+                <p class="eyebrow">Deine Klasse, alles im Blick.</p>
+                <h2>Hausaufgaben, Stundenplan, Speiseplan, Mitteilungen, Abwesenheiten.</h2>
+                <p>Klar, geschützt, alles an einem Ort.</p>
                 <ul class="auth-benefits">
-                    <li>Termine und Stundenplan im Blick</li>
-                    <li>Speiseplan und Mitbringlisten gemeinsam planen</li>
-                    <li>Fotogalerie und Chat geschützt teilen</li>
+                    <li>DSGVO-konform und lokal</li>
+                    <li>Keine Cookies, keine Werbe-Tracker</li>
+                    <li>Du entscheidest, was angezeigt wird.</li>
                 </ul>
                 <a class="auth-project-card" href="{% url 'project' %}">
                     <strong>Projekt kennenlernen</strong>
