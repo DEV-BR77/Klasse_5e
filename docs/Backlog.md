@@ -56,9 +56,13 @@ Abnahmetests.
   Freigabeschalter für Telefon, E-Mail und Adresse. Freigegebene Adressen
   erscheinen ausschließlich in der Kontaktkarte und nur für aktuelle
   Klassenmitglieder.
-- [ ] **Kontaktkarte.** Einen deutlich beschrifteten Kontakt-Button anbieten;
+- [x] **Kontaktkarte.** Einen deutlich beschrifteten Kontakt-Button anbieten;
   Details in einer mittigen Kachel öffnen. Freigegebene Telefon- und
   E-Mail-Adressen müssen `tel:` beziehungsweise `mailto:` verwenden.
+  **Abgeschlossen am 09.09.2026:** Die Familienzeile öffnet über „Kontakt
+  öffnen“ eine zentrierte, mobile Kachel. Freigegebene Telefon- und
+  E-Mail-Adressen sind sichere `tel:`- und `mailto:`-Links; die Kontaktkarte
+  zeigt nur nach aktueller Klassen- und Beziehungsprüfung sichtbare Angaben.
 - [ ] **Familienbild und Ersatzdarstellung.** Optionales Familienfoto für die
   Kontaktkarte; ohne Bild einen Initialen-Kreis aus dem Familiennamen.
   Sichtbarkeit nur mit erforderlichen Foto-Freigaben aller abgebildeten
