@@ -26,6 +26,11 @@ class ChatRetentionCategory(models.Model):
 
 
 class ChatRoom(models.Model):
+    class Audience(models.TextChoices):
+        GENERAL = "general", "Alle Klassenmitglieder"
+        GUARDIANS = "guardians", "Nur Eltern"
+        STUDENTS = "students", "Nur Schülerinnen und Schüler"
+
     class Appearance(models.TextChoices):
         STANDARD = "standard", "Standard"
         CLASSIC = "classic", "Klassische Schultafel"
@@ -38,6 +43,9 @@ class ChatRoom(models.Model):
     event = models.OneToOneField(Event, null=True, blank=True, on_delete=models.CASCADE)
     retention_category = models.ForeignKey(ChatRetentionCategory, null=True, blank=True, on_delete=models.PROTECT)
     title = models.CharField(max_length=120)
+    audience = models.CharField(
+        max_length=16, choices=Audience.choices, default=Audience.GENERAL
+    )
     appearance = models.CharField(
         max_length=16, choices=Appearance.choices, default=Appearance.STANDARD
     )

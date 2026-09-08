@@ -89,7 +89,7 @@ from .models import (
     StudentProfile,
     UserNotification,
 )
-from .policies import active_roles, family_label, has_active_membership
+from .policies import active_roles, family_label
 from .registration import sanitized_profile_photo
 from .school_import import EXPECTED_FIELDS, detect_encoding, import_schools
 
@@ -873,6 +873,9 @@ def chat_overview(request):
             appearance = request.POST.get("appearance", ChatRoom.Appearance.STANDARD)
             if appearance not in ChatRoom.Appearance.values:
                 appearance = ChatRoom.Appearance.STANDARD
+            audience = request.POST.get("audience", ChatRoom.Audience.GENERAL)
+            if audience not in ChatRoom.Audience.values:
+                audience = ChatRoom.Audience.GENERAL
             ChatRoom.objects.create(
                 school_class=school_class,
                 school_year=school_class.school_year,
@@ -880,12 +883,19 @@ def chat_overview(request):
                 is_open=True,
                 retention_category=retention,
                 appearance=appearance,
+                audience=audience,
             )
             messages.success(request, "Der Chatraum wurde angelegt.")
         return redirect("ui-chat")
+    from klasse5e.chat.services import require_room_access
+
     rooms = ChatRoom.objects.filter(school_class=school_class).order_by("event_id", "title")
     room_rows = []
     for room in rooms:
+        try:
+            require_room_access(request.user, room)
+        except PermissionDenied:
+            continue
         state = ChatReadState.objects.filter(room=room, user=request.user).first()
         unread = room.messages.exclude(author=request.user)
         if state:
@@ -905,6 +915,7 @@ def chat_overview(request):
         is_active=True, intended_for_events=False
     )
     context["appearance_choices"] = ChatRoom.Appearance.choices
+    context["audience_choices"] = ChatRoom.Audience.choices
     return render(request, "ui/chat_overview.html", context)
 
 
@@ -912,10 +923,12 @@ def chat_overview(request):
 @require_http_methods(["GET", "POST"])
 def chat_room(request, room_id):
     room = get_object_or_404(ChatRoom, public_id=room_id)
-    if not has_active_membership(request.user, room.school_class) and not _can_manage_portal(
-        request.user
-    ):
-        raise Http404
+    from klasse5e.chat.services import require_room_access
+
+    try:
+        require_room_access(request.user, room)
+    except PermissionDenied:
+        raise Http404 from None
     if request.method == "POST":
         from klasse5e.chat.services import create_message
 
@@ -955,7 +968,13 @@ def chat_attachment(request, message_id):
     from klasse5e.chat.models import ChatMessage
 
     message = get_object_or_404(ChatMessage.objects.select_related("room"), public_id=message_id)
-    if not has_active_membership(request.user, message.room.school_class) or not message.attachment:
+    from klasse5e.chat.services import require_room_access
+
+    try:
+        require_room_access(request.user, message.room)
+    except PermissionDenied:
+        raise Http404 from None
+    if not message.attachment:
         raise Http404
     if (
         message.attachment_content_type.startswith("image/")

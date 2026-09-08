@@ -8,11 +8,13 @@ from klasse5e.chat.models import ChatMessage, ChatRetentionCategory, ChatRoom
 from klasse5e.chat.retention import cleanup_expired_messages
 from klasse5e.core.models import (
     ClassMembership,
+    GuardianChildRelationship,
     Person,
     RoleAssignment,
     School,
     SchoolClass,
     SchoolYear,
+    StudentProfile,
     UserAccount,
 )
 
@@ -137,3 +139,46 @@ def test_messages_remain_when_retention_is_disabled_and_expire_only_when_enabled
     category.save(update_fields=["automatic_deletion_enabled"])
     assert cleanup_expired_messages() == 1
     assert not ChatMessage.objects.filter(pk=message.pk).exists()
+
+
+@pytest.mark.django_db
+def test_guardian_and_student_rooms_enforce_their_audience(client, room):
+    student_user = member(room, "student@example.test")
+    StudentProfile.objects.create(person=student_user.person)
+    guardian_user = member(room, "guardian@example.test")
+    GuardianChildRelationship.objects.create(
+        guardian_person=guardian_user.person,
+        student_person=student_user.person,
+        relationship_type="guardian",
+        is_legal_guardian=True,
+        may_view_student_profile=True,
+        valid_from=date(2026, 8, 1),
+        status="verified",
+        verified_by=guardian_user,
+        verified_at=timezone.now(),
+    )
+    other_member = member(room, "other@example.test")
+    guardian_room = ChatRoom.objects.create(
+        school_class=room.school_class,
+        school_year=room.school_year,
+        title="Elternrat",
+        audience=ChatRoom.Audience.GUARDIANS,
+    )
+    student_room = ChatRoom.objects.create(
+        school_class=room.school_class,
+        school_year=room.school_year,
+        title="Schülerchat",
+        audience=ChatRoom.Audience.STUDENTS,
+    )
+
+    client.force_login(guardian_user)
+    assert client.post(f"/chat/rooms/{guardian_room.public_id}/messages/", {"body": "Hallo"}).status_code == 201
+    assert client.get(f"/chat/rooms/{student_room.public_id}/messages/").status_code == 404
+
+    client.force_login(student_user)
+    assert client.post(f"/chat/rooms/{student_room.public_id}/messages/", {"body": "Hallo"}).status_code == 201
+    assert client.get(f"/chat/rooms/{guardian_room.public_id}/messages/").status_code == 404
+
+    client.force_login(other_member)
+    assert client.get(f"/chat/rooms/{guardian_room.public_id}/messages/").status_code == 404
+    assert client.get(f"/chat/rooms/{student_room.public_id}/messages/").status_code == 404

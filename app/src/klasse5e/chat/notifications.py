@@ -1,5 +1,5 @@
-from web_push_kit import DeliveryStatus, NotificationPayload, Subscription
 from django.db.models import Q
+from web_push_kit import DeliveryStatus, NotificationPayload, Subscription
 
 from klasse5e.core.models import PushPreference, PushSubscription, UserNotification
 from klasse5e.webuntis.notifications import configured_sender

@@ -1,8 +1,14 @@
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
-from klasse5e.core.models import AuditEvent, Role
+from klasse5e.core.models import (
+    AuditEvent,
+    GuardianChildRelationship,
+    Role,
+    RoleAssignment,
+    StudentProfile,
+)
 from klasse5e.core.policies import active_roles, has_active_membership
 
 from .models import ChatMessage, ChatReadState
@@ -27,8 +33,40 @@ def _mentioned_users(room, body):
 
 
 def require_room_access(user, room):
+    is_portal_admin = user.is_superuser or RoleAssignment.objects.filter(
+        user=user,
+        active=True,
+        role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.SCHOOL_ADMIN, Role.CLASS_ADMIN],
+    ).filter(
+        models.Q(school_class=room.school_class)
+        | models.Q(school=room.school_class.school)
+        | models.Q(school__isnull=True, school_class__isnull=True)
+    ).exists()
+    if is_portal_admin:
+        return
     if not has_active_membership(user, room.school_class):
         raise PermissionDenied
+    if room.audience == room.Audience.STUDENTS:
+        if not StudentProfile.objects.filter(person=user.person).exists():
+            raise PermissionDenied
+    elif room.audience == room.Audience.GUARDIANS:
+        today = timezone.localdate()
+        is_guardian = GuardianChildRelationship.objects.filter(
+            guardian_person=user.person,
+            student_person__classmembership__school_class=room.school_class,
+            student_person__classmembership__status="active",
+            student_person__classmembership__valid_from__lte=today,
+            status="verified",
+            verified_at__isnull=False,
+            may_view_student_profile=True,
+            valid_from__lte=today,
+        ).filter(
+            models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=today),
+            models.Q(student_person__classmembership__valid_until__isnull=True)
+            | models.Q(student_person__classmembership__valid_until__gte=today),
+        ).exists()
+        if not is_guardian:
+            raise PermissionDenied
 
 
 def may_moderate(user, room):
