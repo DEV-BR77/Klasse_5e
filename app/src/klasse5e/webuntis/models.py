@@ -59,6 +59,7 @@ class FeatureKey(models.TextChoices):
     SUBSTITUTIONS = "substitutions", "Stundenplanänderungen und Vertretungen"
     EXAMS = "exams", "Prüfungen"
     HOMEWORK = "homework", "Hausaufgaben"
+    ABSENCES = "absences", "Abwesenheiten"
     HOLIDAYS = "holidays", "Ferien"
     TIMEGRID = "timegrid", "Stundenraster"
     SUBJECTS = "subjects", "Fächer"
@@ -144,6 +145,38 @@ class WebUntisHomework(models.Model):
                 name="unique_webuntis_homework_fingerprint",
             )
         ]
+
+
+class WebUntisAbsence(models.Model):
+    connection = models.ForeignKey(WebUntisConnection, on_delete=models.CASCADE, related_name="absences")
+    external_id = models.CharField(max_length=128)
+    starts_on = models.DateField()
+    ends_on = models.DateField()
+    starts_time = models.TimeField(null=True, blank=True)
+    ends_time = models.TimeField(null=True, blank=True)
+    source_status = models.CharField(max_length=80, blank=True)
+    fetched_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["connection", "external_id"], name="unique_webuntis_absence")]
+        ordering = ["-starts_on", "-pk"]
+
+
+class AbsenceDraft(models.Model):
+    """Local prototype only: deliberately has no submission state or transport."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    student = models.ForeignKey(Person, on_delete=models.CASCADE)
+    starts_on = models.DateField(default=timezone.localdate)
+    ends_on = models.DateField(default=timezone.localdate)
+    starts_time = models.TimeField(null=True, blank=True)
+    ends_time = models.TimeField(null=True, blank=True)
+    reason = models.CharField(max_length=16, choices=[("sick", "Krank"), ("doctor", "Arztbesuch"), ("other", "Sonstiges")])
+    note = models.TextField(max_length=2000, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
 
 
 class HomeworkProgress(models.Model):

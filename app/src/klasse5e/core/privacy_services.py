@@ -29,6 +29,7 @@ def erase_account_data(item: AccountDeletionRequest) -> None:
     # Integration credentials, sessions, push endpoints and personal notifications
     # have no retention purpose after withdrawal.
     user.webuntis_connections.all().delete()
+    user.absencedraft_set.all().delete()
     user.itslearningconnection_set.all().delete()
     PushSubscription.objects.filter(user=user).delete()
     user.notifications.all().delete()

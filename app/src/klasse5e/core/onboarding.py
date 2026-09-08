@@ -34,7 +34,7 @@ WEBUNTIS_KEYS = {
     "webuntis_teachers": "teachers",
     "webuntis_schoolyears": "schoolyears",
     "webuntis_statusdata": "statusdata",
-    "webuntis_absences": None,
+    "webuntis_absences": "absences",
 }
 
 STEP_CONTENT = {

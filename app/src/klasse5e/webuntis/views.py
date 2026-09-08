@@ -47,6 +47,7 @@ def connection(request):
         "timetable_extended",
         "substitutions",
         "homework",
+        "absences",
         "exams",
         "holidays",
         "timegrid",

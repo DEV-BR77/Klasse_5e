@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page narrow-page">
+  <header class="page-heading"><h1>Abwesenheiten</h1><a href="/">Zur Startseite</a></header>
+  <article class="settings-panel"><header><h2>Aus WebUntis importiert</h2></header>
+    <p>Von der Schule erfasste Abwesenheiten deiner Kinder. Der Stand entspricht dem letzten erfolgreichen Abruf; fehlende Einträge bedeuten nicht, dass keine Abwesenheit vorliegt.</p>
+    {% for item in absences %}<div class="settings-row"><div><strong>{{ item.connection.student.first_name }} · {{ item.starts_on|date:"d.m.Y" }} – {{ item.ends_on|date:"d.m.Y" }}</strong><p>{{ item.starts_time|time:"H:i" }} – {{ item.ends_time|time:"H:i" }} · {{ item.source_status }}</p><small>Abruf: {{ item.fetched_at|date:"d.m.Y H:i" }}</small></div></div>
+    {% empty %}<p>Noch keine importierten Abwesenheiten.</p>{% endfor %}
+  </article>
+  <article class="settings-panel"><header><h2>Abwesenheit melden · Prototyp</h2></header>
+    <p><strong>Dieser Entwurf wird nur im Portal gespeichert und nicht an WebUntis oder die Schule übertragen.</strong> Die tatsächliche Meldung erfolgt später gemeinsam über eine ausdrücklich gestartete Browsersteuerung.</p>
+    <form method="post" class="form-stack">{% csrf_token %}{{ form.as_p }}<button class="button button-primary">Entwurf lokal speichern – nicht senden</button></form>
+  </article>
+  <article class="settings-panel"><header><h2>Deine lokalen Entwürfe</h2></header>
+    {% for item in drafts %}<div class="settings-row"><div><strong>{{ item.student.first_name }} · {{ item.starts_on|date:"d.m.Y" }} – {{ item.ends_on|date:"d.m.Y" }}</strong><p>{{ item.starts_time|time:"H:i" }} – {{ item.ends_time|time:"H:i" }} · {{ item.get_reason_display }}</p><p>{{ item.note|linebreaksbr }}</p><span>Nicht übertragen</span><form method="post">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="draft_id" value="{{ item.pk }}"><button class="button button-secondary">Entwurf löschen</button></form></div></div>{% empty %}<p>Noch keine Entwürfe.</p>{% endfor %}
+  </article>
+</section>
+{% endblock %}

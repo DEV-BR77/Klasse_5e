@@ -755,6 +755,9 @@ def dashboard(request):
             ).select_related("course")[:3],
         }
     )
+    from klasse5e.webuntis.absences import child_contexts
+
+    context["absences_available"] = bool(child_contexts(request.user))
     return render(request, "ui/dashboard_v2.html", context)
 
 

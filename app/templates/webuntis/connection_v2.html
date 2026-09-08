@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% if absence_consent == "allowed" %}<a class="button button-secondary" href="{% url 'absence-portal' %}">Abwesenheiten · Abwesenheit melden</a>{% endif %}
 <section class="settings-page narrow-page">
   <header class="page-heading"><div><p class="eyebrow">Synchronisation</p><h1>Schuldaten synchronisieren</h1><p class="lede">Verbindung, Inhalte und Kalender an einer Stelle verwalten.</p></div><a class="button button-secondary" href="{% url 'ui-more' %}">← Hauptmenü</a></header>
   {% if students %}<form method="get" class="settings-row settings-child-select"><div><strong>Kind auswählen</strong><small>Nur bestätigte Eltern-Kind-Beziehungen werden angezeigt.</small></div><select id="student" name="student" onchange="this.form.submit()">{% for student in students %}<option value="{{ student.pk }}" {% if selected.pk == student.pk %}selected{% endif %}>{{ student.first_name }} {{ student.last_name }}</option>{% endfor %}</select></form>{% else %}<div class="empty-state"><h2>Noch kein bestätigtes Kind</h2><p>Die Klassenverwaltung muss die Eltern-Kind-Beziehung zuerst prüfen. Namen oder E-Mail-Adressen werden aus Sicherheitsgründen nicht automatisch zusammengeführt.</p></div>{% endif %}

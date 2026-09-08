@@ -401,13 +401,14 @@ def _save_personal_profile(request, person):
             messages.success(request, f"Theme „{theme.name}“ ist jetzt aktiv.")
             return redirect(f"{reverse('personal-profile')}?tab=themes")
         if save_scope == "notifications":
-            categories = ("events", "timetable", "homework", "exams", "chat", "carpool")
+            categories = ("events", "timetable", "homework", "exams", "chat", "carpool", "absences")
             for category in categories:
                 for channel in ("push", "inapp"):
                     PushPreference.objects.update_or_create(
                         user=request.user,
                         key=f"{channel}_{category}",
-                        defaults={"enabled": request.POST.get(f"{channel}_{category}") == "on"},
+                        defaults={"enabled": request.POST.get(f"{channel}_{category}") == "on"
+                                  and not (category == "absences" and channel == "push")},
                     )
             PushPreference.objects.update_or_create(
                 user=request.user, key="push_chat_mentions",
@@ -489,6 +490,7 @@ def _notification_rows(user):
     labels = (
         ("events", "event", "Veranstaltung", "Neue oder geänderte Veranstaltung"),
         ("timetable", "calendar", "Stundenplan", "Änderung, Vertretung oder Ausfall"),
+        ("absences", "calendar", "Abwesenheiten", "Neue importierte Abwesenheit (nur In-App)"),
         ("homework", "document", "Hausaufgaben", "Neue Hausaufgabe"),
         ("exams", "consent", "Prüfungen", "Neuer Test oder neue Prüfung"),
         ("chat", "chat", "Chat", "Wenn du mit @ erwähnt wirst"),
@@ -497,7 +499,7 @@ def _notification_rows(user):
     stored = {item.key: item.enabled for item in PushPreference.objects.filter(user=user)}
     rows = [
         {"key": key, "icon": icon, "label": label, "description": description,
-         "push": stored.get(f"push_{key}", False), "inapp": stored.get(f"inapp_{key}", True)}
+         "push": stored.get(f"push_{key}", False), "inapp": stored.get(f"inapp_{key}", key != "absences")}
         for key, icon, label, description in labels
     ]
     for row in rows:
@@ -572,9 +574,20 @@ def profile_photo(request, person_id):
     return response
 
 
+def _notification_class(request):
+    from .family_context import active_child_school_class, available_child_contexts
+    from .policies import has_active_membership
+
+    school_class = active_child_school_class(request) or active_class_for_user(request.user)
+    if school_class is None:
+        classes = {child.school_class for child in available_child_contexts(request.user) if child.school_class}
+        school_class = next(iter(classes)) if len(classes) == 1 else None
+    return school_class if school_class and has_active_membership(request.user, school_class) else None
+
+
 @login_required
 def notification_list(request):
-    school_class = active_class_for_user(request.user)
+    school_class = _notification_class(request)
     if not school_class:
         raise Http404
     items = UserNotification.objects.filter(user=request.user, school_class=school_class)
@@ -592,7 +605,7 @@ def notification_list(request):
 @login_required
 @require_POST
 def notification_read(request, notification_id):
-    school_class = active_class_for_user(request.user)
+    school_class = _notification_class(request)
     with transaction.atomic():
         item = (
             UserNotification.objects.select_for_update()
@@ -610,7 +623,7 @@ def notification_read(request, notification_id):
 @login_required
 @require_POST
 def notifications_read_all(request):
-    school_class = active_class_for_user(request.user)
+    school_class = _notification_class(request)
     if not school_class:
         raise Http404
     UserNotification.objects.filter(

@@ -207,6 +207,10 @@ def sync_homework(connection, adapter, *, today=None):
 def sync_feature(connection, adapter, key):
     if key in {"timetable", "timetable_extended", "substitutions"}:
         return sync_timetable(connection, adapter)
+    if key == "absences":
+        from .absences import sync_absences
+
+        return sync_absences(connection, adapter)
     if key == "homework":
         return sync_homework(connection, adapter)
     return None

@@ -64,6 +64,9 @@ def module_context(request):
     family_children, active_child = active_child_context(request)
     person = request.user.person if hasattr(request.user, "person") else None
     school_class = active_child_school_class(request) or active_class_for_user(request.user)
+    if school_class is None:
+        child_classes = {child.school_class for child in family_children if child.school_class}
+        school_class = next(iter(child_classes)) if len(child_classes) == 1 else None
     keys = PortalModule.objects.values_list("key", flat=True)
     unread_count = 0
     if school_class:

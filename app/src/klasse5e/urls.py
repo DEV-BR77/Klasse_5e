@@ -15,8 +15,10 @@ from klasse5e.media import views as media_views
 from klasse5e.mobility import views as mobility_views
 from klasse5e.schedule import views as schedule_views
 from klasse5e.webuntis import views as webuntis_views
+from klasse5e.webuntis.absences import absence_portal
 
 urlpatterns = [
+    path("abwesenheiten/", absence_portal, name="absence-portal"),
     path("registrieren/", views.register, name="register"),
     path("einladung/", views.invitation_entry, name="invitation-entry"),
     path("familie/start/<str:token>/", views.family_register, name="family-register"),
