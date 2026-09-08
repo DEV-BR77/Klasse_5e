@@ -125,3 +125,11 @@ UX-Spezifikationen. Aufgabe 14 setzt den versionierten Einwilligungskatalog,
 fortsetzbares Onboarding, Tutorial, Mehr-Sorgeberechtigten-Regel und
 Widerrufsfolgen um. Eine organisatorische Produktivfreigabe ist dadurch nicht
 vorweggenommen; offene Beschlussfelder bleiben Gate vor einem Realpilot.
+
+## Freigegebener Folgeauftrag: Abwesenheiten
+
+Der Auftrag vom 08.09.2026 ergänzt persönliche WebUntis-Abwesenheitsimporte,
+Opt-in-In-App-Hinweise und einen lokalen Meldeprototyp. Die frühere Zurückstellung
+von Krankmeldungen wird ausschließlich für diesen Prototyp aufgehoben.
+[Abnahme und Betriebsvertrag](Abwesenheiten.md); Übertragung ausschließlich
+später gemeinsam per Browser, keine automatische Schreibintegration.

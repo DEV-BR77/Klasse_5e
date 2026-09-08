@@ -393,3 +393,13 @@ Anbieter übertragen werden.
 **Folge:** Die OSM-/ODbL-Attribution bleibt sichtbar und die Kartendatei wird
 bei Bedarf mit `tools/Build-LocalMobilityMap.py` aktualisiert. Straßenrouting
 oder externe Kacheln benötigen weiterhin eine neue Entscheidung.
+
+## ADR-028: Abwesenheiten lesen, Meldungen lokal vorbereiten
+
+Der Folgeauftrag vom 08.09.2026 erlaubt persönliche Abwesenheitsimporte und
+lokale Meldeentwürfe. Der bestehende Read-only-Adapter erhält Persistenz und
+Opt-in-Glockenhinweise. Eine Meldung nach WebUntis wird ausschließlich in einem
+späteren gemeinsamen Browserdurchlauf ausgeführt; automatische Browseraktionen
+und API-Schreibzugriffe werden nicht implementiert. Persönliche Zugriffe
+erfordern aktuelle Beziehung, Klasse und Einwilligung. Details und Grenzen
+stehen in [Abwesenheiten](Abwesenheiten.md).

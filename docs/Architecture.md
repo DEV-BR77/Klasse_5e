@@ -424,3 +424,8 @@ Kalendereinträge besitzen eine monotone Revision; ein separates Änderungsobjek
 ermöglicht Deduplizierung pro Eintrag, Revision und Empfänger. iCal-Tokens sind
 zufällig, ausschließlich gehasht gespeichert, rotierbar und an die aktive
 Klassenmitgliedschaft gebunden.
+
+## Abwesenheiten
+
+Importmodell und persönlicher lokaler Meldeentwurf bleiben im Django-Modul
+`webuntis`. Zugriff, Importvertrag und Versandgrenze: [Abwesenheiten](Abwesenheiten.md).
