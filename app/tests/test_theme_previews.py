@@ -82,7 +82,7 @@ def test_theme_settings_links_to_preview_instead_of_activating_it(client, guardi
     )
     client.force_login(guardian)
 
-    response = client.get("/einstellungen/design/", secure=True)
+    response = client.get("/einstellungen/profil/?tab=themes", secure=True)
 
     assert response.status_code == 200
     assert f"/einstellungen/design/vorschau/{theme.id}/uebersicht/".encode() in response.content
@@ -94,14 +94,14 @@ def test_theme_settings_links_administrators_to_the_css_template_catalog(
 ):
     client.force_login(admin_user)
 
-    management_link = client.get("/einstellungen/design/", secure=True)
+    management_link = client.get("/einstellungen/profil/?tab=themes", secure=True)
 
     assert management_link.status_code == 200
     assert b"6 CSS-Vorlagen vergleichen" in management_link.content
     assert b'/verwaltung/themes/' in management_link.content
 
     client.force_login(guardian)
-    guardian_view = client.get("/einstellungen/design/", secure=True)
+    guardian_view = client.get("/einstellungen/profil/?tab=themes", secure=True)
 
     assert b"CSS-Vorlagen vergleichen" not in guardian_view.content
 
@@ -124,7 +124,7 @@ def test_administrator_can_release_a_preview_template_as_a_portal_theme(
     assert released.name == "Velora UI"
 
     client.force_login(guardian)
-    personal_themes = client.get("/einstellungen/design/", secure=True)
+    personal_themes = client.get("/einstellungen/profil/?tab=themes", secure=True)
 
     assert b"Velora UI" in personal_themes.content
 

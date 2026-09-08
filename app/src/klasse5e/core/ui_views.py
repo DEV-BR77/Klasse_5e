@@ -547,7 +547,9 @@ def _webuntis_connections(user):
 @login_required
 def dashboard(request):
     family_children, active_child = active_child_context(request)
-    dashboard_child = active_child
+    # A household with exactly one child has an unambiguous personal portal
+    # context even before the family switcher has been used in this browser.
+    dashboard_child = active_child or (family_children[0] if len(family_children) == 1 else None)
     school_class = dashboard_child.school_class if dashboard_child else None
     if school_class is None and not family_children:
         school_class = _class_or_404(request.user, request)
@@ -694,6 +696,11 @@ def dashboard(request):
             "homework": homework,
             "family_children": family_children,
             "active_child": active_child,
+            "family_overview_items": (
+                _family_overview_items(family_children, now=timezone.now())
+                if not active_child and len(family_children) > 1
+                else []
+            ),
             "calendar_entries": calendar_entries,
             "events": (
                 Event.objects.filter(

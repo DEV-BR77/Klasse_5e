@@ -37,9 +37,9 @@ from .models import (
     GuardianChildRelationship,
     Invitation,
     Person,
-    PushSubscription,
-    PushPreference,
     PortalTheme,
+    PushPreference,
+    PushSubscription,
     RegistrationApplication,
     Role,
     RoleAssignment,
@@ -380,6 +380,10 @@ def personal_profile(request):
             "avatar_presets": PROFILE_AVATAR_PRESETS,
             "avatar_designer": avatar_designer_context(),
             "themes": PortalTheme.objects.filter(is_active=True),
+            "can_manage_themes": request.user.is_superuser
+            or request.user.roleassignment_set.filter(
+                active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+            ).exists(),
             "notification_rows": _notification_rows(request.user),
             "push_active": PushSubscription.objects.filter(user=request.user, enabled=True).exists(),
             "vapid_configured": bool(settings.VAPID_PUBLIC_KEY),

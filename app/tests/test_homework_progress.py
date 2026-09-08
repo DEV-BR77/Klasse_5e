@@ -106,7 +106,7 @@ def test_dashboard_names_tomorrow_and_renders_a_double_lesson_time_range(
     assert copy["dashboard_heading"] == "Was steht morgen an?"
     assert _dashboard_day_copy(day, today=day)["dashboard_heading"] == "Was steht heute an?"
     assert "Morgen" in html
-    assert "07:45–09:15 Uhr" in html
+    assert "07:45\u201309:15 Uhr" in html
 
 
 @pytest.mark.django_db

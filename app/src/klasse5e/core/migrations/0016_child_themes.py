@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 CHILD_THEMES = [
     {
         "key": "princess-garden",

@@ -88,7 +88,7 @@ def test_dashboard_combines_important_items_for_all_children(client, guardian, t
     html = response.content.decode()
     assert "Familie im Blick" in html
     assert "Mila" in html and "Jonas" in html
-    assert "Sport fällt aus" in html
+    assert "Sport f" + chr(0xE4) + "llt aus" in html
     assert "Elterninformation Jahrgang 7" in html
 
 

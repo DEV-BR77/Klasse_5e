@@ -26,6 +26,7 @@
     </div>
 
     <div id="dashboard-panel-day" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboard-tab-day" data-dashboard-panel="day">
+      {% if family_overview_items %}<article class="dashboard-subsection"><header class="card-header"><div><p class="eyebrow">Familie</p><h2>Alle wichtigen Termine</h2></div></header><ol class="timeline-list compact-timeline">{% for item in family_overview_items %}<li><time>{{ item.when|date:"d.m. H:i" }} Uhr</time><div><strong>{{ item.title }}</strong><small>{{ item.child.student.first_name }} · {{ item.kind }}{% if item.detail %} · {{ item.detail }}{% endif %}</small></div></li>{% endfor %}</ol></article>{% endif %}
       <div class="dashboard-summary-grid">
         <article class="dashboard-subsection schedule-card">
           <header class="card-header"><div><p class="eyebrow">{{ dashboard_schedule_label }}</p><h2>Stundenplan</h2></div><span class="soft-badge">{{ lessons|length }} Einträge</span></header>
