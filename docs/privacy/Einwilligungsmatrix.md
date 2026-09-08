@@ -5,7 +5,7 @@ Alle optionalen Zwecke sind standardmäßig aus. Ein globaler Sammelschalter ist
 | Schlüssel | Zweck | Betroffene Person | Erforderliche Entscheidung | Widerrufsfolge |
 |---|---|---|---|---|
 | `profile_contact_visibility` | Kontaktangaben in der Klasse zeigen | Erwachsene/Schüler | selbst bzw. alle aktuell verwaltungsberechtigten Sorgeberechtigten | Felder sofort verbergen |
-| `photo_gallery` | erkennbare Fotos in geschützter Galerie | abgebildete Person | selbst bzw. alle berechtigten Sorgeberechtigten | neue Anzeige stoppen, Löschprüfung starten |
+| `photo_gallery` | erkennbare Fotos in geschützter Galerie und auf Familienbildern der Kontaktkarte | abgebildete Person | selbst bzw. alle berechtigten Sorgeberechtigten | neue Anzeige stoppen; Familienbild sofort ausblenden, Löschprüfung starten |
 | `biometric_face_search` | biometrische Suche in privaten Galerien | abgebildeter Schüler | alle berechtigten Sorgeberechtigten; zusätzlich altersangemessene Beteiligung | Profil, Ausschnitte und Embeddings löschen |
 | `push_general` | allgemeine Portal-Benachrichtigungen | Kontoinhaber | selbst | Kategorie und Endpunkt deaktivieren |
 | `push_chat` | Benachrichtigung über Chats | Kontoinhaber | selbst | Kategorie deaktivieren |

@@ -63,10 +63,15 @@ Abnahmetests.
   öffnen“ eine zentrierte, mobile Kachel. Freigegebene Telefon- und
   E-Mail-Adressen sind sichere `tel:`- und `mailto:`-Links; die Kontaktkarte
   zeigt nur nach aktueller Klassen- und Beziehungsprüfung sichtbare Angaben.
-- [ ] **Familienbild und Ersatzdarstellung.** Optionales Familienfoto für die
+- [x] **Familienbild und Ersatzdarstellung.** Optionales Familienfoto für die
   Kontaktkarte; ohne Bild einen Initialen-Kreis aus dem Familiennamen.
   Sichtbarkeit nur mit erforderlichen Foto-Freigaben aller abgebildeten
   Personen.
+  **Abgeschlossen am 09.09.2026:** Familienbilder sind klassenbezogen,
+  enthalten eine ausdrückliche Liste der abgebildeten Personen und werden nur
+  mit deren aktueller Foto-Freigabe geschützt ausgeliefert. Ein Widerruf
+  blendet das Bild sofort aus; die Kontaktkarte zeigt dann die
+  Familieninitialen.
 - [x] **Adressfreigabe.** Einen gemeinsamen Schalter „Adresse im Portal
   anzeigen“ für Straße, Postleitzahl und Ort ergänzen.
   **Abgeschlossen am 09.09.2026:** Auf ausdrückliche Erweiterung der
