@@ -19,7 +19,7 @@ den sichtbaren Schalter leer. Das betrifft auch die Schalter unter Schulzugänge
 Adapter werden aktuell unter `/verwaltung/adapter/` schulgebunden angelegt und
 freigeschaltet. Familien wählen freigegebene Module unter Kind → Schulzugänge.
 Der vollständige zentrale Katalog mit Schulzuordnung und direkter persönlicher
-Zugangspflege beim Kind ist als separate **Aufgabe 16 in Nextsteps.md** dokumentiert.
+Zugangspflege beim Kind ist als separate **BL-16 in [Backlog.md](Backlog.md)** dokumentiert.
 
 Regressionen: `test_family_privacy_table.py`, `test_family_centre.py` und
 `test_onboarding.py` prüfen Darstellung, Speichern, Widerruf und Berechtigungen.
