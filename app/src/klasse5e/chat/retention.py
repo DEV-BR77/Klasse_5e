@@ -15,6 +15,8 @@ def cleanup_expired_messages(*, now=None):
         days = category.retention_days
         if message.created_at >= now - timedelta(days=days):
             continue
+        if message.reports.filter(resolved_at__isnull=True).exists():
+            continue
         if message.attachment:
             message.attachment.delete(save=False)
         message.delete()

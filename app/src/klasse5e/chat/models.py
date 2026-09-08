@@ -71,6 +71,51 @@ class ChatRoom(models.Model):
             raise ValidationError("event_class_mismatch")
 
 
+class DirectConversation(models.Model):
+    room = models.OneToOneField(
+        ChatRoom, on_delete=models.CASCADE, related_name="direct_conversation"
+    )
+    school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE)
+    participant_one = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="direct_conversations_as_one",
+    )
+    participant_two = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="direct_conversations_as_two",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school_class", "participant_one", "participant_two"],
+                name="unique_direct_conversation_pair_class",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(participant_one__lt=models.F("participant_two")),
+                name="direct_conversation_ordered_participants",
+            ),
+        ]
+
+    def clean(self):
+        if self.participant_one_id and self.participant_two_id:
+            if self.participant_one_id >= self.participant_two_id:
+                raise ValidationError("direct_participants_must_be_ordered")
+        if self.room_id and self.school_class_id:
+            if self.room.school_class_id != self.school_class_id:
+                raise ValidationError("direct_conversation_class_mismatch")
+
+    def other_participant(self, user):
+        if user.pk == self.participant_one_id:
+            return self.participant_two
+        if user.pk == self.participant_two_id:
+            return self.participant_one
+        return None
+
+
 class ChatMessage(models.Model):
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     room = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name="messages")

@@ -1,9 +1,10 @@
 import json
 
+from django.contrib import messages as django_messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -11,7 +12,13 @@ from klasse5e.core.models import AuditEvent
 from klasse5e.core.policies import family_label
 
 from .models import ChatMessage, ChatReport, ChatRoom
-from .services import create_message, mark_read, may_moderate, require_room_access
+from .services import (
+    create_message,
+    mark_read,
+    may_moderate,
+    require_room_access,
+    room_title_for_user,
+)
 
 
 def _room(room_id):
@@ -28,7 +35,7 @@ def room_detail(request, room_id):
     return JsonResponse(
         {
             "id": str(room.public_id),
-            "title": room.title,
+            "title": room_title_for_user(room, request.user),
             "poll_url": f"/chat/rooms/{room.public_id}/messages/",
         }
     )
@@ -79,7 +86,13 @@ def edit_or_delete_message(request, message_id):
     if message.author_id != request.user.id or message.withdrawn_at:
         raise Http404
     if request.method == "DELETE":
-        message.body = ""
+        if not message.reports.filter(resolved_at__isnull=True).exists():
+            message.body = ""
+            if message.attachment:
+                message.attachment.delete(save=False)
+            message.attachment = ""
+            message.attachment_name = ""
+            message.attachment_content_type = ""
         message.withdrawn_at = timezone.now()
         action = "chat.message.withdrawn"
     else:
@@ -113,9 +126,20 @@ def report_message(request, message_id):
     reason = request.POST.get("reason", "other")
     if reason not in {"inappropriate", "privacy", "other"}:
         reason = "other"
-    ChatReport.objects.get_or_create(
+    report, created = ChatReport.objects.get_or_create(
         message=message, reporter=request.user, defaults={"reason": reason}
     )
+    if created:
+        AuditEvent.objects.create(
+            actor=request.user,
+            action="chat.message.reported",
+            target_type="chat_message",
+            target_id=str(message.public_id),
+            metadata={"reason": report.reason},
+        )
+    if request.POST.get("return_to") == "room":
+        django_messages.success(request, "Die Nachricht wurde der Moderation gemeldet.")
+        return redirect("ui-chat-room", room_id=message.room.public_id)
     return HttpResponse(status=204)
 
 
@@ -124,6 +148,11 @@ def report_message(request, message_id):
 def moderate_message(request, message_id):
     message = get_object_or_404(ChatMessage, public_id=message_id)
     if not may_moderate(request.user, message.room):
+        raise Http404
+    if (
+        getattr(message.room, "direct_conversation", None)
+        and not message.reports.filter(resolved_at__isnull=True).exists()
+    ):
         raise Http404
     message.hidden_at = timezone.now()
     message.hidden_by = request.user

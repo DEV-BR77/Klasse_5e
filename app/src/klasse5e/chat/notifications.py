@@ -1,3 +1,4 @@
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from web_push_kit import DeliveryStatus, NotificationPayload, Subscription
 
@@ -9,6 +10,63 @@ from klasse5e.core.models import (
 from klasse5e.webuntis.notifications import configured_sender
 
 from .models import ChatMessage
+
+
+def notify_direct_message(message_id, *, sender=None):
+    message = ChatMessage.objects.select_related(
+        "room__direct_conversation__participant_one",
+        "room__direct_conversation__participant_two",
+    ).get(pk=message_id)
+    direct = getattr(message.room, "direct_conversation", None)
+    if not direct:
+        return 0
+    recipient = direct.other_participant(message.author)
+    if recipient is None:
+        return 0
+    from .services import require_room_access
+
+    try:
+        require_room_access(recipient, message.room)
+    except PermissionDenied:
+        return 0
+
+    target_url = f"/chat/{message.room.public_id}/ansicht/"
+    if not PushPreference.objects.filter(
+        user=recipient, key="inapp_chat", enabled=False
+    ).exists():
+        UserNotification.objects.get_or_create(
+            user=recipient,
+            school_class=message.room.school_class,
+            object_type="direct_chat_message",
+            object_id=str(message.public_id),
+            revision="created",
+            defaults={
+                "category": "chat",
+                "title": "Neue private Nachricht",
+                "summary": "In deiner privaten Unterhaltung wartet eine neue Nachricht.",
+                "target_url": target_url,
+            },
+        )
+
+    sender = sender or configured_sender()
+    if sender is None or not PushPreference.objects.filter(
+        user=recipient, key="push_chat", enabled=True
+    ).exists():
+        return 1
+    for stored in PushSubscription.objects.filter(user=recipient, enabled=True):
+        result = sender.send(
+            Subscription(endpoint=stored.endpoint, p256dh=stored.p256dh, auth=stored.auth),
+            NotificationPayload(
+                title="KlassID",
+                body="Du hast eine neue private Nachricht.",
+                url=target_url,
+                category="chat",
+                message_id=f"direct-{message.public_id}",
+            ),
+        )
+        if result.status == DeliveryStatus.STALE:
+            stored.delete()
+    return 1
 
 
 def notify_mentions(message_id, *, sender=None):
@@ -59,11 +117,13 @@ def notify_parent_representatives(message_id):
     message = ChatMessage.objects.select_related("room").get(pk=message_id)
     from klasse5e.core.role_management import parent_representatives
 
-    if not (message.room.parent_representative_chat or
-            message.room.audience == message.room.Audience.PARENT_REPRESENTATIVES):
+    if not (
+        message.room.parent_representative_chat
+        or message.room.audience == message.room.Audience.PARENT_REPRESENTATIVES
+    ):
         return
+
     from .services import require_room_access
-    from django.core.exceptions import PermissionDenied
 
     for user in parent_representatives(message.room.school_class):
         try:

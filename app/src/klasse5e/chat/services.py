@@ -7,11 +7,18 @@ from klasse5e.core.models import (
     GuardianChildRelationship,
     Role,
     RoleAssignment,
+    SchoolClass,
     StudentProfile,
 )
 from klasse5e.core.policies import active_roles, has_active_membership
 
-from .models import ChatMessage, ChatReadState
+from .models import (
+    ChatMessage,
+    ChatReadState,
+    ChatRetentionCategory,
+    ChatRoom,
+    DirectConversation,
+)
 from .safety import filter_chat_language
 
 
@@ -20,10 +27,17 @@ def _mentioned_users(room, body):
 
     from klasse5e.core.models import UserAccount
 
-    users = UserAccount.objects.filter(
-        person__classmembership__school_class=room.school_class,
-        person__classmembership__status="active",
-    ).select_related("person").distinct()
+    direct = getattr(room, "direct_conversation", None)
+    if direct:
+        users = UserAccount.objects.filter(
+            pk__in=[direct.participant_one_id, direct.participant_two_id]
+        )
+    else:
+        users = UserAccount.objects.filter(
+            person__classmembership__school_class=room.school_class,
+            person__classmembership__status="active",
+        )
+    users = users.select_related("person").distinct()
     found = []
     for candidate in users:
         aliases = {candidate.person.first_name.strip(), candidate.person.chat_display_name.strip()}
@@ -33,6 +47,14 @@ def _mentioned_users(room, body):
 
 
 def require_room_access(user, room):
+    direct = getattr(room, "direct_conversation", None)
+    if direct:
+        if (
+            user.pk not in {direct.participant_one_id, direct.participant_two_id}
+            or not has_active_membership(user, room.school_class)
+        ):
+            raise PermissionDenied
+        return
     is_portal_admin = user.is_superuser or RoleAssignment.objects.filter(
         user=user,
         active=True,
@@ -84,6 +106,92 @@ def may_moderate(user, room):
     )
 
 
+def may_start_direct_conversation(user, target_person, school_class):
+    if (
+        not getattr(user, "is_authenticated", False)
+        or not getattr(user, "is_active", False)
+        or user.locked_at
+        or not target_person.user_id
+        or target_person.user_id == user.pk
+        or not target_person.user.is_active
+        or target_person.user.locked_at
+        or not has_active_membership(user, school_class)
+        or not has_active_membership(target_person.user, school_class)
+    ):
+        return False
+    today = timezone.localdate()
+    return GuardianChildRelationship.objects.filter(
+        guardian_person=target_person,
+        status="verified",
+        verified_at__isnull=False,
+        may_view_student_profile=True,
+        valid_from__lte=today,
+        student_person__classmembership__school_class=school_class,
+        student_person__classmembership__status="active",
+        student_person__classmembership__valid_from__lte=today,
+    ).filter(
+        models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=today),
+        models.Q(student_person__classmembership__valid_until__isnull=True)
+        | models.Q(student_person__classmembership__valid_until__gte=today),
+    ).exists()
+
+
+@transaction.atomic
+def get_or_create_direct_conversation(user, target_person, school_class):
+    school_class = SchoolClass.objects.select_for_update().get(pk=school_class.pk)
+    if not may_start_direct_conversation(user, target_person, school_class):
+        raise PermissionDenied
+    participant_one_id, participant_two_id = sorted([user.pk, target_person.user_id])
+    existing = DirectConversation.objects.select_related("room").filter(
+        school_class=school_class,
+        participant_one_id=participant_one_id,
+        participant_two_id=participant_two_id,
+    ).first()
+    if existing:
+        return existing
+    retention, _created = ChatRetentionCategory.objects.get_or_create(
+        name="Private Nachrichten",
+        defaults={
+            "retention_days": 180,
+            "automatic_deletion_enabled": True,
+            "intended_for_events": False,
+            "is_active": True,
+        },
+    )
+    room = ChatRoom.objects.create(
+        school_class=school_class,
+        school_year=school_class.school_year,
+        title="Private Unterhaltung",
+        retention_category=retention,
+    )
+    conversation = DirectConversation.objects.create(
+        room=room,
+        school_class=school_class,
+        participant_one_id=participant_one_id,
+        participant_two_id=participant_two_id,
+    )
+    AuditEvent.objects.create(
+        actor=user,
+        action="chat.direct_conversation.created",
+        target_type="direct_conversation",
+        target_id=str(room.public_id),
+    )
+    return conversation
+
+
+def room_title_for_user(room, user):
+    direct = getattr(room, "direct_conversation", None)
+    if not direct:
+        return room.title
+    other = direct.other_participant(user)
+    if not other:
+        return "Private Unterhaltung"
+    person = getattr(other, "person", None)
+    if not person:
+        return "Private Unterhaltung"
+    return person.chat_display_name or person.first_name or "Private Unterhaltung"
+
+
 @transaction.atomic
 def create_message(room, user, body, reply_to=None, attachment=None):
     require_room_access(user, room)
@@ -129,17 +237,24 @@ def create_message(room, user, body, reply_to=None, attachment=None):
             target_id=str(message.public_id),
             metadata={"hit_count": filter_hits},
         )
-    mentioned = [
-        candidate for candidate in _mentioned_users(room, filtered_body) if candidate.pk != user.pk
-    ]
-    if mentioned:
-        message.mentions.add(*mentioned)
-        from .notifications import notify_mentions
+    if getattr(room, "direct_conversation", None):
+        from .notifications import notify_direct_message
 
-        transaction.on_commit(lambda: notify_mentions(message.pk))
-    from .notifications import notify_parent_representatives
+        transaction.on_commit(lambda: notify_direct_message(message.pk))
+    else:
+        mentioned = [
+            candidate
+            for candidate in _mentioned_users(room, filtered_body)
+            if candidate.pk != user.pk
+        ]
+        if mentioned:
+            message.mentions.add(*mentioned)
+            from .notifications import notify_mentions
 
-    transaction.on_commit(lambda: notify_parent_representatives(message.pk))
+            transaction.on_commit(lambda: notify_mentions(message.pk))
+        from .notifications import notify_parent_representatives
+
+        transaction.on_commit(lambda: notify_parent_representatives(message.pk))
     return message
 
 
