@@ -5,16 +5,23 @@ from datetime import time, timedelta
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
+from django.db import models, transaction
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from klasse5e.core.family_context import available_child_contexts
-from klasse5e.core.models import AuditEvent, ConsentType, Person, PushPreference, UserNotification
+from klasse5e.core.models import (
+    AuditEvent,
+    ClassMembership,
+    ConsentType,
+    Person,
+    PushPreference,
+    UserNotification,
+)
 from klasse5e.core.module_flags import module_enabled
-from klasse5e.core.policies import consent_state, has_active_membership
+from klasse5e.core.policies import consent_state, has_active_membership, visible_student_people
 
 from .importer import MissingStudentId, _date_value
 from .models import AbsenceDraft, WebUntisAbsence, WebUntisConnection
@@ -32,6 +39,39 @@ def child_contexts(user):
         and consent
         and consent_state(consent, child.student) == "allowed"
     ]
+
+
+def absence_data_allowed(student):
+    consent = ConsentType.objects.filter(key="webuntis_absences").first()
+    if consent is None:
+        return False
+    today = timezone.localdate()
+    membership = (
+        ClassMembership.objects.filter(
+            person=student,
+            status="active",
+            valid_from__lte=today,
+            school_class__school_year__starts_on__lte=today,
+            school_class__school_year__ends_on__gte=today,
+        )
+        .filter(models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=today))
+        .select_related("school_class")
+        .first()
+    )
+    return bool(
+        membership
+        and module_enabled("webuntis_timetable", membership.school_class)
+        and consent_state(consent, student) == "allowed"
+    )
+
+
+def visible_absence_students(user):
+    """Return consented absence subjects visible to the child or a guardian."""
+
+    allowed_ids = [
+        student.pk for student in visible_student_people(user) if absence_data_allowed(student)
+    ]
+    return Person.objects.filter(pk__in=allowed_ids)
 
 
 def _clock(value):
@@ -174,23 +214,28 @@ class AbsenceDraftForm(forms.ModelForm):
 @require_http_methods(["GET", "POST"])
 def absence_portal(request):
     children = child_contexts(request.user)
-    if not children:
+    visible_ids = list(visible_absence_students(request.user).values_list("pk", flat=True))
+    if not visible_ids:
         raise Http404
-    ids = [child.student.pk for child in children]
-    form = AbsenceDraftForm(request.POST if request.method == "POST" else None, children=children)
+    draft_ids = [child.student.pk for child in children]
+    form = (
+        AbsenceDraftForm(request.POST if request.method == "POST" else None, children=children)
+        if children
+        else None
+    )
     if request.method == "POST" and request.POST.get("action") == "delete":
         try:
             draft_id = int(request.POST.get("draft_id", ""))
         except (TypeError, ValueError):
             raise Http404 from None
         draft = AbsenceDraft.objects.filter(
-            pk=draft_id, user=request.user, student_id__in=ids
+            pk=draft_id, user=request.user, student_id__in=draft_ids
         ).first()
         if draft is None:
             raise Http404
         draft.delete()
         return redirect("absence-portal")
-    if request.method == "POST" and form.is_valid():
+    if request.method == "POST" and form is not None and form.is_valid():
         draft = form.save(commit=False)
         draft.user = request.user
         draft.save()
@@ -208,13 +253,12 @@ def absence_portal(request):
             "page_title": "Abwesenheiten",
             "form": form,
             "absences": WebUntisAbsence.objects.filter(
-                connection__user=request.user,
-                connection__student_id__in=ids,
+                connection__student_id__in=visible_ids,
                 ends_on__gte=timezone.localdate() - timedelta(days=90),
             ).select_related("connection__student"),
             "drafts": AbsenceDraft.objects.filter(
                 user=request.user,
-                student_id__in=ids,
+                student_id__in=draft_ids,
                 created_at__gte=timezone.now() - timedelta(days=30),
             ).select_related("student"),
         },

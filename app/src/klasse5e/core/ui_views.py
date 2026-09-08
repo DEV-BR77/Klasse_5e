@@ -60,7 +60,6 @@ from klasse5e.portal_adapters.models import (
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
 from klasse5e.webuntis.models import (
     HomeworkProgress,
-    WebUntisConnection,
     WebUntisHomework,
     WebUntisLesson,
 )
@@ -93,7 +92,7 @@ from .models import (
     UserAccount,
     UserNotification,
 )
-from .policies import active_roles, family_label
+from .policies import active_roles, family_label, visible_student_people
 from .registration import sanitized_profile_photo
 from .school_import import EXPECTED_FIELDS, detect_encoding, import_schools
 from .session_security import (
@@ -446,10 +445,17 @@ def _shared(request, title, section):
     }
 
 
-def _connections_for_active_child(connections, child):
+def _connections_for_active_child(connections, child, user=None):
     """Keep personal school data in the child area, never mixed by accident."""
 
-    return connections.filter(student_id=child.student.id) if child else connections.none()
+    person_id = child.student.id if child else None
+    if person_id is None and user and visible_student_people(user).filter(pk=user.person.pk).exists():
+        person_id = user.person.pk
+    if person_id is None:
+        return connections.none()
+    if connections.model is ItslearningConnection:
+        return connections.filter(student__person_id=person_id)
+    return connections.filter(student_id=person_id)
 
 
 def _family_overview_items(children, *, now):
@@ -543,25 +549,15 @@ def select_active_child(request, student_id=None):
 
 
 def _itslearning_connections(user):
-    student_ids = GuardianChildRelationship.objects.filter(
-        guardian_person=user.person,
-        status="verified",
-        verified_at__isnull=False,
-        may_view_student_profile=True,
-    ).values("student_person__studentprofile")
-    return ItslearningConnection.objects.filter(owner=user, student_id__in=student_ids, active=True)
+    return ItslearningConnection.objects.filter(
+        student__person__in=visible_student_people(user), active=True
+    )
 
 
 def _webuntis_connections(user):
-    if not hasattr(user, "person"):
-        return WebUntisConnection.objects.none()
-    student_ids = GuardianChildRelationship.objects.filter(
-        guardian_person=user.person,
-        status="verified",
-        verified_at__isnull=False,
-        may_view_student_profile=True,
-    ).values("student_person")
-    return WebUntisConnection.objects.filter(user=user, student_id__in=student_ids)
+    from klasse5e.webuntis.services import visible_connections
+
+    return visible_connections(user)
 
 
 @login_required
@@ -638,10 +634,10 @@ def dashboard(request):
     ]
     context = _shared(request, "Start", "start")
     portal_connections = _connections_for_active_child(
-        _itslearning_connections(request.user), dashboard_child
+        _itslearning_connections(request.user), dashboard_child, request.user
     )
     webuntis_connections = _connections_for_active_child(
-        _webuntis_connections(request.user), dashboard_child
+        _webuntis_connections(request.user), dashboard_child, request.user
     )
     webuntis_last_sync = (
         webuntis_connections.order_by("-last_successful_sync_at")
@@ -768,9 +764,9 @@ def dashboard(request):
             ).select_related("course")[:3],
         }
     )
-    from klasse5e.webuntis.absences import child_contexts
+    from klasse5e.webuntis.absences import visible_absence_students
 
-    context["absences_available"] = bool(child_contexts(request.user))
+    context["absences_available"] = visible_absence_students(request.user).exists()
     return render(request, "ui/dashboard_v2.html", context)
 
 
@@ -830,10 +826,10 @@ def calendar(request):
             school_class=school_class,
             selected_day=day,
             webuntis_connections=_connections_for_active_child(
-                _webuntis_connections(request.user), calendar_child
+                _webuntis_connections(request.user), calendar_child, request.user
             ),
             itslearning_connections=_connections_for_active_child(
-                _itslearning_connections(request.user), calendar_child
+                _itslearning_connections(request.user), calendar_child, request.user
             ),
             view=view,
             active_categories=categories,
@@ -846,7 +842,9 @@ def calendar(request):
     context["calendar_week_number"] = day.isocalendar().week
     context["calendar_child"] = calendar_child
     context["webuntis_last_sync"] = (
-        _connections_for_active_child(_webuntis_connections(request.user), calendar_child)
+        _connections_for_active_child(
+            _webuntis_connections(request.user), calendar_child, request.user
+        )
         .order_by("-last_successful_sync_at")
         .values_list("last_successful_sync_at", flat=True)
         .first()

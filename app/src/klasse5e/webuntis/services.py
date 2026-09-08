@@ -1,6 +1,7 @@
 from django.db import transaction
 
 from klasse5e.core.models import AuditEvent, Person, RelationshipStatus
+from klasse5e.core.policies import visible_student_people
 
 from .crypto import encrypt
 from .models import FeatureKey, WebUntisConnection, WebUntisFeaturePreference
@@ -15,6 +16,10 @@ def eligible_students(user):
         student_relationships__is_legal_guardian=True,
         student_relationships__may_view_student_profile=True,
     ).distinct()
+
+
+def visible_connections(user):
+    return WebUntisConnection.objects.filter(student__in=visible_student_people(user))
 
 
 def can_manage_connection(user, student):

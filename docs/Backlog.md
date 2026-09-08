@@ -7,10 +7,17 @@ Abnahmetests.
 
 ## Dringend
 
-- [ ] **Schuldaten im Familienkontext ausrollen und prüfen.** WebUntis- und
+- [x] **Schuldaten im Familienkontext ausrollen und prüfen.** WebUntis- und
   Lernportal-Daten eines Kindes müssen für das Kind selbst sowie für alle
   bestätigten Sorgeberechtigten mit Profilzugriff sichtbar sein. Die
   Berechtigung bleibt auf das jeweils zugeordnete Kind begrenzt.
+  **Abgeschlossen am 08.09.2026:** Stundenplan, Hausaufgaben, Abwesenheiten
+  und itslearning-Inhalte werden beim Lesen über das Kind autorisiert. Das
+  Kind selbst und aktuelle bestätigte Sorgeberechtigte mit Profilzugriff sehen
+  denselben Stand; fremde Klassenmitglieder und widerrufene Beziehungen nicht.
+  Zugangsdaten, Synchronisation und Kursverwaltung bleiben beim jeweiligen
+  Verbindungsinhaber. Die Regressionstests decken Kind, zweiten
+  Sorgeberechtigten, Fremdzugriff und unmittelbaren Beziehungswiderruf ab.
 - [ ] **Hängenden Docker-Image-Export beheben.** Das fertig gebaute Image mit
   der Familienfreigabe muss zuverlässig geladen und ausschließlich der
   App-Container neu gestartet werden. Anschließend Zugriff mit einem zweiten

@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from klasse5e.webuntis.absences import child_contexts
+from klasse5e.webuntis.absences import absence_data_allowed, child_contexts
 from klasse5e.webuntis.models import AbsenceDraft, WebUntisAbsence
 
 
@@ -18,7 +18,5 @@ class Command(BaseCommand):
             if draft.student_id not in {c.student.pk for c in child_contexts(draft.user)}:
                 draft.delete()
         for item in WebUntisAbsence.objects.select_related("connection__user"):
-            if item.connection.student_id not in {
-                c.student.pk for c in child_contexts(item.connection.user)
-            }:
+            if not absence_data_allowed(item.connection.student):
                 item.delete()

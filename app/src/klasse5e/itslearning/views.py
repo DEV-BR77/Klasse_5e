@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from klasse5e.core.models import GuardianChildRelationship, RelationshipStatus, StudentProfile
+from klasse5e.core.policies import visible_student_people
 from klasse5e.core.ui_views import _class_or_404, _shared
 
 from .forms import ConnectionForm, CourseForm, WebDavForm
@@ -13,13 +14,18 @@ from .services import sync_connection
 
 
 def _students(user, manage=False):
+    if not manage:
+        return StudentProfile.objects.filter(
+            person__in=visible_student_people(user)
+        ).select_related("person")
     query = GuardianChildRelationship.objects.filter(
         guardian_person=user.person, status=RelationshipStatus.VERIFIED, verified_at__isnull=False
     )
     if manage:
         query = query.filter(may_manage_profile=True)
     return StudentProfile.objects.filter(
-        person_id__in=query.values("student_person_id")
+        person__in=visible_student_people(user),
+        person_id__in=query.values("student_person_id"),
     ).select_related("person")
 
 
@@ -34,7 +40,7 @@ def portal(request):
     _class_or_404(request.user, request)
     students = list(_students(request.user))
     connections = (
-        ItslearningConnection.objects.filter(owner=request.user, student__in=students)
+        ItslearningConnection.objects.filter(student__in=students, active=True)
         .select_related("student__person")
         .prefetch_related(
             "itslearningcourse_set", "itslearningcourse_set__updates", "calendar_items"
@@ -45,6 +51,7 @@ def portal(request):
         {
             "connections": connections,
             "students": students,
+            "manageable_students": list(_students(request.user, manage=True)),
             "connection_form": ConnectionForm(),
             "course_form": CourseForm(),
             "upcoming": [],

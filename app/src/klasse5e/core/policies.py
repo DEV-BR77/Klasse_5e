@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
 
-from .models import ClassMembership, GuardianChildRelationship, Role, RoleAssignment
+from .models import ClassMembership, GuardianChildRelationship, Person, Role, RoleAssignment
 
 PRIVILEGED_ROLES = {
     Role.PRIMARY_ADMIN,
@@ -87,6 +87,45 @@ def has_active_membership(user, school_class):
             | models.Q(student_person__classmembership__valid_until__gte=today),
         )
         .exists()
+    )
+
+
+def visible_student_people(user):
+    """Students whose personal school data the current account may read."""
+
+    if (
+        not getattr(user, "is_authenticated", False)
+        or not user.is_active
+        or user.locked_at
+        or not hasattr(user, "person")
+    ):
+        return Person.objects.none()
+    today = timezone.localdate()
+    relationship = models.Q(
+        student_relationships__guardian_person=user.person,
+        student_relationships__status="verified",
+        student_relationships__verified_at__isnull=False,
+        student_relationships__may_view_student_profile=True,
+        student_relationships__valid_from__lte=today,
+    ) & (
+        models.Q(student_relationships__valid_until__isnull=True)
+        | models.Q(student_relationships__valid_until__gte=today)
+    )
+    return (
+        Person.objects.filter(
+            models.Q(pk=user.person.pk, studentprofile__isnull=False) | relationship
+        )
+        .filter(
+            classmembership__status="active",
+            classmembership__valid_from__lte=today,
+            classmembership__school_class__school_year__starts_on__lte=today,
+            classmembership__school_class__school_year__ends_on__gte=today,
+        )
+        .filter(
+            models.Q(classmembership__valid_until__isnull=True)
+            | models.Q(classmembership__valid_until__gte=today)
+        )
+        .distinct()
     )
 
 

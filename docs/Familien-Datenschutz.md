@@ -23,3 +23,13 @@ Zugangspflege beim Kind ist als separate **BL-16 in [Backlog.md](Backlog.md)** d
 
 Regressionen: `test_family_privacy_table.py`, `test_family_centre.py` und
 `test_onboarding.py` prüfen Darstellung, Speichern, Widerruf und Berechtigungen.
+
+## Schuldaten im Familienkontext
+
+Importierte Stundenpläne, Hausaufgaben, Abwesenheiten und itslearning-Inhalte
+gehören beim Lesezugriff zum Kind. Das Kind mit eigenem Konto sowie jede
+aktuelle, bestätigte Sorgebeziehung mit Profilzugriff dürfen denselben Stand
+sehen. Eine bloße Klassenmitgliedschaft reicht nicht; Beziehungswiderruf,
+abgelaufene Beziehung oder beendete Kind-Mitgliedschaft sperren den Zugriff
+unmittelbar. Zugangsdaten bleiben kontobezogen verschlüsselt. Nur deren
+Besitzer darf die Verbindung synchronisieren oder Kurse verwalten.
