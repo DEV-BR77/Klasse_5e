@@ -74,6 +74,7 @@ from .models import (
     ConsentDecision,
     ConsentType,
     GuardianChildRelationship,
+    Household,
     Person,
     PilotReport,
     PortalModule,
@@ -588,6 +589,8 @@ def dashboard(request):
     except Exception:
         pass
     day = _day_from_request(request)
+    hour = timezone.localtime().hour
+    greeting = "Guten Morgen" if hour < 12 else "Guten Tag" if hour < 18 else "Guten Abend"
     week_start = day - timedelta(days=day.weekday())
     meal_days = list(
         MealDay.objects.filter(
@@ -635,6 +638,12 @@ def dashboard(request):
         if school_class
         else TimetableEntry.objects.none()
     )
+    calendar_entries = (
+        CalendarEntry.objects.filter(school_class_id__in=dashboard_class_ids, starts_at__date=day)
+        .order_by("starts_at")
+        if dashboard_class_ids
+        else CalendarEntry.objects.none()
+    )
     homework = list(
         WebUntisHomework.objects.filter(
             connection__in=webuntis_connections,
@@ -680,17 +689,12 @@ def dashboard(request):
                 for offset in range(7)
             ],
             "webuntis_last_sync": webuntis_last_sync,
+            "greeting": greeting,
             "lessons": personal_lessons if personal_lessons else manual_lessons,
             "homework": homework,
             "family_children": family_children,
             "active_child": active_child,
-            "calendar_entries": (
-                CalendarEntry.objects.filter(
-                    school_class_id__in=dashboard_class_ids, starts_at__date=day
-                ).order_by("starts_at")[:5]
-                if dashboard_class_ids
-                else CalendarEntry.objects.none()
-            ),
+            "calendar_entries": calendar_entries,
             "events": (
                 Event.objects.filter(
                     school_class_id__in=dashboard_class_ids,
@@ -1083,6 +1087,44 @@ def school_management(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+def school_detail(request, school_id):
+    _require_portal_admin(request.user)
+    school = get_object_or_404(_manageable_schools(request.user), pk=school_id)
+    tab = request.GET.get("tab", "data")
+    if tab not in {"data", "classes", "adapters"}:
+        tab = "data"
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if request.POST.get("deactivate_school") == "yes":
+            school.is_active = False
+            school.save(update_fields=["is_active"])
+            messages.success(request, "Die Schule wurde aus dem Portal entfernt. Historische Zuordnungen bleiben erhalten.")
+            return redirect("school-management")
+        if action == "save_school":
+            for field, limit in {"address": 200, "postal_code": 10, "city": 120, "website": 200}.items():
+                setattr(school, field, request.POST.get(field, "").strip()[:limit])
+            school.save()
+        elif action == "add_class":
+            today = timezone.localdate()
+            start_year = today.year if today.month >= 8 else today.year - 1
+            year, _ = SchoolYear.objects.get_or_create(
+                label=f"{start_year}/{str(start_year + 1)[-2:]}",
+                defaults={"starts_on": today.replace(year=start_year, month=8, day=1), "ends_on": today.replace(year=start_year + 1, month=7, day=31), "is_active": True},
+            )
+            label = request.POST.get("class_label", "").strip()[:64]
+            if label:
+                SchoolClass.objects.get_or_create(school=school, school_year=year, code=label.casefold().replace(" ", "-")[:64], defaults={"name": label, "display_name": label, "grade_level": request.POST.get("grade_level", "")[:32], "status": "active"})
+        elif action == "set_adapters":
+            school.available_portal_adapters.set(PortalAdapter.objects.filter(pk__in=request.POST.getlist("adapter_ids"), is_enabled=True))
+        messages.success(request, "Schule gespeichert.")
+        return redirect(f"{reverse('school-detail', args=[school.pk])}?tab={tab}")
+    context = _shared(request, school.name, "management")
+    context.update({"school": school, "active_tab": tab, "classes": SchoolClass.objects.filter(school=school).select_related("school_year").order_by("school_year__starts_on", "display_name", "name"), "adapters": PortalAdapter.objects.filter(is_enabled=True), "school_adapters": school.available_portal_adapters.all(), "map_bounds": {"south": 52.329, "west": 10.623, "north": 52.509, "east": 10.913}})
+    return render(request, "ui/school_detail.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
 def school_catalog_import(request):
     """Preview a bounded set of matching CSV records before importing them."""
 
@@ -1194,47 +1236,46 @@ def school_catalog_import(request):
 def portal_adapter_management(request):
     """Configure reviewed portal connectors without collecting credentials here."""
     _require_portal_admin(request.user)
-    schools = _manageable_schools(request.user)
     if request.method == "POST":
         provider = request.POST.get("provider", "")
         if provider not in ADAPTER_CATALOG:
             messages.error(request, "Bitte wähle einen bekannten Adapter aus.")
             return redirect("portal-adapter-management")
-        school = get_object_or_404(schools, pk=request.POST.get("school_id"))
         definition = provider_definition(provider)
         name = request.POST.get("name", "").strip()[:120] or definition["label"]
+        legacy_school = _manageable_schools(request.user).filter(pk=request.POST.get("school_id")).first()
         adapter, created = PortalAdapter.objects.get_or_create(
-            school=school,
-            provider=provider,
-            name=name,
-            defaults={"base_url": definition["default_url"]},
+            provider=provider, name=name,
+            defaults={
+                "base_url": definition["default_url"],
+                "school": legacy_school,
+                "requires_child_credentials": request.POST.get("requires_child_credentials") == "on",
+                "is_enabled": request.POST.get("is_enabled") == "on",
+            },
         )
         if created:
+            if legacy_school:
+                adapter.schools.add(legacy_school)
             seed_default_modules(adapter)
+            adapter.modules.update(requires_child_credentials=adapter.requires_child_credentials)
             AuditEvent.objects.create(
                 actor=request.user,
                 action="portal_adapter.created",
                 target_type="portal_adapter",
                 target_id=str(adapter.pk),
-                metadata={"provider": provider, "school_id": school.pk},
+                metadata={"provider": provider},
             )
-            messages.success(request, f"{definition['label']} wurde für {school} angelegt.")
+            messages.success(request, f"{definition['label']} wurde angelegt.")
         else:
             messages.info(request, "Dieser Adapter ist für die Schule bereits vorhanden.")
         return redirect("portal-adapter-detail", adapter_id=adapter.pk)
-    selected_school = schools.filter(pk=request.GET.get("schule")).first()
     adapters = (
-        PortalAdapter.objects.filter(school__in=schools)
-        .select_related("school")
+        PortalAdapter.objects.all()
         .prefetch_related("modules")
     )
-    if selected_school:
-        adapters = adapters.filter(school=selected_school)
     context = _shared(request, "Schulportal-Adapter", "management")
     context.update(
         {
-            "schools": schools,
-            "selected_school": selected_school,
             "adapters": adapters,
             "adapter_catalog": ADAPTER_CATALOG.items(),
         }
@@ -1246,14 +1287,18 @@ def portal_adapter_management(request):
 @require_http_methods(["GET", "POST"])
 def portal_adapter_detail(request, adapter_id):
     _require_portal_admin(request.user)
-    schools = _manageable_schools(request.user)
     adapter = get_object_or_404(
-        PortalAdapter.objects.select_related("school").prefetch_related("modules"),
+        PortalAdapter.objects.prefetch_related("modules", "schools"),
         pk=adapter_id,
-        school__in=schools,
     )
     if request.method == "POST":
         action = request.POST.get("action")
+        if action == "delete_adapter":
+            adapter_id = adapter.pk
+            adapter.delete()
+            AuditEvent.objects.create(actor=request.user, action="portal_adapter.deleted", target_type="portal_adapter", target_id=str(adapter_id))
+            messages.success(request, "Adapter wurde gelöscht.")
+            return redirect("portal-adapter-management")
         if action == "save_adapter":
             adapter.base_url = request.POST.get("base_url", "").strip()[:200]
             adapter.project_identifier = request.POST.get("project_identifier", "").strip()[:120]
@@ -1263,12 +1308,14 @@ def portal_adapter_detail(request, adapter_id):
             adapter.school_number = request.POST.get("school_number", "").strip()[:40]
             adapter.configuration_note = request.POST.get("configuration_note", "").strip()[:1200]
             adapter.is_enabled = request.POST.get("is_enabled") == "on"
+            adapter.requires_child_credentials = request.POST.get("requires_child_credentials") == "on"
             try:
                 adapter.full_clean()
             except ValidationError:
                 messages.error(request, "Bitte prüfe die Adresse des Adapters.")
             else:
                 adapter.save()
+                adapter.modules.update(requires_child_credentials=adapter.requires_child_credentials)
                 AuditEvent.objects.create(
                     actor=request.user,
                     action="portal_adapter.updated",
@@ -1289,11 +1336,7 @@ def portal_adapter_detail(request, adapter_id):
                 if module.is_enabled and module.status == PortalAdapterModule.Status.NOT_CONFIGURED:
                     module.status = PortalAdapterModule.Status.READY
             module.save()
-            module.available_to_classes.set(
-                SchoolClass.objects.filter(
-                    pk__in=request.POST.getlist("available_to_classes"), school=adapter.school
-                )
-            )
+            module.available_to_classes.set(SchoolClass.objects.filter(pk__in=request.POST.getlist("available_to_classes"), school__in=adapter.schools.all()))
             AuditEvent.objects.create(
                 actor=request.user,
                 action="portal_adapter.module.updated",
@@ -1330,9 +1373,7 @@ def portal_adapter_detail(request, adapter_id):
         {
             "adapter": adapter,
             "provider_definition": provider_definition(adapter.provider),
-            "school_classes": SchoolClass.objects.filter(
-                school=adapter.school, status="active"
-            ).order_by("display_name", "name"),
+            "school_classes": SchoolClass.objects.filter(school__in=adapter.schools.all(), status="active").order_by("display_name", "name"),
         }
     )
     return render(request, "ui/portal_adapter_detail.html", context)
@@ -1573,6 +1614,12 @@ def more(request):
     configured = stored.get("items") or [
         {"key": key, "group": item[3]} for key, item in catalog.items()
     ]
+    configured_keys = {item.get("key") for item in configured}
+    configured.extend(
+        {"key": key, "group": item[3]}
+        for key, item in catalog.items()
+        if key not in configured_keys
+    )
     labels = {"class": "Klassenleben", "communication": "Kommunikation", "account": "Mein Konto"}
     labels.update(stored.get("group_labels") or {})
     groups = []
@@ -1653,6 +1700,7 @@ def _menu_catalog():
         "gallery": ("Fotos & Galerie", "/mehr/fotos/", "photo", "class"),
         "meals": ("Speiseplan", "/mehr/speiseplan/", "event", "class"),
         "school_data": ("Kalender-Synchronisation", "/mehr/webuntis/", "calendar", "communication"),
+        "contacts": ("Adressliste", "/kontakte/", "people", "communication"),
         "profile": ("Mein Konto", "/einstellungen/profil/", "people", "account"),
         "family": ("Familien-Zentrale", "/mehr/familie/", "people", "account"),
         "tutorial": ("Einführung", "/tutorial/", "home", "account"),
@@ -2427,8 +2475,9 @@ def _school_modules_for_student(student):
     )
     modules = (
         PortalAdapterModule.objects.filter(
-            adapter__school=membership.school_class.school,
             adapter__is_enabled=True,
+        ).filter(
+            Q(adapter__schools=membership.school_class.school) | Q(adapter__school=membership.school_class.school),
             is_enabled=True,
         )
         .filter(Q(available_to_classes=membership.school_class) | ~Exists(class_links))
@@ -2507,6 +2556,23 @@ def family(request):
                     person = relation.student_person
                 if action == "profile":
                     save_person(request, person)
+                    if person.pk != request.user.person.pk:
+                        school_class = available_classes().filter(
+                            pk=request.POST.get("school_class")
+                        ).first()
+                        if school_class is None:
+                            raise ValidationError("Bitte eine Schule und Klasse auswählen.")
+                        today = timezone.localdate()
+                        ClassMembership.objects.filter(
+                            person=person, status="active"
+                        ).exclude(school_class=school_class).update(
+                            status="ended", valid_until=today
+                        )
+                        ClassMembership.objects.update_or_create(
+                            person=person,
+                            school_class=school_class,
+                            defaults={"status": "active", "valid_from": today, "valid_until": None},
+                        )
                 else:
                     save_consent(request, person)
                 messages.success(request, "Die Änderungen wurden gespeichert.")
@@ -2580,6 +2646,7 @@ def family(request):
                 "relationship": relationship,
                 "membership": membership,
                 "modules": module_rows,
+                "school_classes": available_classes(),
                 "card": person_card(
                     relationship.student_person,
                     request.user,
@@ -2619,37 +2686,63 @@ def family(request):
 @login_required
 def contacts(request):
     school_class = _class_or_404(request.user, request)
-    memberships = ClassMembership.objects.filter(
-        school_class=school_class, status="active", person__user__isnull=False
-    ).select_related("person__user")
-    rows = []
-    for membership in memberships:
-        person = membership.person
-        children = GuardianChildRelationship.objects.filter(
-            guardian_person=person,
+    relationships = list(
+        GuardianChildRelationship.objects.filter(
             status="verified",
             student_person__classmembership__school_class=school_class,
             student_person__classmembership__status="active",
-        ).select_related("student_person")
-        rows.append(
-            {
-                "person": person,
-                "display_name": (
-                    f"{person.first_name} {person.last_name}"
-                    if person.field_visibility.get("first_name", True)
-                    and person.field_visibility.get("last_name", True)
-                    else "Mitglied"
-                ),
-                "children": [relationship.student_person for relationship in children],
-                "email": (
-                    person.contact_email or person.user.email
-                    if person.email_visibility == "members"
-                    else ""
-                ),
-                "phone": person.phone if person.phone_visibility == "members" else "",
-            }
+            guardian_person__user__isnull=False,
+        ).select_related("guardian_person__user", "student_person")
+    )
+    guardians = {relationship.guardian_person_id: relationship.guardian_person for relationship in relationships}
+    children_by_guardian = {}
+    for relationship in relationships:
+        children_by_guardian.setdefault(relationship.guardian_person_id, []).append(
+            relationship.student_person
         )
-    context = _shared(request, "Kontakte", "contacts")
+
+    rows = []
+    assigned_guardians = set()
+    households = Household.objects.filter(members__in=guardians).prefetch_related("members__user").distinct()
+    for household in households:
+        adults = [member for member in household.members.all() if member.pk in guardians]
+        if not adults:
+            continue
+        assigned_guardians.update(person.pk for person in adults)
+        children = []
+        for adult in adults:
+            children.extend(children_by_guardian.get(adult.pk, []))
+        children = list({child.pk: child for child in children}.values())
+        representative = next((person for person in adults if person.profile_photo), adults[0])
+        family_name = household.label or (children[0].last_name if children else adults[0].last_name)
+        emails = [
+            person.contact_email or person.user.email
+            for person in adults
+            if person.email_visibility == "members" and (person.contact_email or person.user_id)
+        ]
+        phones = [person.phone for person in adults if person.phone_visibility == "members" and person.phone]
+        rows.append({
+            "family_name": family_name,
+            "adults": adults,
+            "children": sorted(children, key=lambda child: (child.last_name.lower(), child.first_name.lower())),
+            "person": representative,
+            "emails": list(dict.fromkeys(emails)),
+            "phones": list(dict.fromkeys(phones)),
+        })
+    for guardian_id, guardian in guardians.items():
+        if guardian_id in assigned_guardians:
+            continue
+        children = children_by_guardian.get(guardian_id, [])
+        rows.append({
+            "family_name": guardian.last_name,
+            "adults": [guardian],
+            "children": sorted(children, key=lambda child: (child.last_name.lower(), child.first_name.lower())),
+            "person": guardian,
+            "emails": [guardian.contact_email or guardian.user.email] if guardian.email_visibility == "members" else [],
+            "phones": [guardian.phone] if guardian.phone_visibility == "members" and guardian.phone else [],
+        })
+    rows.sort(key=lambda row: (row["family_name"].casefold(), row["adults"][0].first_name.casefold()))
+    context = _shared(request, "Adressliste", "contacts")
     context["contacts"] = rows
     return render(request, "ui/contacts.html", context)
 

@@ -102,6 +102,26 @@
     list?.querySelectorAll("[data-filter-text]").forEach((item) => { item.hidden = !item.dataset.filterText.includes(query); });
   }));
   document.querySelectorAll("[data-confirm]").forEach((form) => form.addEventListener("submit", (event) => { if (!window.confirm(form.dataset.confirm)) event.preventDefault(); }));
+  document.querySelectorAll("[data-contact-table]").forEach((directory) => {
+    const rows = directory.querySelector("[data-contact-rows]");
+    const filter = directory.querySelector("[data-contact-filter]");
+    const count = directory.querySelector("[data-contact-count]");
+    const allRows = () => Array.from(rows?.querySelectorAll("[data-contact-row]") || []);
+    const refreshCount = () => { if (count) count.textContent = allRows().filter((row) => !row.hidden).length; };
+    filter?.addEventListener("input", () => {
+      const query = filter.value.trim().toLocaleLowerCase("de");
+      allRows().forEach((row) => { row.hidden = !`${row.dataset.family} ${row.dataset.children} ${row.dataset.phone} ${row.dataset.email}`.toLocaleLowerCase("de").includes(query); });
+      refreshCount();
+    });
+    directory.querySelectorAll("[data-contact-sort]").forEach((button) => button.addEventListener("click", () => {
+      const key = button.dataset.contactSort;
+      const ascending = button.dataset.direction !== "asc";
+      directory.querySelectorAll("[data-contact-sort]").forEach((item) => { item.dataset.direction = ""; item.removeAttribute("aria-sort"); });
+      button.dataset.direction = ascending ? "asc" : "desc";
+      button.setAttribute("aria-sort", ascending ? "ascending" : "descending");
+      allRows().sort((left, right) => left.dataset[key].localeCompare(right.dataset[key], "de", { sensitivity: "base" }) * (ascending ? 1 : -1)).forEach((row) => rows.append(row));
+    }));
+  });
   document.querySelectorAll("[data-dialog-open]").forEach((button) => button.addEventListener("click", () => {
     const dialog = document.getElementById(button.dataset.dialogOpen);
     dialog?.showModal();

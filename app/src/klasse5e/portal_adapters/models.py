@@ -16,7 +16,10 @@ class PortalAdapter(models.Model):
         WOBILA_MAIL = "wobila-mail", "Mail Wobila"
         CUSTOM = "custom", "Eigenes Portal"
 
-    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="portal_adapters")
+    school = models.ForeignKey(
+        School, null=True, blank=True, on_delete=models.SET_NULL, related_name="legacy_portal_adapters"
+    )
+    schools = models.ManyToManyField(School, blank=True, related_name="available_portal_adapters")
     provider = models.CharField(max_length=32, choices=Provider.choices)
     name = models.CharField(max_length=120)
     base_url = models.URLField(blank=True)
@@ -25,6 +28,7 @@ class PortalAdapter(models.Model):
     school_number = models.CharField(max_length=40, blank=True)
     configuration_note = models.TextField(blank=True, max_length=1200)
     is_enabled = models.BooleanField(default=True)
+    requires_child_credentials = models.BooleanField(default=False)
     last_checked_at = models.DateTimeField(null=True, blank=True)
     last_check_status = models.CharField(max_length=32, blank=True)
     last_check_message = models.CharField(max_length=300, blank=True)
@@ -32,15 +36,10 @@ class PortalAdapter(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ("school__name", "provider", "name")
-        constraints = [
-            models.UniqueConstraint(
-                fields=["school", "provider", "name"], name="unique_portal_adapter_per_school"
-            )
-        ]
+        ordering = ("name", "provider")
 
     def __str__(self):
-        return f"{self.school} · {self.name}"
+        return self.name
 
 
 class PortalAdapterModule(models.Model):

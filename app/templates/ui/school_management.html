@@ -53,7 +53,7 @@
             <h2>{{ school.name }}</h2>
             <p>{% if school.school_type %}{{ school.school_type }}{% else %}Schule ohne hinterlegte Schulart{% endif %}</p>
           </div>
-          <a class="button button-secondary" href="{% url 'portal-adapter-management' %}?schule={{ school.pk }}">Adapter &amp; Module</a>
+          <a class="button button-secondary" href="{% url 'school-detail' school.pk %}">Schule öffnen</a>
         </header>
 
         <div class="settings-details-body form-stack">

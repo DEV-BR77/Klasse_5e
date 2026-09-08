@@ -25,9 +25,9 @@ from .registration import sanitized_profile_photo
 class FamilyPersonForm(forms.ModelForm):
     class Meta:
         model = Person
-        fields = ["first_name", "last_name", "street", "postal_code", "city",
+        fields = ["first_name", "last_name", "birth_date", "street", "postal_code", "city",
                   "contact_email", "phone", "chat_display_name"]
-        labels = {"first_name": "Vorname", "last_name": "Nachname", "street": "Straße und Hausnummer",
+        labels = {"first_name": "Vorname", "last_name": "Nachname", "birth_date": "Geburtsdatum", "street": "Straße und Hausnummer",
                   "postal_code": "Postleitzahl", "city": "Ort", "contact_email": "Kontakt-E-Mail",
                   "phone": "Telefonnummer", "chat_display_name": "Anzeigename im Chat"}
 

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from django.db.models import Q
 from django.utils import timezone
 
+from klasse5e.core.models import ClassMembership, MembershipStatus
 from klasse5e.events.models import Event
 from klasse5e.itslearning.models import ItslearningCalendarItem
 from klasse5e.schedule.models import CalendarEntry, TimeGrid, TimetableEntry
@@ -224,6 +225,27 @@ def build_calendar_context(
                 meta=homework.text,
             )
         )
+
+    birthdays = ClassMembership.objects.filter(
+        school_class=school_class,
+        status=MembershipStatus.ACTIVE,
+        person__birth_date__isnull=False,
+    ).select_related("person")
+    for offset in range((grid_end - grid_start).days):
+        day = grid_start + timedelta(days=offset)
+        for membership in birthdays:
+            birthday = membership.person.birth_date
+            is_leap_day_fallback = birthday.month == 2 and birthday.day == 29 and day.month == 2 and day.day == 28 and day.year % 4 != 0
+            if (birthday.month, birthday.day) != (day.month, day.day) and not is_leap_day_fallback:
+                continue
+            items[day].append(
+                _item(
+                    "appointment",
+                    "Geburtstag",
+                    f"{membership.person.first_name} {membership.person.last_name}",
+                    meta="Geburtstag",
+                )
+            )
 
     for entry in CalendarEntry.objects.filter(
         school_class=school_class,

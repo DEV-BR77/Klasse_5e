@@ -141,6 +141,7 @@ class Person(models.Model):
     user = models.OneToOneField(UserAccount, null=True, blank=True, on_delete=models.SET_NULL)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
+    birth_date = models.DateField(null=True, blank=True)
     phone = models.CharField(max_length=50, blank=True)
     other_contact = models.CharField(max_length=200, blank=True)
     street = models.CharField(max_length=180, blank=True)

@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="settings-page portal-adapter-detail">
-  <header class="page-heading"><div><p class="eyebrow">{{ adapter.school }}</p><h1>{{ adapter.name }}</h1><p class="lede">{{ provider_definition.hint }}</p></div><div class="button-row">{% if adapter.base_url %}<a class="button button-secondary" href="{{ adapter.base_url }}" target="_blank" rel="noreferrer">Portal extern öffnen ↗</a>{% endif %}<a class="button button-secondary" href="{% url 'portal-adapter-management' %}">← Alle Adapter</a></div></header>
+  <header class="page-heading"><div><p class="eyebrow">Zentraler Schulportal-Adapter</p><h1>{{ adapter.name }}</h1><p class="lede">{{ provider_definition.hint }}</p></div><div class="button-row">{% if adapter.base_url %}<a class="button button-secondary" href="{{ adapter.base_url }}" target="_blank" rel="noreferrer">Portal extern öffnen ↗</a>{% endif %}<a class="button button-secondary" href="{% url 'portal-adapter-management' %}">← Alle Adapter</a></div></header>
 
   <form method="post" class="settings-panel form-stack">{% csrf_token %}<input type="hidden" name="action" value="save_adapter">
     <div class="section-heading"><div><p class="eyebrow">Verbindung</p><h2>Adresse und Kennungen</h2></div><label class="switch-field"><input type="checkbox" name="is_enabled" {% if adapter.is_enabled %}checked{% endif %}><span>Adapter freigeben</span></label></div>
+    <label class="switch-row settings-row"><div><strong>Zugangsdaten pro Kind erforderlich</strong><small>Bei aktivierten Modulen wird die Zugangspflege im Kinderprofil angeboten.</small></div><span class="switch"><input type="checkbox" name="requires_child_credentials" {% if adapter.requires_child_credentials %}checked{% endif %}><span></span></span></label>
     <label>Portal-Adresse<input type="url" name="base_url" value="{{ adapter.base_url }}" placeholder="https://…"></label>
     <div class="field-pair"><label>Projektkennung <input name="project_identifier" value="{{ adapter.project_identifier }}" placeholder="z. B. MensaMax-Projekt"></label><label>Einrichtungskennung <input name="institution_identifier" value="{{ adapter.institution_identifier }}" placeholder="z. B. Schule / Einrichtung"></label><label>Schulnummer <input name="school_number" value="{{ adapter.school_number }}" placeholder="z. B. DSBmobile-Schulnummer"></label><span></span></div>
     <label>Weitere technische Konfiguration <textarea name="configuration_note" rows="4" placeholder="Nur technische Hinweise, Zuordnung oder Abrufweg – keine Passwörter.">{{ adapter.configuration_note }}</textarea></label>
@@ -23,6 +24,7 @@
     </form>
   {% empty %}<p class="empty-state">Diesem Adapter sind noch keine Module zugeordnet.</p>{% endfor %}</div></section>
 
+  <form method="post" class="form-actions" data-confirm="Adapter inklusive seiner Module wirklich löschen?">{% csrf_token %}<input type="hidden" name="action" value="delete_adapter"><button class="button button-secondary">Adapter löschen</button></form>
   <details class="settings-panel"><summary>Weiteres Modul anlegen</summary><form method="post" class="form-stack settings-details-body">{% csrf_token %}<input type="hidden" name="action" value="add_module"><label>Name <input name="label" maxlength="120" required placeholder="z. B. Abwesenheiten"></label><label>Technische Kennung <input name="key" maxlength="80" placeholder="wird sonst automatisch erzeugt"></label><label>Beschreibung <textarea name="description" rows="2" maxlength="300"></textarea></label><footer class="form-actions"><a class="button button-secondary" href="{% url 'portal-adapter-management' %}">Abbrechen</a><button class="button button-primary">Modul anlegen</button></footer></form></details>
 </section>
 {% endblock %}

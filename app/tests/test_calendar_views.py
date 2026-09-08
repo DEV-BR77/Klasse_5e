@@ -4,7 +4,7 @@ import pytest
 from django.utils import timezone
 
 from klasse5e.core.calendar_presenter import build_calendar_context
-from klasse5e.core.models import Person
+from klasse5e.core.models import ClassMembership, Person
 from klasse5e.itslearning.models import ItslearningConnection
 from klasse5e.schedule.models import LessonPeriod, TimeGrid, TimetableEntry
 from klasse5e.webuntis.models import WebUntisConnection, WebUntisLesson
@@ -174,3 +174,15 @@ def test_cancelled_original_is_hidden_when_replacement_uses_same_slot(guardian, 
     )
 
     assert [item["title"] for item in context["agenda"]] == ["Deutsch"]
+
+
+@pytest.mark.django_db
+def test_child_birthday_is_shown_as_calendar_appointment(school_class):
+    child = Person.objects.create(first_name="Mila", last_name="Beispiel", birth_date=date(2015, 9, 4))
+    ClassMembership.objects.create(person=child, school_class=school_class, valid_from=date(2026, 8, 1), status="active")
+    context = build_calendar_context(
+        school_class=school_class, selected_day=date(2026, 9, 4),
+        webuntis_connections=WebUntisConnection.objects.none(),
+        itslearning_connections=ItslearningConnection.objects.none(), view="day",
+    )
+    assert [(item["kind_label"], item["title"]) for item in context["agenda"]] == [("Geburtstag", "Mila Beispiel")]

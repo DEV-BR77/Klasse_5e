@@ -104,6 +104,7 @@ urlpatterns = [
     ),
     path("verwaltung/", ui_views.portal_management, name="portal-management"),
     path("verwaltung/schulen/", ui_views.school_management, name="school-management"),
+    path("verwaltung/schulen/<int:school_id>/", ui_views.school_detail, name="school-detail"),
     path(
         "verwaltung/schulen/import/",
         ui_views.school_catalog_import,
