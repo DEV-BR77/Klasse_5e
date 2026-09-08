@@ -4,10 +4,15 @@
 {% block head_title %}Anmeldung{% endblock head_title %}
 
 {% block content %}
-    <h1 id="auth-heading">Bei KlassID anmelden</h1>
+    <h1 id="auth-heading" class="sr-only">Bei KlassID anmelden</h1>
 
     {% url 'account_login' as login_url %}
-    {% if request.GET.timeout %}<p class="status-banner">Deine Sitzung wurde wegen Inaktivität beendet. Bitte melde dich erneut an.</p>{% endif %}
+    {% if request.GET.timeout %}
+        <section class="status-banner" role="status" aria-live="polite" data-timeout-notice>
+            <p>Deine Sitzung wurde wegen Inaktivität beendet. Bitte melde dich erneut an.</p>
+            <button class="status-banner__dismiss" type="button" data-timeout-notice-close>Verstanden</button>
+        </section>
+    {% endif %}
     {% element form form=form method="post" action=login_url tags="entrance,login" %}
         {% slot body %}
             {% csrf_token %}

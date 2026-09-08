@@ -783,6 +783,14 @@
   }));
 })();
 (() => {
+  document.querySelectorAll("[data-timeout-notice-close]").forEach((button) => button.addEventListener("click", () => {
+    button.closest("[data-timeout-notice]")?.remove();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("timeout");
+    window.history.replaceState({}, "", url);
+  }));
+})();
+(() => {
   document.querySelectorAll('[data-profile-photo-input]').forEach((input) => input.addEventListener('change', () => {
     const file = input.files?.[0]; if (!file) return;
     const form = input.closest('form'); const preview = form?.querySelector('[data-profile-current-preview]');
