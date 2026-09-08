@@ -45,11 +45,17 @@ Abnahmetests.
   Löschung; die gemeldete Nachricht kann ausgeblendet werden, ohne den
   übrigen Verlauf für Moderatoren zugänglich zu machen. Tests decken Zugriff,
   Entzug, Hinweise, Meldung, Moderation und Aufbewahrung ab.
-- [ ] **Kontaktliste als Familienansicht.** Familienname einmal zeigen,
+- [x] **Kontaktliste als Familienansicht.** Familienname einmal zeigen,
   darunter Vornamen der Erwachsenen und Kinder; keine doppelte Bezeichnung
   wie „Familie Familie Radke“. Die Freigabeschalter für Erwachsene und Kinder
   müssen einheitlich gestaltet und bedienbar sein; das gilt für Adresse,
   Telefonnummer, E-Mail und weitere freigebbare Kontaktdaten.
+  **Abgeschlossen am 09.09.2026:** Haushalte werden mit bereinigtem
+  Familiennamen dargestellt; darunter stehen die Vornamen der Erwachsenen und
+  Kinder. Die Erwachsenen- und Kinderseite verwenden denselben zugänglichen
+  Freigabeschalter für Telefon, E-Mail und Adresse. Freigegebene Adressen
+  erscheinen ausschließlich in der Kontaktkarte und nur für aktuelle
+  Klassenmitglieder.
 - [ ] **Kontaktkarte.** Einen deutlich beschrifteten Kontakt-Button anbieten;
   Details in einer mittigen Kachel öffnen. Freigegebene Telefon- und
   E-Mail-Adressen müssen `tel:` beziehungsweise `mailto:` verwenden.
@@ -57,8 +63,11 @@ Abnahmetests.
   Kontaktkarte; ohne Bild einen Initialen-Kreis aus dem Familiennamen.
   Sichtbarkeit nur mit erforderlichen Foto-Freigaben aller abgebildeten
   Personen.
-- [ ] **Adressfreigabe.** Einen gemeinsamen Schalter „Adresse im Portal
+- [x] **Adressfreigabe.** Einen gemeinsamen Schalter „Adresse im Portal
   anzeigen“ für Straße, Postleitzahl und Ort ergänzen.
+  **Abgeschlossen am 09.09.2026:** Auf ausdrückliche Erweiterung der
+  Familienansicht umgesetzt. Der Schalter setzt alle drei Adressfelder
+  gemeinsam und zeigt die vollständige Adresse nur in der Kontaktkarte.
 
 ## Mobile Startseite und Navigation
 

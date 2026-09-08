@@ -14,8 +14,9 @@ Familie, Profil, Schulmodule und Einwilligungen.
 - Neue Kinder werden per Einladungscode oder Schul-/Klassenwahl angefragt.
   Die Verwaltung bestätigt sie anschließend über die Aktion
   „Als neue Kinder bestätigen“; erst dann entsteht eine gültige Beziehung.
-- Kontaktfelder haben je einen Sichtbarkeitsschalter. Die Kontaktliste wertet
-  E-Mail, Telefon und Namensfreigabe aus.
+- Kontaktfelder haben in der Erwachsenen- und Kinderansicht dieselben
+  Sichtbarkeitsschalter. Die Kontaktliste wertet E-Mail, Telefon und eine
+  gemeinsam freigegebene vollständige Adresse aus.
 
 Profilfotos werden weiterhin serverseitig bereinigt. Der Avatar-Dialog speichert
 nur eine harmlose Kombination von Gestaltungsteilen und enthält keine
