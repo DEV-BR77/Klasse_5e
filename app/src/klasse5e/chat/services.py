@@ -137,10 +137,9 @@ def create_message(room, user, body, reply_to=None, attachment=None):
         from .notifications import notify_mentions
 
         transaction.on_commit(lambda: notify_mentions(message.pk))
-    if room.audience == room.Audience.PARENT_REPRESENTATIVES:
-        from .notifications import notify_parent_representatives
+    from .notifications import notify_parent_representatives
 
-        transaction.on_commit(lambda: notify_parent_representatives(message.pk))
+    transaction.on_commit(lambda: notify_parent_representatives(message.pk))
     return message
 
 

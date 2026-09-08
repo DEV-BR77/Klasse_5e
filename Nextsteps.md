@@ -812,3 +812,15 @@ Liefere:
 ## Abschlussbedingung
 
 Das Qualitätsgate darf nicht allein deshalb als bestanden gelten, weil Dokumente vorhanden sind. Widerruf, Rechteisolation, Löschung und Sperrung biometrischer Funktionen müssen technisch nachgewiesen sein.
+
+# Aufgaben 16 und 17 – in den zentralen Backlog verschoben
+
+Die offenen Folgeaufträge werden ausschließlich in [docs/Backlog.md](docs/Backlog.md)
+weitergepflegt:
+
+- **BL-16:** Zentraler Adapterkatalog, Schulzuordnung und persönliche Zugänge.
+- **BL-17:** Abwesenheit per Dashboard-Schnellzugriff melden und bei WebUntis rückprüfen.
+
+Auch die ausstehende Veröffentlichung der Rollenverwaltung und Datenschutzkorrektur
+ist dort dokumentiert. Diese Datei bleibt historische Spezifikation der früheren
+Arbeitspakete; neue offene Aufgaben gehören in den zentralen Backlog.

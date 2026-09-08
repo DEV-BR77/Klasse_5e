@@ -4,39 +4,11 @@ from web_push_kit import DeliveryStatus, NotificationPayload, Subscription
 from klasse5e.core.models import (
     PushPreference,
     PushSubscription,
-    Role,
-    RoleAssignment,
     UserNotification,
 )
 from klasse5e.webuntis.notifications import configured_sender
 
 from .models import ChatMessage
-
-
-def notify_parent_representatives(message_id):
-    """Create a personal in-app notice for every other active class representative."""
-
-    message = ChatMessage.objects.select_related("room", "author__person").get(pk=message_id)
-    target_url = f"/chat/{message.room.public_id}/ansicht/"
-    recipients = RoleAssignment.objects.filter(
-        school_class=message.room.school_class,
-        role=Role.PARENT_REPRESENTATIVE,
-        active=True,
-    ).exclude(user=message.author).select_related("user")
-    for assignment in recipients:
-        UserNotification.objects.get_or_create(
-            user=assignment.user,
-            school_class=message.room.school_class,
-            object_type="parent_representative_chat",
-            object_id=str(message.public_id),
-            revision="created",
-            defaults={
-                "category": "chat",
-                "title": "Neue Nachricht im Elternvertretungs-Chat",
-                "summary": f"In „{message.room.title}“ gibt es eine neue Nachricht.",
-                "target_url": target_url,
-            },
-        )
 
 
 def notify_mentions(message_id, *, sender=None):
@@ -81,3 +53,33 @@ def notify_mentions(message_id, *, sender=None):
         if result.status == DeliveryStatus.STALE:
             stored.delete()
     return len(recipients)
+
+
+def notify_parent_representatives(message_id):
+    message = ChatMessage.objects.select_related("room").get(pk=message_id)
+    from klasse5e.core.role_management import parent_representatives
+
+    if not (message.room.parent_representative_chat or
+            message.room.audience == message.room.Audience.PARENT_REPRESENTATIVES):
+        return
+    from .services import require_room_access
+    from django.core.exceptions import PermissionDenied
+
+    for user in parent_representatives(message.room.school_class):
+        try:
+            require_room_access(user, message.room)
+        except PermissionDenied:
+            continue
+        if user.pk == message.author_id:
+            continue
+        UserNotification.objects.get_or_create(
+            user=user, school_class=message.room.school_class,
+            object_type="parent_representative_chat",
+            object_id=str(message.public_id), revision="created",
+            defaults={
+                "category": "chat",
+                "title": "Neue Nachricht im Elternvertretungs-Chat",
+                "summary": f"In „{message.room.title}“ gibt es eine neue Nachricht.",
+                "target_url": f"/chat/{message.room.public_id}/ansicht/",
+            },
+        )

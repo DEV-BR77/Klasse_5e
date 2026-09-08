@@ -1025,7 +1025,14 @@ def chat_attachment(request, message_id):
 @login_required
 def portal_management(request):
     _require_portal_admin(request.user)
+    from .role_management import require_role_manager
+
     context = _shared(request, "Verwaltung", "management")
+    try:
+        require_role_manager(request.user)
+        context["can_manage_roles"] = True
+    except PermissionDenied:
+        context["can_manage_roles"] = False
     context.update(
         {
             "review_pending": RegistrationApplication.objects.filter(
@@ -2833,7 +2840,7 @@ def family(request):
                             for r in relationships
                             if str(r.student_person_id) == person_id
                             and r.is_current()
-                            and r.may_manage_profile
+                            and (action == "consent" or r.may_manage_profile)
                         ),
                         None,
                     )
