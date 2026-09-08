@@ -247,6 +247,7 @@ def test_reported_direct_message_is_moderated_without_opening_private_thread(
     ).status_code == 204
     message.refresh_from_db()
     assert message.hidden_at and message.hidden_by == moderator
+    assert not message.reports.filter(resolved_at__isnull=True).exists()
 
     client.force_login(second)
     hidden_view = client.get(
@@ -255,6 +256,5 @@ def test_reported_direct_message_is_moderated_without_opening_private_thread(
     assert "Diese Nachricht wurde von der Moderation ausgeblendet." in hidden_view
     assert "Gemeldeter Inhalt" not in hidden_view
 
-    message.reports.update(resolved_at=timezone.now())
     assert cleanup_expired_messages() == 1
     assert not ChatMessage.objects.filter(pk=message.pk).exists()

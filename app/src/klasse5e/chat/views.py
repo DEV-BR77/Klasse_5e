@@ -157,6 +157,8 @@ def moderate_message(request, message_id):
     message.hidden_at = timezone.now()
     message.hidden_by = request.user
     message.save(update_fields=["hidden_at", "hidden_by"])
+    if getattr(message.room, "direct_conversation", None):
+        message.reports.filter(resolved_at__isnull=True).update(resolved_at=timezone.now())
     AuditEvent.objects.create(
         actor=request.user,
         action="chat.message.hidden",

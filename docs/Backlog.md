@@ -33,10 +33,18 @@ Abnahmetests.
 
 ## Kommunikation und Kontakte
 
-- [ ] **Private Nachrichten.** In der Kontaktkarte eine Person auswählen,
+- [x] **Private Nachrichten.** In der Kontaktkarte eine Person auswählen,
   einen privaten Gesprächsverlauf öffnen, antworten und neutrale In-App-/
   Push-Hinweise erhalten. Zugriff, Aufbewahrung, Moderation und Meldung
   müssen für diesen Nachrichtentyp definiert und getestet werden.
+  **Abgeschlossen am 09.09.2026:** Die Kontaktkarte eröffnet idempotent eine
+  paarweise, klassenbezogene Unterhaltung. Nur die zwei aktiven Teilnehmer
+  können lesen, schreiben und Anhänge abrufen; auch Portaladmins sehen keinen
+  Verlauf. Hinweise und Push-Mitteilungen bleiben neutral. Nachrichten und
+  Anhänge werden nach 180 Tagen gelöscht, offene Meldungen stoppen die
+  Löschung; die gemeldete Nachricht kann ausgeblendet werden, ohne den
+  übrigen Verlauf für Moderatoren zugänglich zu machen. Tests decken Zugriff,
+  Entzug, Hinweise, Meldung, Moderation und Aufbewahrung ab.
 - [ ] **Kontaktliste als Familienansicht.** Familienname einmal zeigen,
   darunter Vornamen der Erwachsenen und Kinder; keine doppelte Bezeichnung
   wie „Familie Familie Radke“.
