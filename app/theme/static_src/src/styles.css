@@ -20,6 +20,49 @@
 @source "../../../templates/**/*.html";
 @source "../../../src/**/*.py";
 
+.portal-module-list {
+  display: grid;
+  gap: .75rem;
+}
+
+.portal-module-card {
+  overflow: hidden;
+}
+
+.portal-module-toggle {
+  border-bottom: 0;
+}
+
+.portal-module-toggle .status {
+  width: fit-content;
+  margin-top: .35rem;
+}
+
+.portal-module-card details[open] {
+  border-top: 1px solid var(--color-border);
+}
+
+.portal-credential-form {
+  margin: 0 1rem 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: .85rem;
+  background: var(--color-background);
+}
+
+.portal-credential-form .section-heading {
+  align-items: center;
+}
+
+.portal-credential-form .section-heading > div {
+  display: grid;
+  gap: .2rem;
+}
+
+.portal-credential-form small {
+  color: var(--color-text-muted);
+}
+
 /*
  * Django writes these values on <html> for every released portal theme.
  * `inline` keeps Tailwind utilities tied to the runtime value instead of

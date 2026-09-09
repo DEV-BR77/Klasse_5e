@@ -26,7 +26,47 @@
     </tbody></table></div>
   </article>
   {% else %}
-  <article class="settings-panel"><header><div><h2>Schulzugänge und aktive Module</h2><p>Aktiviere nur die von der Schule bereitgestellten Funktionen. Zugangsdaten werden je Kind gepflegt.</p></div></header><div class="sync-option-list">{% for module_row in active_row.modules %}{% with module=module_row.module connection=module_row.connection %}<div class="sync-option"><div><strong>{{ module.label }}</strong><small>{{ module.description }}{% if connection and connection.is_enabled %} · {{ connection.get_connection_state_display }}{% endif %}</small></div><div class="module-actions">{% if active_row.relationship.status == 'verified' and active_row.relationship.may_manage_profile %}<form method="post" class="inline-toggle-form">{% csrf_token %}<input type="hidden" name="relationship_id" value="{{ active_row.relationship.pk }}"><input type="hidden" name="module_id" value="{{ module.pk }}"><label class="switch"><span class="sr-only">{{ module.label }} aktivieren</span><input type="checkbox" name="enabled" {% if connection and connection.is_enabled %}checked{% endif %} onchange="this.form.submit()"><span></span></label></form>{% endif %}{% if connection and connection.is_enabled and module_row.connection_url %}<a class="button button-secondary" href="{{ module_row.connection_url }}">{% if module.requires_child_credentials %}Zugangsdaten pflegen{% else %}Öffnen{% endif %}</a>{% endif %}</div></div>{% endwith %}{% empty %}<div class="settings-details-body"><p>Für diese Schule sind noch keine Module freigegeben.</p></div>{% endfor %}</div></article>
+  <article class="settings-panel">
+    <header><div><h2>Schulzugänge und aktive Module</h2><p>Aktiviere nur die von der Schule bereitgestellten Funktionen. Zugangsdaten werden je Kind gepflegt.</p></div></header>
+    <div class="sync-option-list">
+      {% for adapter_row in active_row.adapters %}
+        <section class="settings-details-body">
+          <header class="settings-row">
+            <div><strong>{{ adapter_row.adapter.name }}</strong><small>{{ adapter_row.adapter.get_provider_display }}</small></div>
+            {% if adapter_row.has_enabled_connection and adapter_row.connection_url %}
+              <a class="button button-secondary" href="{{ adapter_row.connection_url }}">{% if adapter_row.requires_child_credentials %}Zugangsdaten pflegen{% else %}Öffnen{% endif %}</a>
+            {% endif %}
+          </header>
+          {% for module_row in adapter_row.modules %}{% with module=module_row.module connection=module_row.connection %}
+            <div class="sync-option">
+              <div><strong>{{ module.label }}</strong><small>{{ module.description }}{% if connection and connection.is_enabled %} · {{ connection.get_connection_state_display }}{% endif %}</small></div>
+              {% if active_row.relationship.status == 'verified' and active_row.relationship.may_manage_profile %}
+                <form method="post" class="inline-toggle-form">{% csrf_token %}<input type="hidden" name="relationship_id" value="{{ active_row.relationship.pk }}"><input type="hidden" name="module_id" value="{{ module.pk }}"><label class="switch"><span class="sr-only">{{ module.label }} aktivieren</span><input type="checkbox" name="enabled" {% if connection and connection.is_enabled %}checked{% endif %} onchange="this.form.submit()"><span></span></label></form>
+              {% endif %}
+            </div>
+          {% endwith %}{% endfor %}
+          {% if adapter_row.adapter.provider == 'webuntis' and adapter_row.has_enabled_connection %}
+            <form method="post" action="{% url 'webuntis-connection' %}" class="form-stack portal-credential-form">
+              {% csrf_token %}
+              <input type="hidden" name="student" value="{{ active_row.relationship.student_person.pk }}">
+              <input type="hidden" name="return_to" value="family">
+              <div class="section-heading">
+                <div><strong>WebUntis-Zugang für {{ active_row.relationship.student_person.first_name }}</strong><small>{% if adapter_row.credential_connection %}Zugangsdaten sind gespeichert. Zum Ändern beide Felder neu ausfüllen.{% else %}Benutzername und Passwort werden verschlüsselt gespeichert.{% endif %}</small></div>
+                {% if adapter_row.credential_connection %}<span class="status status-success">{{ adapter_row.credential_connection.get_status_display }}</span>{% endif %}
+              </div>
+              <div class="field-pair">
+                <label>Benutzername<input name="username" autocomplete="username" required maxlength="160" placeholder="WebUntis-Benutzername"></label>
+                <label>Passwort<input name="password" type="password" autocomplete="new-password" required placeholder="WebUntis-Passwort"></label>
+              </div>
+              <footer class="form-actions"><button class="button button-primary">Zugangsdaten speichern</button></footer>
+            </form>
+          {% endif %}
+        </section>
+      {% empty %}
+        <div class="settings-details-body"><p>Für diese Schule sind noch keine Module freigegeben.</p></div>
+      {% endfor %}
+    </div>
+  </article>
   {% endif %}
   {% endif %}
 </section>{% include "ui/_avatar_designer.html" %}

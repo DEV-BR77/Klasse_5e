@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page narrow-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Schule und Lernen</p>
+      <h1>Lernportale</h1>
+      <p class="lede">Öffne die von deiner Schule bereitgestellten Lernangebote.</p>
+    </div>
+    <a class="button button-secondary" href="{% url 'ui-more' %}">← Hauptmenü</a>
+  </header>
+  <div class="card-grid">
+    {% for row in portal_rows %}
+      <article class="content-card">
+        <h2>{{ row.adapter.name }}</h2>
+        <p>{{ row.hint }}</p>
+        <p class="help-text">{% for module in row.modules %}{{ module.label }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+        {% if row.adapter.base_url %}
+          <a class="button button-primary" href="{{ row.adapter.base_url }}" target="_blank" rel="noopener noreferrer">{{ row.adapter.name }} öffnen ↗</a>
+        {% else %}
+          <span class="status status-warning">Noch kein Link hinterlegt</span>
+        {% endif %}
+      </article>
+    {% empty %}
+      <article class="empty-state">
+        <h2>Noch keine Lernportale freigegeben</h2>
+        <p>Sobald die Schule ein Lernangebot aktiviert, erscheint es hier.</p>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

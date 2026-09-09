@@ -164,6 +164,7 @@ urlpatterns = [
     ),
     path("pilot/melden/", ui_views.pilot_report, name="pilot-report"),
     path("mehr/", ui_views.more, name="ui-more"),
+    path("mehr/lernportale/", ui_views.learning_portals, name="ui-learning-portals"),
     path("mehr/dokumente/", ui_views.documents, name="ui-documents"),
     path("mehr/aktuelles/", ui_views.posts, name="ui-posts"),
     path("mehr/aktuelles/<int:post_id>/", ui_views.post_detail, name="ui-post-detail"),

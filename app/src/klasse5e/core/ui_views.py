@@ -66,6 +66,7 @@ from klasse5e.portal_adapters.models import (
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
 from klasse5e.webuntis.models import (
     HomeworkProgress,
+    WebUntisConnection,
     WebUntisHomework,
     WebUntisLesson,
 )
@@ -1657,22 +1658,23 @@ def portal_adapter_detail(request, adapter_id):
         elif action in {"save_module", "toggle_module"}:
             module = get_object_or_404(adapter.modules, pk=request.POST.get("module_id"))
             module.is_enabled = request.POST.get("is_enabled") == "on"
-            module.requires_child_credentials = (
-                request.POST.get("requires_child_credentials") == "on"
-            )
             if action == "save_module":
+                module.requires_child_credentials = (
+                    request.POST.get("requires_child_credentials") == "on"
+                )
                 module.configuration_note = request.POST.get("configuration_note", "").strip()[
                     :1200
                 ]
-                if module.is_enabled and module.status == PortalAdapterModule.Status.NOT_CONFIGURED:
-                    module.status = PortalAdapterModule.Status.READY
+            if module.is_enabled and module.status == PortalAdapterModule.Status.NOT_CONFIGURED:
+                module.status = PortalAdapterModule.Status.READY
             module.save()
-            module.available_to_classes.set(
-                SchoolClass.objects.filter(
-                    pk__in=request.POST.getlist("available_to_classes"),
-                    school__in=adapter.schools.all(),
+            if action == "save_module":
+                module.available_to_classes.set(
+                    SchoolClass.objects.filter(
+                        pk__in=request.POST.getlist("available_to_classes"),
+                        school__in=adapter.schools.all(),
+                    )
                 )
-            )
             AuditEvent.objects.create(
                 actor=request.user,
                 action="portal_adapter.module.updated",
@@ -2030,6 +2032,51 @@ def more(request):
     return render(request, "ui/more.html", context)
 
 
+@login_required
+def learning_portals(request):
+    school_class = _class_or_404(request.user, request)
+    adapters = (
+        PortalAdapter.objects.filter(
+            provider__in=(
+                PortalAdapter.Provider.MUNDO,
+                PortalAdapter.Provider.WIR_LERNEN_ONLINE,
+            ),
+            is_enabled=True,
+            modules__is_enabled=True,
+        )
+        .filter(
+            Q(schools=school_class.school)
+            | Q(school=school_class.school)
+        )
+        .prefetch_related("modules__available_to_classes")
+        .distinct()
+        .order_by("name")
+    )
+    portal_rows = []
+    for adapter in adapters:
+        modules = [
+            module
+            for module in adapter.modules.all()
+            if module.is_enabled
+            and (
+                not module.available_to_classes.all()
+                or school_class in module.available_to_classes.all()
+            )
+        ]
+        if not modules:
+            continue
+        portal_rows.append(
+            {
+                "adapter": adapter,
+                "hint": provider_definition(adapter.provider)["hint"],
+                "modules": modules,
+            }
+        )
+    context = _shared(request, "Lernportale", "more")
+    context["portal_rows"] = portal_rows
+    return render(request, "ui/learning_portals.html", context)
+
+
 def _menu_catalog():
     return {
         "events": ("Veranstaltungen & Mitbringen", "/mehr/veranstaltungen/", "event", "class"),
@@ -2037,6 +2084,7 @@ def _menu_catalog():
         "news": ("Aktuelles", "/mehr/aktuelles/", "news", "class"),
         "gallery": ("Fotos & Galerie", "/mehr/fotos/", "photo", "class"),
         "meals": ("Speiseplan", "/mehr/speiseplan/", "event", "class"),
+        "learning_portals": ("Lernportale", "/mehr/lernportale/", "document", "class"),
         "school_data": ("Kalender-Synchronisation", "/mehr/webuntis/", "calendar", "communication"),
         "contacts": ("Adressliste", "/kontakte/", "people", "communication"),
         "profile": ("Mein Konto", "/einstellungen/profil/", "people", "account"),
@@ -3093,24 +3141,56 @@ def family(request):
             student__in=[relationship.student_person for relationship in relationships]
         )
     }
+    webuntis_connections = {
+        item.student_id: item
+        for item in WebUntisConnection.objects.filter(
+            user=request.user,
+            student__in=[relationship.student_person for relationship in relationships],
+        )
+    }
     relationship_rows = []
     for relationship in relationships:
         membership, modules = _school_modules_for_student(relationship.student_person)
         module_rows = []
+        adapter_rows = {}
         for module in modules:
             connection = module_connections.get((relationship.student_person_id, module.pk))
-            module_rows.append(
+            module_row = {
+                "module": module,
+                "connection": connection,
+                "connection_url": _module_connection_url(module, relationship.student_person),
+            }
+            module_rows.append(module_row)
+            adapter_row = adapter_rows.setdefault(
+                module.adapter_id,
                 {
-                    "module": module,
-                    "connection": connection,
-                    "connection_url": _module_connection_url(module, relationship.student_person),
-                }
+                    "adapter": module.adapter,
+                    "modules": [],
+                    "connection_url": module_row["connection_url"],
+                    "requires_child_credentials": False,
+                    "has_enabled_connection": False,
+                    "credential_connection": None,
+                },
             )
+            adapter_row["modules"].append(module_row)
+            adapter_row["requires_child_credentials"] = (
+                adapter_row["requires_child_credentials"]
+                or module.requires_child_credentials
+            )
+            adapter_row["has_enabled_connection"] = (
+                adapter_row["has_enabled_connection"]
+                or bool(connection and connection.is_enabled)
+            )
+            if module.adapter.provider == PortalAdapter.Provider.WEBUNTIS:
+                adapter_row["credential_connection"] = webuntis_connections.get(
+                    relationship.student_person_id
+                )
         relationship_rows.append(
             {
                 "relationship": relationship,
                 "membership": membership,
                 "modules": module_rows,
+                "adapters": list(adapter_rows.values()),
                 "school_classes": available_classes(),
                 "card": person_card(
                     relationship.student_person,

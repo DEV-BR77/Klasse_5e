@@ -182,13 +182,27 @@ def test_guardian_can_only_activate_school_approved_modules_for_own_child(
     # the personal choice above, then stores credentials only for this child.
     response = client.post(
         f"/mehr/webuntis/?student={child.pk}",
-        {"username": "synthetic-user", "password": "synthetic-password"},
+        {
+            "username": "synthetic-user",
+            "password": "synthetic-password",
+            "return_to": "family",
+        },
         secure=True,
     )
     assert response.status_code == 302
+    assert response.url == f"/mehr/familie/?tab=modules&child={relationship.pk}"
     assert WebUntisConnection.objects.filter(user=guardian, student=child).exists()
     connection.refresh_from_db()
     assert connection.connection_state == ChildModuleConnection.ConnectionState.CONNECTED
+
+    family = client.get(
+        f"/mehr/familie/?tab=modules&child={relationship.pk}", secure=True
+    )
+    body = family.content.decode()
+    assert body.count("WebUntis-Zugang für Mila") == 1
+    assert 'name="username"' in body
+    assert 'name="password"' in body
+    assert "Zugangsdaten sind gespeichert" in body
 
     adapter.is_enabled = False
     adapter.save(update_fields=["is_enabled"])
@@ -204,3 +218,49 @@ def test_guardian_can_only_activate_school_approved_modules_for_own_child(
         secure=True,
     )
     assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_module_quick_toggle_preserves_advanced_settings(
+    client, admin_user, school, school_class
+):
+    adapter = PortalAdapter.objects.create(
+        provider=PortalAdapter.Provider.WEBUNTIS,
+        name="WebUntis",
+        is_enabled=True,
+        requires_child_credentials=True,
+    )
+    adapter.schools.add(school)
+    module = PortalAdapterModule.objects.create(
+        adapter=adapter,
+        key="homework",
+        label="Hausaufgaben",
+        description="Aufgaben und Fälligkeiten abrufen.",
+        is_enabled=True,
+        requires_child_credentials=True,
+        configuration_note="Nur für die Pilotklasse",
+    )
+    module.available_to_classes.add(school_class)
+    client.force_login(admin_user)
+
+    page = client.get(f"/verwaltung/adapter/{adapter.pk}/", secure=True)
+    body = page.content.decode()
+    assert "portal-module-list" in body
+    assert "Aufgaben und Fälligkeiten abrufen." in body
+    assert "Weitere Einstellungen" in body
+
+    response = client.post(
+        f"/verwaltung/adapter/{adapter.pk}/",
+        {
+            "action": "toggle_module",
+            "module_id": module.pk,
+        },
+        secure=True,
+    )
+
+    assert response.status_code == 302
+    module.refresh_from_db()
+    assert module.is_enabled is False
+    assert module.requires_child_credentials is True
+    assert module.configuration_note == "Nur für die Pilotklasse"
+    assert list(module.available_to_classes.all()) == [school_class]

@@ -212,6 +212,14 @@ die Freigabe serverseitig beim Speichern und Abrufen; deaktivierte Adapter sperr
 direkte Zugriffe und automatische Synchronisationen. Verschlüsselte Zugangsdaten bleiben
 bei den konkreten Adaptern und werden nicht im Katalog gespeichert.
 
+**Nachbesserung am 09.09.2026:** Die Modulverwaltung verwendet kompakte, einheitliche
+Kacheln mit Beschreibung und direktem Freigabeschalter; erweiterte Klassen- und
+Zugangseinstellungen bleiben beim Umschalten erhalten. In der Familien-Zentrale werden
+Module je Portal gruppiert. WebUntis zeigt Benutzername, Passwort und Speichern direkt
+beim ausgewählten Kind, ohne gespeicherte Zugangsdaten zurückzugeben. MUNDO und weitere
+öffentliche Lernangebote sind zusätzlich über den eigenen Menüpunkt „Lernportale“
+erreichbar.
+
 #### Ziel und Ablauf
 
 1. Portal-Admins legen Adapter einmal im zentralen Katalog an und bearbeiten sie dort.

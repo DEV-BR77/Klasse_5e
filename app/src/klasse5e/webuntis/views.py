@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
-from klasse5e.core.models import ConsentType
+from klasse5e.core.models import ConsentType, GuardianChildRelationship
 from klasse5e.core.policies import consent_state
 
 from .adapter import WebUntisAdapter, classify_error
@@ -43,6 +43,17 @@ def connection(request):
             password=form.cleaned_data["password"],
         )
         messages.success(request, "Schuldaten-Zugang eingerichtet.")
+        if request.POST.get("return_to") == "family":
+            relationship = GuardianChildRelationship.objects.filter(
+                guardian_person=request.user.person,
+                student_person=selected,
+                status="verified",
+            ).first()
+            if relationship:
+                return redirect(
+                    f"{reverse('ui-family')}?tab=modules&child={relationship.pk}"
+                )
+            return redirect("ui-family")
         return redirect("webuntis-connection")
     supported_keys = {
         "timetable",
