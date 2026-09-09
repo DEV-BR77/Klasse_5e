@@ -99,6 +99,7 @@ from .models import (
     UserNotification,
 )
 from .policies import active_roles, consent_state, family_label, visible_student_people
+from .presentation import presentation_events_for_class
 from .registration import sanitized_profile_photo
 from .school_import import EXPECTED_FIELDS, detect_encoding, import_schools
 from .session_security import (
@@ -742,6 +743,11 @@ def dashboard(request):
                 ).order_by("-important", "-pinned", "-updated_at")[:3]
                 if dashboard_class_ids
                 else Post.objects.none()
+            ),
+            "presentation_events": (
+                presentation_events_for_class(school_class)
+                if school_class
+                else []
             ),
             "documents": (
                 ProtectedDocument.objects.filter(
@@ -2700,6 +2706,7 @@ def event(request, event_id):
             "idempotency_key": secrets.token_urlsafe(18),
             "status": request.GET.get("status", ""),
             "is_organizer": is_organizer,
+            "edit_mode": request.GET.get("bearbeiten") == "1",
             "is_participating": EventParticipation.objects.filter(event=item, user=request.user).exists(),
             "attendee_names": attendee_names,
             "food_query": food_query,

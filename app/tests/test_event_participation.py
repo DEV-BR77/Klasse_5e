@@ -4,7 +4,15 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
-from klasse5e.core.models import AuditEvent, ClassMembership, Household, Person, UserAccount
+from klasse5e.core.models import (
+    AuditEvent,
+    ClassMembership,
+    Household,
+    Person,
+    UserAccount,
+    UserNotification,
+)
+from klasse5e.core.presentation import ensure_presentation_notifications
 from klasse5e.events.models import Event, EventParticipation
 
 
@@ -93,3 +101,22 @@ def test_event_participation_shows_a_family_and_can_be_withdrawn(
     assert response.status_code == 302
     assert not EventParticipation.objects.filter(event=published_event, user=guardian).exists()
     assert AuditEvent.objects.filter(action="event.participation.withdrawn").exists()
+
+
+@pytest.mark.django_db
+def test_portal_presentation_is_news_and_creates_one_direct_notification(
+    client, guardian, published_event
+):
+    client.force_login(guardian)
+    ensure_presentation_notifications(guardian, published_event.school_class)
+
+    notification = UserNotification.objects.get(user=guardian, object_id=str(published_event.pk))
+    assert notification.category == "news"
+    assert notification.target_url == f"/mehr/veranstaltungen/{published_event.pk}/"
+    assert UserNotification.objects.filter(user=guardian).count() == 1
+
+    response = client.get("/", secure=True)
+    body = response.content.decode()
+    assert "Portalvorstellung" in body
+    assert f"/mehr/veranstaltungen/{published_event.pk}/" in body
+    assert 'class="app-notification-badge" aria-hidden="true">1<' in body

@@ -103,7 +103,10 @@
     <div id="dashboard-panel-news" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboard-tab-news" data-dashboard-panel="news" hidden>
       <article class="dashboard-subsection">
         <header class="card-header"><div><p class="eyebrow">Klasse</p><h2>Aktuelles</h2></div>{% if notification_counts.news %}<span class="new-label">{{ notification_counts.news }} neu</span>{% endif %}</header>
-        <ul class="news-list">{% for item in posts %}<li><a href="/mehr/aktuelles/{{ item.id }}/"><span>{% include "ui/_icon.html" with name="news" %}</span><strong>{{ item.title }}</strong><small>Mehr lesen →</small></a></li>{% empty %}<li class="empty-compact">Keine neuen Beiträge.</li>{% endfor %}</ul>
+        <ul class="news-list">
+          {% for item in presentation_events %}<li><a href="/mehr/veranstaltungen/{{ item.id }}/"><span>{% include "ui/_icon.html" with name="news" %}</span><strong>{{ item.title }}</strong><small>Vorstellung öffnen →</small></a></li>{% endfor %}
+          {% for item in posts %}<li><a href="/mehr/aktuelles/{{ item.id }}/"><span>{% include "ui/_icon.html" with name="news" %}</span><strong>{{ item.title }}</strong><small>Mehr lesen →</small></a></li>{% empty %}{% if not presentation_events %}<li class="empty-compact">Keine neuen Beiträge.</li>{% endif %}{% endfor %}
+        </ul>
       </article>
     </div>
 

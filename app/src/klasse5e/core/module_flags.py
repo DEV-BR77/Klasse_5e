@@ -71,6 +71,9 @@ def module_context(request):
     keys = PortalModule.objects.values_list("key", flat=True)
     unread_count = 0
     if school_class:
+        from .presentation import ensure_presentation_notifications
+
+        ensure_presentation_notifications(request.user, school_class)
         unread_count = UserNotification.objects.filter(
             user=request.user, school_class=school_class, read_at__isnull=True
         ).count()

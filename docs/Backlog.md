@@ -36,9 +36,11 @@ Abnahmetests.
   **Abgeschlossen am 09.09.2026:** Unter „KlassID als App installieren“
   erklären zwei responsive Kacheln die Installation über Chrome beziehungsweise
   Safari; der direkte Browser-Installationsknopf bleibt zusätzlich erhalten.
-- [ ] **Portalvorstellung sichtbar ankündigen.** Die Präsentationsveranstaltung
-  im Bereich Aktuelles verlinken und allen berechtigten Konten eine ungelesene,
-  neutrale In-App-Benachrichtigung mit direktem Link zur Veranstaltung geben.
+- [x] **Portalvorstellung sichtbar ankündigen.** Präsentationstermine (Titel mit
+  „Portal/KlassID“ und „Vorstellung/Kennenlernen“) erscheinen im Dashboard unter
+  „Aktuelles“. Aktive Klassenmitglieder erhalten beim ersten Portalaufruf
+  idempotent eine ungelesene, neutrale In-App-Benachrichtigung mit direktem Link
+  zur Veranstaltung; spätere Konten werden dadurch ebenfalls erreicht.
 - [ ] **Erstlogin als Willkommensseite.** Den bisherigen Cloud-/Schrittablauf
   durch eine kurze Willkommensseite für die Klasse 5e ersetzen. Sie verweist auf
   Familienverwaltung, Profil-/Freigabepflege, persönliche WebUntis-Zugänge am
