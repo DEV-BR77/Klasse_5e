@@ -14,23 +14,17 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 
 | Reihenfolge | Aufgabe | Empfohlenes Modell | Begründung |
 |---:|---|---|---|
-| 1 | Erstlogin als Willkommensseite | GPT-5.6 Terra · mittel | Onboarding berührt mehrere Zustände und Berechtigungen. |
-| 2 | BL-16 Adapterkatalog und persönliche Zugänge | GPT-6 Astra · hoch | Größtes Daten-, Sicherheits- und Migrationsrisiko. |
-| 3 | BL-17 Abwesenheit melden und rückprüfen | GPT-6 Astra · hoch | Externe Schreib-/Leseprüfung und unklare Fehlerfälle. |
-| 4 | BL-18 Schulmanager-Online-Adapter | GPT-6 Astra · hoch | Playwright-Stabilität, Geheimnisse und Datenschutz. |
-| 5 | Kinderschutz für Sprache und Bilder | GPT-5.6 Sol · hoch | Gute Code-/Sicherheitsprüfung bei geringerem Preis; Modell- und Lizenzprüfung bleibt nötig. |
-| 6 | Rollenänderungen zusammenführen und veröffentlichen | GPT-5.6 Terra · hoch | Abschlussprüfung, Migrationen und kontrollierter Rollout. |
-| 7 | Mobile Kopfzeile verdichten | GPT-5.6 Luna · gering | Begrenzte Template-/CSS-Anpassung. |
-| 8 | Mobile Dashboard-Navigation | GPT-5.6 Luna · mittel | UI- und Tastaturbedienung über mehrere Tabs. |
-| 9 | Stundenplan kompakt darstellen | GPT-5.6 Luna · gering | Lokales Layout ohne neue Fachlogik. |
-| 10 | Hausaufgaben vor Tagesmenü | GPT-5.6 Luna · gering | Begrenzte Dashboard-Anordnung. |
-| 11 | Fahrgemeinschaft in Klassengemeinschaft verschieben | GPT-5.6 Luna · gering | Navigation und Beschriftungen anpassen. |
-| 12 | Abmeldebestätigung | GPT-5.6 Luna · gering | Kleine, isolierte Dialogänderung. |
-| 13 | Chatraum-Aktionen verdichten | GPT-5.6 Luna · mittel | Responsive Aktionen und Wischbedienung. |
-| 14 | Einstellungen sortieren | GPT-5.6 Luna · gering | Reihenfolge und Standardöffnung der Navigation. |
-| 15 | Telefonnummern normalisieren | GPT-5.6 Terra · mittel | Externe Bibliothek, Datenmigration und Anzeige. |
-| 16 | E-Mail-Prüfung vereinheitlichen | GPT-5.6 Terra · mittel | Zentrale Validierung über mehrere Eingabepfade. |
-| 17 | Bestätigungs-E-Mail und doppelten Schritt überarbeiten | GPT-5.6 Luna · mittel | Ablaufänderung mit Authentifizierungs-Regressionstests. |
+| 1 | Rollenänderungen abschließend veröffentlichen | GPT-5.6 Terra · hoch | Migrationen, Berechtigungen und kontrollierter Rollout. |
+| 2 | Mobile Kopfzeile verdichten | GPT-5.6 Luna · gering | Begrenzte Template-/CSS-Anpassung. |
+| 3 | Mobile Dashboard-Navigation | GPT-5.6 Luna · mittel | UI- und Tastaturbedienung über mehrere Tabs. |
+| 4 | Stundenplan kompakt darstellen | GPT-5.6 Luna · gering | Lokales Layout ohne neue Fachlogik. |
+| 5 | Hausaufgaben vor Tagesmenü | GPT-5.6 Luna · gering | Begrenzte Dashboard-Anordnung. |
+| 6 | Abmeldebestätigung | GPT-5.6 Luna · gering | Kleine, isolierte Dialogänderung. |
+| 7 | Chatraum-Aktionen verdichten | GPT-5.6 Luna · mittel | Responsive Aktionen und Wischbedienung über mehrere Ansichten. |
+| 8 | Einstellungen sortieren | GPT-5.6 Luna · gering | Reihenfolge und Standardöffnung der Navigation. |
+| 9 | Bestätigungs-E-Mail überarbeiten | GPT-5.6 Luna · mittel | Text und Authentifizierungs-Regressionstest. |
+| 10 | Doppelten Bestätigungsschritt entfernen | GPT-5.6 Luna · mittel | Zustandswechsel im Registrierungsablauf. |
+| später | BL-18 Schulmanager-Online-Adapter | GPT-6 Astra · hoch | Auf Wunsch zurückgestellt; Playwright, Geheimnisse und Datenschutz benötigen die stärkere Prüfung. |
 
 ## Dringend
 
@@ -158,9 +152,16 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
   Lehrkraft darunter; drei Einträge ohne übergroße Karten sichtbar machen.
 - [ ] **Hausaufgaben vor Tagesmenü.** Hausaufgaben im Tagesbereich vor dem
   Menü platzieren; Tagesmenü ein- und ausklappbar machen.
-- [ ] **Fahrgemeinschaft verschieben.** Aus der Startnavigation entfernen
+- [x] **Fahrgemeinschaft verschieben.** Aus der Startnavigation entfernen
   und in Klassengemeinschaft einordnen; Adressliste in die direkte
   Navigation aufnehmen.
+  **Abgeschlossen am 09.09.2026:** Die direkte Navigation führt nun zur
+  Adressliste; Fahrgemeinschaften bleiben unter „Klassenleben“ erreichbar.
+  Die Übersicht verwendet ein passendes fünftes Rasterfeld für die Aktion.
+  Die zentrierte Kontaktkarte zeigt Erwachsene und Kinder jeweils einzeln mit
+  Profilbild oder Avatar, Name sowie ausschließlich freigegebenen E-Mail-,
+  Telefon- und Adressdaten. Zulässige Direktnachrichten starten direkt an der
+  jeweiligen Person. Auf Mobilgeräten stehen die Personenkarten untereinander.
 
 ## Bedienung und Einstellungen
 
@@ -182,12 +183,23 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 
 ## Eingabe und E-Mail-Ablauf
 
-- [ ] **Telefonnummern normalisieren.** Google libphonenumber einsetzen,
+- [x] **Telefonnummern normalisieren.** Google libphonenumber einsetzen,
   internationale E.164-Speicherung, gut lesbare Anzeige und direkte
   Telefonwahl sicherstellen.
-- [ ] **E-Mail-Prüfung vereinheitlichen.** Serverseitige Django-Prüfung an
+  **Abgeschlossen am 09.09.2026:** `phonenumbers` 9.0.38 prüft Eingaben aus
+  persönlichem Profil und Familien-Zentrale mit Standardregion Deutschland.
+  Gültige Nummern werden als E.164 gespeichert, international formatiert
+  angezeigt und als kanonischer `tel:`-Link ausgegeben. Die Migration bricht
+  bei nicht sicher konvertierbaren Bestandswerten ab, statt Daten zu verlieren.
+- [x] **E-Mail-Prüfung vereinheitlichen.** Serverseitige Django-Prüfung an
   allen Eingabestellen verwenden; Konten zusätzlich nur nach E-Mail-Link
   aktivieren.
+  **Abgeschlossen am 09.09.2026:** Registrierung, Familienanmeldung,
+  Familienprofile, persönliche Profile und Kontoerstellung verwenden dieselbe
+  Normalisierung und Djangos E-Mail-Validator. Bestehende Aktivierungslogik
+  erzeugt weiterhin erst nach bestätigtem E-Mail-Link und anschließender
+  Freigabe ein aktives Konto. Regressionstests decken ungültige Eingaben und
+  atomare Profilspeicherung ab.
 - [ ] **Bestätigungs-E-Mail überarbeiten.** KlassID statt Klassenkennung im
   Betreff und Text, persönliche Du-Anrede und klarer Bestätigungslink.
 - [ ] **Doppelten Bestätigungsschritt entfernen.** Nach dem E-Mail-Link
@@ -357,7 +369,8 @@ eine reale, bewusst freigegebene Abwesenheitsmeldung.
 
 ### BL-18 – Schulmanager Online: persönlicher Playwright-Adapter für Nachrichten und Elternbriefe
 
-**Status:** in Bearbeitung; am 09.09.2026 gemeinsam mit BL-17 freigegeben.
+**Status:** am 09.09.2026 auf Wunsch zurückgestellt; erst nach erneuter
+Freigabe fortsetzen.
 Die angemeldete Chrome-Sitzung zeigt Nachrichten unter
 `#/modules/messenger/messages` und Elternbriefe unter `#/modules/letters/view`.
 Noch zu prüfen sind Login, eindeutige Kind-/Schulzuordnung, Detailansichten und

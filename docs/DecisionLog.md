@@ -469,3 +469,22 @@ und die gewünschte direkte Verpixelung ohne neue Laufzeitarchitektur. Die
 proprietäre Trainingsbasis des FalconsAI-Modells und mögliche Fehlklassifikationen
 werden durch eine vorsichtige Schwelle, sichtbare Kennzeichnung und den weiterhin
 menschlich ausgelösten Meldeweg berücksichtigt.
+
+## ADR-032: Personengenaue Adressliste und kanonische Kontaktdaten
+
+Die Adressliste bleibt eine serverseitig gerenderte Ansicht des Monolithen. Sie
+zeigt Familien in der Übersicht und im Detail je eine eigene Karte für jede
+zugeordnete erwachsene Person und jedes Kind. E-Mail, Telefon und Adresse werden
+pro Person nur bei der jeweils aktiven Freigabe ausgegeben. Eine private
+Nachricht ist nur sichtbar, wenn die bestehende Chat-Policy sie für genau dieses
+Zielkonto erlaubt. Die Adressliste ersetzt die Fahrgemeinschaft in der direkten
+Navigation; Fahrgemeinschaften bleiben als eigener Eintrag unter
+„Klassenleben“ erreichbar.
+
+Telefonnummern werden mit `phonenumbers` 9.0.38, dem Python-Port von Google
+libphonenumber, geprüft und in E.164 gespeichert. Bestehende gültige Werte
+werden einmalig migriert; ein nicht sicher konvertierbarer Wert bricht die
+Migration ab, statt Kontaktdaten zu verändern oder zu löschen. E-Mail-Adressen
+nutzen in Registrierung, Konten und Personenprofilen eine gemeinsame
+Normalisierung sowie Djangos serverseitigen Validator. Damit bleiben Anzeige,
+Direktwahl, Dublettenprüfung und Anmeldung über alle Eingabepfade konsistent.

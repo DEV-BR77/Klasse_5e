@@ -125,6 +125,14 @@ Einwilligungen, `valid_from`, `valid_until`, `status`, `verified_by` und
 `verified_at`. Damit bleiben getrennte Haushalte, mehrere Sorgeberechtigte,
 mehrere Kinder und sonstige autorisierte Bezugspersonen modellierbar.
 
+Telefonnummern von Personen werden an allen bearbeitbaren Profilpfaden mit dem
+Python-Port von Google libphonenumber geprüft und in E.164 gespeichert. Die
+Oberfläche formatiert sie international lesbar und verwendet für direkte Anrufe
+den kanonischen E.164-Wert. E-Mail-Adressen durchlaufen vor jeder Speicherung
+dieselbe Django-Validierung und bestehende Login-Normalisierung. Die
+Adressliste wertet Freigaben anschließend für jede Person und jedes Feld einzeln
+aus; die Familienzuordnung erweitert keine Sichtbarkeit.
+
 Jede Handlung speichert das tatsächlich authentisierte Benutzerkonto. Eine
 sichtbare Familienbezeichnung wird nur aus verifizierten Beziehungen abgeleitet
 und nie als frei behauptbarer Text gespeichert. Profilfreigaben steuern, ob
