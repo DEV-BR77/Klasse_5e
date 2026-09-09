@@ -3,6 +3,9 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 
+from klasse5e.portal_adapters.models import PortalAdapter
+from klasse5e.portal_adapters.policies import provider_available_for_student
+
 from .models import SyncRun, SyncSchedule, WebUntisConnection
 from .scheduling import next_run
 from .sync import SyncThrottled, run_connection
@@ -38,6 +41,10 @@ def run_due_schedules(*, now=None):
             continue
         started = timezone.now()
         for connection in WebUntisConnection.objects.filter(sync_enabled=True).iterator():
+            if not provider_available_for_student(
+                connection.student, PortalAdapter.Provider.WEBUNTIS
+            ):
+                continue
             try:
                 key = f"due:{schedule.pk}:{connection.pk}:{schedule.last_started_at.isoformat()}"
                 results.append(run_connection(connection, trigger=SyncRun.Trigger.AUTOMATIC, idempotency_key=key))

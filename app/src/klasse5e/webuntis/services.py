@@ -2,6 +2,8 @@ from django.db import transaction
 
 from klasse5e.core.models import AuditEvent, Person, RelationshipStatus
 from klasse5e.core.policies import visible_student_people
+from klasse5e.portal_adapters.models import ChildModuleConnection, PortalAdapter
+from klasse5e.portal_adapters.policies import provider_available_for_student, set_connection_state
 
 from .crypto import encrypt
 from .models import FeatureKey, WebUntisConnection, WebUntisFeaturePreference
@@ -23,11 +25,15 @@ def visible_connections(user):
 
 
 def can_manage_connection(user, student):
-    return eligible_students(user).filter(pk=student.pk).exists()
+    return eligible_students(user).filter(pk=student.pk).exists() and provider_available_for_student(
+        student, PortalAdapter.Provider.WEBUNTIS
+    )
 
 
 @transaction.atomic
 def save_connection(*, user, student, username, password):
+    if not can_manage_connection(user, student):
+        raise PermissionError("WebUntis ist für dieses Kind nicht freigegeben.")
     connection, _ = WebUntisConnection.objects.update_or_create(
         user=user,
         student=student,
@@ -49,10 +55,20 @@ def save_connection(*, user, student, username, password):
         target_id=str(connection.pk),
         metadata={"student_id": str(student.pk)},
     )
+    set_connection_state(
+        student,
+        PortalAdapter.Provider.WEBUNTIS,
+        ChildModuleConnection.ConnectionState.CONNECTED,
+    )
     return connection
 
 
 def remove_connection(connection, actor):
+    set_connection_state(
+        connection.student,
+        PortalAdapter.Provider.WEBUNTIS,
+        ChildModuleConnection.ConnectionState.CREDENTIALS_NEEDED,
+    )
     connection_id = connection.pk
     connection.delete()
     AuditEvent.objects.create(

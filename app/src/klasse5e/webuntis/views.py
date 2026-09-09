@@ -25,6 +25,8 @@ def connection(request):
     students = eligible_students(request.user)
     selected_id = request.POST.get("student") or request.GET.get("student")
     selected = students.filter(pk=selected_id).first() if selected_id else students.first()
+    if selected and not can_manage_connection(request.user, selected):
+        raise Http404
     current = (
         WebUntisConnection.objects.filter(user=request.user, student=selected)
         .prefetch_related("features")

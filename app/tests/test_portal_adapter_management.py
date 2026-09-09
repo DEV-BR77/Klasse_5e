@@ -1,6 +1,8 @@
 from datetime import date
 
 import pytest
+from cryptography.fernet import Fernet
+from django.test import override_settings
 from django.utils import timezone
 
 from klasse5e.core.models import ClassMembership, GuardianChildRelationship, Person, SchoolClass
@@ -9,6 +11,7 @@ from klasse5e.portal_adapters.models import (
     PortalAdapter,
     PortalAdapterModule,
 )
+from klasse5e.webuntis.models import WebUntisConnection
 
 
 @pytest.mark.django_db
@@ -98,6 +101,7 @@ def test_school_admin_can_limit_a_module_to_selected_classes(client, admin_user,
 
 
 @pytest.mark.django_db
+@override_settings(WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY=Fernet.generate_key().decode())
 def test_guardian_can_only_activate_school_approved_modules_for_own_child(
     client, guardian, school_class
 ):
@@ -149,6 +153,7 @@ def test_guardian_can_only_activate_school_approved_modules_for_own_child(
     hidden_module.available_to_classes.add(other_class)
 
     client.force_login(guardian)
+    assert client.get(f"/mehr/webuntis/?student={child.pk}", secure=True).status_code == 404
     family = client.get("/mehr/familie/", secure=True)
     assert family.status_code == 200
     module_labels = [
@@ -172,6 +177,22 @@ def test_guardian_can_only_activate_school_approved_modules_for_own_child(
     connection = ChildModuleConnection.objects.get(student=child, module=allowed_module)
     assert connection.is_enabled is True
     assert connection.connection_state == ChildModuleConnection.ConnectionState.CREDENTIALS_NEEDED
+
+    # A direct concrete-adapter URL remains unavailable until the parent made
+    # the personal choice above, then stores credentials only for this child.
+    response = client.post(
+        f"/mehr/webuntis/?student={child.pk}",
+        {"username": "synthetic-user", "password": "synthetic-password"},
+        secure=True,
+    )
+    assert response.status_code == 302
+    assert WebUntisConnection.objects.filter(user=guardian, student=child).exists()
+    connection.refresh_from_db()
+    assert connection.connection_state == ChildModuleConnection.ConnectionState.CONNECTED
+
+    adapter.is_enabled = False
+    adapter.save(update_fields=["is_enabled"])
+    assert client.get(f"/mehr/webuntis/?student={child.pk}", secure=True).status_code == 404
 
     response = client.post(
         "/mehr/familie/",

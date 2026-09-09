@@ -8,6 +8,8 @@ from django.utils import timezone
 from klasse5e.core.models import ConsentType
 from klasse5e.core.module_flags import module_enabled
 from klasse5e.core.policies import consent_state
+from klasse5e.portal_adapters.models import PortalAdapter
+from klasse5e.portal_adapters.policies import provider_available_for_student
 
 from .adapter import CAPABILITIES, WebUntisAdapter, classify_error
 from .crypto import decrypt
@@ -72,6 +74,26 @@ def _set_feature_state(connection, key, state):
 
 
 def _execute_once(run):
+    if not provider_available_for_student(
+        run.connection.student, PortalAdapter.Provider.WEBUNTIS
+    ):
+        # A connection may outlive a school or family-side approval.  Do not
+        # contact the external portal after that approval was withdrawn.
+        run.status = SyncRun.Status.NO_CHANGE
+        run.categories = []
+        run.change_count = 0
+        run.error_code = "adapter_disabled"
+        run.finished_at = timezone.now()
+        run.save(
+            update_fields=[
+                "status",
+                "categories",
+                "change_count",
+                "error_code",
+                "finished_at",
+            ]
+        )
+        return run
     categories = _enabled_categories(run.connection)
     total_changes = 0
     successes = 0

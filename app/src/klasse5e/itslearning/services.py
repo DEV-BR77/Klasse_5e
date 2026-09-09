@@ -10,6 +10,9 @@ from zoneinfo import ZoneInfo
 from django.db import transaction
 from django.utils import timezone
 
+from klasse5e.portal_adapters.models import PortalAdapter
+from klasse5e.portal_adapters.policies import provider_available_for_student
+
 from .models import ItslearningCalendarItem, ItslearningUpdate
 
 MAX_FEED_BYTES = 2 * 1024 * 1024
@@ -140,6 +143,10 @@ def sync_calendar(connection):
 
 
 def sync_connection(connection):
+    if not connection.active or not provider_available_for_student(
+        connection.student.person, PortalAdapter.Provider.ITSLEARNING
+    ):
+        return False
     try:
         count = sync_calendar(connection)
         for course in connection.itslearningcourse_set.all():

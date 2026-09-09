@@ -196,7 +196,7 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 
 ## Adapter und Abwesenheitsmeldungen
 
-- [ ] **BL-16: Zentraler Adapterkatalog, Schulzuordnung und persönliche Zugänge.**
+- [x] **BL-16: Zentraler Adapterkatalog, Schulzuordnung und persönliche Zugänge.**
 - [ ] **BL-17: Abwesenheit direkt vom Dashboard melden und bei WebUntis rückprüfen.**
 
 Die folgenden Details sind aus den bisherigen Aufgaben 16 und 17 in `Nextsteps.md`
@@ -204,9 +204,11 @@ Die folgenden Details sind aus den bisherigen Aufgaben 16 und 17 in `Nextsteps.m
 
 ### BL-16 – Zentraler Adapterkatalog, Schulzuordnung und persönliche Zugänge
 
-**Status:** offen; am 08.09.2026 ausdrücklich als Folgeaufgabe beauftragt.
-Diese Aufgabe wird separat umgesetzt; die derzeitige schulgebundene Adapterverwaltung
-ist noch kein vollständiger zentraler Katalog.
+**Status:** abgeschlossen am 09.09.2026. Der zentrale Katalog, die Schul-/Klassenfreigabe
+und die persönliche Aktivierung je Kind sind umgesetzt. WebUntis und itslearning prüfen
+die Freigabe serverseitig beim Speichern und Abrufen; deaktivierte Adapter sperren auch
+direkte Zugriffe und automatische Synchronisationen. Verschlüsselte Zugangsdaten bleiben
+bei den konkreten Adaptern und werden nicht im Katalog gespeichert.
 
 #### Ziel und Ablauf
 

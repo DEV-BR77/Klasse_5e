@@ -190,7 +190,6 @@ def test_tour_and_webuntis_status_explain_phase_boundary(client, guardian):
     assert "Noch kein Import" in tour or "noch keine Fachdaten" in tour
     assert "tour-visual--webuntis" in tour
     page = client.get(f"/mehr/webuntis/?student={child.id}")
-    html = page.content.decode()
-    assert page.status_code == 200
-    assert "Schuldaten synchronisieren" in html
-    assert "Kalender verbinden" in html
+    # School data stays closed until the school and the family have enabled a
+    # concrete adapter for this child.
+    assert page.status_code == 404

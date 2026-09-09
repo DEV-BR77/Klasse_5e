@@ -7,6 +7,8 @@ from django.views.decorators.http import require_POST
 from klasse5e.core.models import GuardianChildRelationship, RelationshipStatus, StudentProfile
 from klasse5e.core.policies import visible_student_people
 from klasse5e.core.ui_views import _class_or_404, _shared
+from klasse5e.portal_adapters.models import PortalAdapter
+from klasse5e.portal_adapters.policies import provider_available_for_student
 
 from .forms import ConnectionForm, CourseForm, WebDavForm
 from .models import ItslearningConnection, ItslearningCourse, ItslearningUpdate, WebDavSpace
@@ -30,7 +32,10 @@ def _students(user, manage=False):
 
 
 def _connection_for(user, student_id):
-    if not _students(user, manage=True).filter(id=student_id).exists():
+    student = _students(user, manage=True).filter(id=student_id).first()
+    if not student or not provider_available_for_student(
+        student.person, PortalAdapter.Provider.ITSLEARNING
+    ):
         raise Http404
     return ItslearningConnection.objects.filter(owner=user, student_id=student_id).first()
 
@@ -38,7 +43,11 @@ def _connection_for(user, student_id):
 @login_required
 def portal(request):
     _class_or_404(request.user, request)
-    students = list(_students(request.user))
+    students = [
+        student
+        for student in _students(request.user)
+        if provider_available_for_student(student.person, PortalAdapter.Provider.ITSLEARNING)
+    ]
     connections = (
         ItslearningConnection.objects.filter(student__in=students, active=True)
         .select_related("student__person")
@@ -51,7 +60,11 @@ def portal(request):
         {
             "connections": connections,
             "students": students,
-            "manageable_students": list(_students(request.user, manage=True)),
+            "manageable_students": [
+                student
+                for student in _students(request.user, manage=True)
+                if provider_available_for_student(student.person, PortalAdapter.Provider.ITSLEARNING)
+            ],
             "connection_form": ConnectionForm(),
             "course_form": CourseForm(),
             "upcoming": [],

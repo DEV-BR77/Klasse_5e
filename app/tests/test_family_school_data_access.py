@@ -20,6 +20,11 @@ from klasse5e.itslearning.models import (
     ItslearningCourse,
     ItslearningUpdate,
 )
+from klasse5e.portal_adapters.models import (
+    ChildModuleConnection,
+    PortalAdapter,
+    PortalAdapterModule,
+)
 from klasse5e.webuntis.models import (
     WebUntisAbsence,
     WebUntisConnection,
@@ -46,6 +51,26 @@ def shared_school_data(guardian, school_class):
         person=child,
         school_class=school_class,
         valid_from=school_class.school_year.starts_on,
+    )
+    adapter = PortalAdapter.objects.create(
+        school=school_class.school,
+        provider=PortalAdapter.Provider.ITSLEARNING,
+        name="Lernplattform-Zugang",
+        is_enabled=True,
+    )
+    module = PortalAdapterModule.objects.create(
+        adapter=adapter,
+        key="learning-material",
+        label="Lernmaterial",
+        is_enabled=True,
+        requires_child_credentials=True,
+    )
+    module.available_to_classes.add(school_class)
+    ChildModuleConnection.objects.create(
+        student=child,
+        module=module,
+        is_enabled=True,
+        connection_state=ChildModuleConnection.ConnectionState.CONNECTED,
     )
     second_user = UserAccount.objects.create_user(
         email="second-guardian@example.test", password="Synthetic-Password-123!"
