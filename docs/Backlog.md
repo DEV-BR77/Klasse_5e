@@ -5,6 +5,33 @@ Folgeaufträge fest. `docs/Backlog.md` ist die zentrale Datei für die nächsten
 abzuarbeitenden Aufgaben; neue offene Folgeaufträge werden hier gepflegt. Sie ersetzt keine Berechtigungsprüfung und keine
 Abnahmetests.
 
+## Empfohlene Reihenfolge und Modellwahl
+
+Die folgende Liste enthält alle derzeit offenen Aufgaben. Die Modelle sind
+Arbeitsvorschläge: Bei jeder Aufgabe wird vor dem Start nochmals geprüft, ob
+Aufwand und Risiko die Wahl rechtfertigen. Nach jeder Aufgabe folgt ein
+Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
+
+| Reihenfolge | Aufgabe | Empfohlenes Modell | Begründung |
+|---:|---|---|---|
+| 1 | Erstlogin als Willkommensseite | GPT-5.6 Terra · mittel | Onboarding berührt mehrere Zustände und Berechtigungen. |
+| 2 | BL-16 Adapterkatalog und persönliche Zugänge | GPT-6 Astra · hoch | Größtes Daten-, Sicherheits- und Migrationsrisiko. |
+| 3 | BL-17 Abwesenheit melden und rückprüfen | GPT-6 Astra · hoch | Externe Schreib-/Leseprüfung und unklare Fehlerfälle. |
+| 4 | BL-18 Schulmanager-Online-Adapter | GPT-6 Astra · hoch | Playwright-Stabilität, Geheimnisse und Datenschutz. |
+| 5 | Kinderschutz für Sprache und Bilder | GPT-6 Astra · hoch | Modell-, Lizenz-, Fehlklassifikations- und Sicherheitsprüfung. |
+| 6 | Rollenänderungen zusammenführen und veröffentlichen | GPT-5.6 Terra · hoch | Abschlussprüfung, Migrationen und kontrollierter Rollout. |
+| 7 | Mobile Kopfzeile verdichten | GPT-5.6 Luna · gering | Begrenzte Template-/CSS-Anpassung. |
+| 8 | Mobile Dashboard-Navigation | GPT-5.6 Luna · mittel | UI- und Tastaturbedienung über mehrere Tabs. |
+| 9 | Stundenplan kompakt darstellen | GPT-5.6 Luna · gering | Lokales Layout ohne neue Fachlogik. |
+| 10 | Hausaufgaben vor Tagesmenü | GPT-5.6 Luna · gering | Begrenzte Dashboard-Anordnung. |
+| 11 | Fahrgemeinschaft in Klassengemeinschaft verschieben | GPT-5.6 Luna · gering | Navigation und Beschriftungen anpassen. |
+| 12 | Abmeldebestätigung | GPT-5.6 Luna · gering | Kleine, isolierte Dialogänderung. |
+| 13 | Chatraum-Aktionen verdichten | GPT-5.6 Luna · mittel | Responsive Aktionen und Wischbedienung. |
+| 14 | Einstellungen sortieren | GPT-5.6 Luna · gering | Reihenfolge und Standardöffnung der Navigation. |
+| 15 | Telefonnummern normalisieren | GPT-5.6 Terra · mittel | Externe Bibliothek, Datenmigration und Anzeige. |
+| 16 | E-Mail-Prüfung vereinheitlichen | GPT-5.6 Terra · mittel | Zentrale Validierung über mehrere Eingabepfade. |
+| 17 | Bestätigungs-E-Mail und doppelten Schritt überarbeiten | GPT-5.6 Luna · mittel | Ablaufänderung mit Authentifizierungs-Regressionstests. |
+
 ## Dringend
 
 - [x] **Schuldaten im Familienkontext ausrollen und prüfen.** WebUntis- und
