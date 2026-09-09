@@ -43,7 +43,7 @@
         <section class="settings-details-body">
           <header class="settings-row">
             <div><strong>{{ adapter_row.adapter.name }}</strong><small>{{ adapter_row.adapter.get_provider_display }}</small></div>
-            {% if adapter_row.has_enabled_connection and adapter_row.connection_url %}
+            {% if adapter_row.adapter.provider != 'webuntis' and adapter_row.has_enabled_connection and adapter_row.connection_url %}
               <a class="button button-secondary" href="{{ adapter_row.connection_url }}">{% if adapter_row.requires_child_credentials %}Zugangsdaten pflegen{% else %}Öffnen{% endif %}</a>
             {% endif %}
           </header>

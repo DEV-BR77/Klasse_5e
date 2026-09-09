@@ -203,6 +203,7 @@ def test_guardian_can_only_activate_school_approved_modules_for_own_child(
     assert 'name="username"' in body
     assert 'name="password"' in body
     assert "Zugangsdaten sind gespeichert" in body
+    assert "Zugangsdaten pflegen" not in body
 
     adapter.is_enabled = False
     adapter.save(update_fields=["is_enabled"])
