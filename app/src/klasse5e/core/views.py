@@ -24,7 +24,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.csrf import csrf_failure as django_csrf_failure
 from django.views.decorators.csrf import csrf_protect
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from .avatar_designer import avatar_designer_context, validate_avatar_seed
 from .contact_data import format_phone_number, normalize_email_address, normalize_phone_number
@@ -57,8 +57,9 @@ logger = logging.getLogger(__name__)
 SCAN_LINK_MAX_AGE = 20 * 60
 
 
+@require_GET
 def temporary_scan_access(request, token):
-    """Authenticate one signed scan link for twenty minutes, then redirect home."""
+    """Authenticate one signed scan link and render its first protected page directly."""
 
     try:
         user_id = TimestampSigner(salt="klassid-scan-access").unsign(token, max_age=SCAN_LINK_MAX_AGE)
@@ -67,7 +68,14 @@ def temporary_scan_access(request, token):
         return HttpResponse("Dieser Scan-Link ist abgelaufen oder ungültig.", status=410)
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     request.session.set_expiry(SCAN_LINK_MAX_AGE)
-    return redirect("/")
+    # Some HTML scanners do not retain a cookie across a redirect. Rendering the
+    # dashboard in this authenticated request lets such tools start their scan
+    # at the protected portal instead of falling back to the login form.
+    from .ui_views import dashboard
+
+    response = dashboard(request)
+    response["Cache-Control"] = "private, no-store, max-age=0"
+    return response
 
 
 def csrf_failure(request, reason=""):
