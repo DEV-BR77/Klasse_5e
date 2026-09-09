@@ -67,7 +67,7 @@ def test_family_centre_saves_only_the_guardians_own_profile(client, guardian, ma
         f"person-{person_id}-first_name": "Alex", f"person-{person_id}-last_name": "Beispiel",
         f"person-{person_id}-street": "Musterstraße 1", f"person-{person_id}-postal_code": "38440",
         f"person-{person_id}-city": "Wolfsburg", f"person-{person_id}-contact_email": "alex@example.test",
-        f"person-{person_id}-phone": "05361 1", f"person-{person_id}-chat_display_name": "Alex",
+        f"person-{person_id}-phone": "05361 123456", f"person-{person_id}-chat_display_name": "Alex",
         "share_phone": "on", "avatar_seed": "v2:1:2:3:4:1:2", "profile_image_mode": "avatar",
     })
 
@@ -75,6 +75,7 @@ def test_family_centre_saves_only_the_guardians_own_profile(client, guardian, ma
     guardian.person.refresh_from_db()
     managed_child.refresh_from_db()
     assert guardian.person.street == "Musterstraße 1"
+    assert guardian.person.phone == "+495361123456"
     assert guardian.person.phone_visibility == "members"
     assert guardian.person.avatar_seed == "v2:1:2:3:4:1:2"
     assert managed_child.street == ""
@@ -120,7 +121,7 @@ def test_child_contact_sharing_uses_the_same_address_switch_as_an_adult(
             f"person-{managed_child.pk}-postal_code": "38440",
             f"person-{managed_child.pk}-city": "Wolfsburg",
             f"person-{managed_child.pk}-contact_email": "mila@example.test",
-            f"person-{managed_child.pk}-phone": "05361 1",
+            f"person-{managed_child.pk}-phone": "05361 123456",
             f"person-{managed_child.pk}-chat_display_name": "Mila",
             "share_address": "on",
             "share_phone": "on",
@@ -137,6 +138,7 @@ def test_child_contact_sharing_uses_the_same_address_switch_as_an_adult(
     assert managed_child.field_visibility["postal_code"]
     assert managed_child.field_visibility["city"]
     assert managed_child.phone_visibility == "members"
+    assert managed_child.phone == "+495361123456"
     assert managed_child.email_visibility == "members"
 
 
@@ -151,10 +153,15 @@ def test_contacts_show_one_clean_family_name_and_only_shared_address(
     guardian.person.postal_code = "38440"
     guardian.person.city = "Wolfsburg"
     guardian.person.field_visibility = {"street": True, "postal_code": True, "city": True}
-    guardian.person.phone = "+49 5361 1"
+    guardian.person.phone = "+495361123456"
     guardian.person.phone_visibility = "members"
     guardian.person.email_visibility = "members"
     guardian.person.save()
+    managed_child.contact_email = "mila@example.test"
+    managed_child.email_visibility = "members"
+    managed_child.phone = "+4915123456789"
+    managed_child.phone_visibility = "members"
+    managed_child.save()
     household = Household.objects.create(label="Familie Beispiel")
     household.members.add(guardian.person)
     client.force_login(guardian)
@@ -167,8 +174,15 @@ def test_contacts_show_one_clean_family_name_and_only_shared_address(
     assert "Familie Familie Beispiel" not in body
     assert "Musterstraße 1 · 38440 Wolfsburg" in body
     assert 'aria-label="Kontaktkarte für Familie Beispiel öffnen"' in body
-    assert 'href="tel:+49 5361 1"' in body
+    assert 'href="tel:+495361123456"' in body
+    assert "+49 5361 123456" in body
     assert 'href="mailto:guardian@example.test"' in body
+    assert 'href="tel:+4915123456789"' in body
+    assert 'href="mailto:mila@example.test"' in body
+    assert body.count('class="contact-person"') == 2
+    assert "Wähle die Person aus" not in body
+    assert 'href="/mehr/mobilitaet/" class="app-bottom-nav__item"' not in body
+    assert 'href="/kontakte/" class="app-bottom-nav__item"' in body
 
     guardian.person.field_visibility["city"] = False
     guardian.person.save(update_fields=["field_visibility"])

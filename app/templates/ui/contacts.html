@@ -1,5 +1,119 @@
 {% extends "base.html" %}
 {% load static avatar_tags %}
 {% block content %}
-<section class="contacts-page"><header class="page-heading"><div><p class="eyebrow">Klasse</p><h1>Adressliste</h1><p class="lede">Kontaktdaten erscheinen nur, wenn die jeweilige Person sie für aktive Klassenmitglieder freigegeben hat.</p></div></header><section class="contacts-directory" data-contact-table><div class="contacts-tools"><label class="contacts-search">{% include "ui/_icon.html" with name="search" %}<span class="sr-only">Adressliste durchsuchen</span><input type="search" placeholder="Familie oder Kind suchen" data-contact-filter></label><small><span data-contact-count>{{ contacts|length }}</span> Familien</small></div><div class="contacts-table" role="table" aria-label="Adressliste"><div class="contacts-table__head" role="row"><button type="button" data-contact-sort="family">Familie</button><button type="button" data-contact-sort="children">Kinder</button><button type="button" data-contact-sort="phone">Telefon</button><button type="button" data-contact-sort="email">E-Mail</button></div><div data-contact-rows>{% for contact in contacts %}<article class="contacts-table__row" role="row" data-contact-row data-family="{{ contact.family_name|lower }}" data-children="{% for child in contact.children %}{{ child.first_name }} {% endfor %}" data-phone="{{ contact.phones|join:' ' }}" data-email="{{ contact.emails|join:' ' }}"><button type="button" class="contact-family" data-dialog-open="contact-{{ forloop.counter }}"><span class="contact-avatar">{% if contact.family_photo %}<img src="{% url 'family-photo' contact.family_photo.pk %}" alt="Familienbild {{ contact.family_name }}">{% else %}<span class="family-initials" aria-hidden="true">{{ contact.family_initials }}</span>{% endif %}</span><span><strong>Familie {{ contact.family_name }}</strong><small>{% for adult in contact.adults %}{{ adult.first_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</small></span></button><div class="contact-children">{% for child in contact.children %}<span>{{ child.first_name }}</span>{% empty %}<span class="muted">Keine Kinder dieser Klasse</span>{% endfor %}</div><div class="contact-values">{% for phone in contact.phones %}<a href="tel:{{ phone }}">{{ phone }}</a>{% empty %}<span class="muted">Nicht freigegeben</span>{% endfor %}</div><div class="contact-values">{% for email in contact.emails %}<a href="mailto:{{ email }}">{{ email }}</a>{% empty %}<span class="muted">Nicht freigegeben</span>{% endfor %}</div><button type="button" class="contact-more" data-dialog-open="contact-{{ forloop.counter }}" aria-label="Kontaktkarte für Familie {{ contact.family_name }} öffnen">›</button></article><dialog id="contact-{{ forloop.counter }}" class="app-dialog contact-dialog"><div class="contact-card"><header class="dialog-head"><div class="contact-card__identity"><span class="contact-avatar contact-avatar--large">{% if contact.family_photo %}<img src="{% url 'family-photo' contact.family_photo.pk %}" alt="Familienbild {{ contact.family_name }}">{% else %}<span class="family-initials" aria-hidden="true">{{ contact.family_initials }}</span>{% endif %}</span><div><p class="eyebrow">Kontakt</p><h2>Familie {{ contact.family_name }}</h2></div></div><button type="button" class="icon-button" data-dialog-close aria-label="Schließen">×</button></header><dl><dt>Erwachsene</dt><dd>{% for adult in contact.adults %}{{ adult.first_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</dd><dt>Kinder</dt><dd>{% for child in contact.children %}{{ child.first_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</dd>{% if contact.addresses %}<dt>Adresse</dt><dd>{% for address in contact.addresses %}{{ address }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</dd>{% endif %}{% if contact.phones %}<dt>Telefon</dt><dd>{% for phone in contact.phones %}<a href="tel:{{ phone }}">{{ phone }}</a>{% if not forloop.last %}<br>{% endif %}{% endfor %}</dd>{% endif %}{% if contact.emails %}<dt>E-Mail</dt><dd>{% for email in contact.emails %}<a href="mailto:{{ email }}">{{ email }}</a>{% if not forloop.last %}<br>{% endif %}{% endfor %}</dd>{% endif %}</dl>{% if contact.message_targets %}<section class="contact-message-actions" aria-label="Private Nachricht beginnen"><h3>Private Nachricht</h3><p>Wähle die Person aus, der du schreiben möchtest.</p><div>{% for adult in contact.message_targets %}<form method="post" action="{% url 'direct-conversation-start' adult.pk %}">{% csrf_token %}<button class="button button-primary" type="submit">{{ adult.first_name }} schreiben</button></form>{% endfor %}</div></section>{% endif %}</div></dialog>{% empty %}<div class="settings-details-body"><p>Für diese Klasse sind noch keine Familien gelistet.</p></div>{% endfor %}</div></div></section></section>
+<section class="contacts-page">
+  <header class="page-heading contacts-heading">
+    <div>
+      <p class="eyebrow">Klasse</p>
+      <h1>Adressliste</h1>
+      <p class="lede">Kontaktdaten erscheinen nur, wenn die jeweilige Person sie für aktive Klassenmitglieder freigegeben hat.</p>
+    </div>
+  </header>
+
+  <section class="contacts-directory" data-contact-table>
+    <div class="contacts-tools">
+      <label class="contacts-search">
+        {% include "ui/_icon.html" with name="search" %}
+        <span class="sr-only">Adressliste durchsuchen</span>
+        <input type="search" placeholder="Familie oder Kind suchen" data-contact-filter>
+      </label>
+      <small><span data-contact-count>{{ contacts|length }}</span> Familien</small>
+    </div>
+
+    <div class="contacts-table" role="table" aria-label="Adressliste">
+      <div class="contacts-table__head" role="row">
+        <button type="button" data-contact-sort="family">Familie</button>
+        <button type="button" data-contact-sort="children">Kinder</button>
+        <button type="button" data-contact-sort="phone">Telefon</button>
+        <button type="button" data-contact-sort="email">E-Mail</button>
+        <span aria-hidden="true"></span>
+      </div>
+      <div data-contact-rows>
+        {% for contact in contacts %}
+          <article class="contacts-table__row" role="row" data-contact-row
+                   data-family="{{ contact.family_name|lower }}"
+                   data-children="{% for child in contact.children %}{{ child.first_name }} {% endfor %}"
+                   data-phone="{{ contact.phones|join:' ' }}"
+                   data-email="{{ contact.emails|join:' ' }}">
+            <button type="button" class="contact-family" data-dialog-open="contact-{{ forloop.counter }}" role="cell">
+              <span class="contact-avatar">
+                {% if contact.family_photo %}
+                  <img src="{% url 'family-photo' contact.family_photo.pk %}" alt="Familienbild {{ contact.family_name }}">
+                {% else %}
+                  <span class="family-initials" aria-hidden="true">{{ contact.family_initials }}</span>
+                {% endif %}
+              </span>
+              <span>
+                <strong>Familie {{ contact.family_name }}</strong>
+                <small>{% for adult in contact.adults %}{{ adult.first_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>
+              </span>
+            </button>
+            <div class="contact-children contact-overview-cell" role="cell" data-label="Kinder">
+              {% for child in contact.children %}<span>{{ child.first_name }}</span>{% empty %}<span class="muted">Keine Kinder dieser Klasse</span>{% endfor %}
+            </div>
+            <div class="contact-values contact-overview-cell" role="cell" data-label="Telefon">
+              {% for phone in contact.phone_displays %}<span>{{ phone }}</span>{% empty %}<span class="muted">Nicht freigegeben</span>{% endfor %}
+            </div>
+            <div class="contact-values contact-overview-cell" role="cell" data-label="E-Mail">
+              {% for email in contact.emails %}<span>{{ email }}</span>{% empty %}<span class="muted">Nicht freigegeben</span>{% endfor %}
+            </div>
+            <button type="button" class="button button-secondary contact-more" data-dialog-open="contact-{{ forloop.counter }}" aria-label="Kontaktkarte für Familie {{ contact.family_name }} öffnen">Kontakt</button>
+          </article>
+
+          <dialog id="contact-{{ forloop.counter }}" class="app-dialog contact-dialog">
+            <div class="contact-card">
+              <header class="dialog-head">
+                <div class="contact-card__identity">
+                  <span class="contact-avatar contact-avatar--large">
+                    {% if contact.family_photo %}
+                      <img src="{% url 'family-photo' contact.family_photo.pk %}" alt="Familienbild {{ contact.family_name }}">
+                    {% else %}
+                      <span class="family-initials" aria-hidden="true">{{ contact.family_initials }}</span>
+                    {% endif %}
+                  </span>
+                  <div><p class="eyebrow">Kontakt</p><h2>Familie {{ contact.family_name }}</h2></div>
+                </div>
+                <button type="button" class="icon-button" data-dialog-close aria-label="Schließen">×</button>
+              </header>
+
+              <div class="contact-people" aria-label="Personen der Familie {{ contact.family_name }}">
+                {% for item in contact.people %}
+                  <article class="contact-person">
+                    <div class="contact-person__avatar" aria-hidden="true">
+                      {% if item.person.profile_image_mode == 'photo' and item.person.profile_photo %}
+                        <img src="{% url 'profile-photo' item.person.pk %}" alt="">
+                      {% elif item.person.avatar_seed %}
+                        {% avatar_composite item.person.avatar_seed %}
+                      {% else %}
+                        <img src="{% static item.person.avatar_static_path %}" alt="">
+                      {% endif %}
+                    </div>
+                    <div class="contact-person__body">
+                      <header><div><p>{{ item.role }}</p><h3>{{ item.person.first_name }} {{ item.person.last_name }}</h3></div></header>
+                      <dl>
+                        <div><dt>E-Mail</dt><dd>{% if item.email %}<a href="mailto:{{ item.email }}">{{ item.email }}</a>{% else %}<span class="muted">Nicht freigegeben</span>{% endif %}</dd></div>
+                        <div><dt>Telefon</dt><dd>{% if item.phone %}<a href="tel:{{ item.phone }}">{{ item.phone_display }}</a>{% else %}<span class="muted">Nicht freigegeben</span>{% endif %}</dd></div>
+                        {% if item.address %}<div class="contact-person__address"><dt>Adresse</dt><dd>{{ item.address }}</dd></div>{% endif %}
+                      </dl>
+                      {% if item.may_message %}
+                        <form method="post" action="{% url 'direct-conversation-start' item.person.pk %}">
+                          {% csrf_token %}
+                          <button class="button button-primary button-compact" type="submit">{{ item.person.first_name }} schreiben</button>
+                        </form>
+                      {% elif item.is_self %}
+                        <small class="contact-person__self">Das bist du.</small>
+                      {% endif %}
+                    </div>
+                  </article>
+                {% endfor %}
+              </div>
+            </div>
+          </dialog>
+        {% empty %}
+          <div class="settings-details-body"><p>Für diese Klasse sind noch keine Familien gelistet.</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</section>
 {% endblock %}

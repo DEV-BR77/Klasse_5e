@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#5558a6">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
-  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}?v=settings-v4">
+  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}?v=contacts-v1">
   {% block extra_head %}{% endblock %}
   <title>{{ page_title|default:"Home" }} · KlassID</title>
 </head>
@@ -68,12 +68,10 @@
       <span class="app-bottom-nav__label">Chat</span>
     </a>
     {% endif %}
-    {% if enabled_modules.mobility %}
-    <a href="/mehr/mobilitaet/" class="app-bottom-nav__item" {% if active_section == "mobility" %}aria-current="page"{% endif %}>
+    <a href="/kontakte/" class="app-bottom-nav__item" {% if active_section == "contacts" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="people" %}
-      <span class="app-bottom-nav__label">Fahrgemeinschaft</span>
+      <span class="app-bottom-nav__label">Adressliste</span>
     </a>
-    {% endif %}
     <a href="/mehr/" class="app-bottom-nav__item" {% if active_section == "more" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="more" %}
       <span class="app-bottom-nav__label">Menü</span>

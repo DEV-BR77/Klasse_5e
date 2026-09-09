@@ -72,6 +72,7 @@ from klasse5e.webuntis.models import (
 )
 
 from .calendar_presenter import build_calendar_context
+from .contact_data import format_phone_number
 from .family_context import active_child_context
 from .family_handouts import create_family_handout
 from .models import (
@@ -3301,7 +3302,7 @@ def contacts(request):
             Q(student_person__classmembership__valid_until__isnull=True)
             | Q(student_person__classmembership__valid_until__gte=today),
         )
-        .select_related("guardian_person__user", "student_person")
+        .select_related("guardian_person__user", "student_person__user")
     )
     guardians = {
         relationship.guardian_person_id: relationship.guardian_person
@@ -3316,13 +3317,6 @@ def contacts(request):
     from klasse5e.chat.services import may_start_direct_conversation
 
     from .family_photos import family_photo_is_visible
-
-    def message_targets(adults):
-        return [
-            adult
-            for adult in adults
-            if may_start_direct_conversation(request.user, adult, school_class)
-        ]
 
     def normalized_family_name(value):
         name = " ".join((value or "").split())
@@ -3342,6 +3336,22 @@ def contacts(request):
             part for part in (person.street, " ".join((person.postal_code, person.city)).strip()) if part
         )
 
+    def contact_person(person, role):
+        email = ""
+        if person.email_visibility == "members":
+            email = person.contact_email or (person.user.email if person.user_id else "")
+        phone = person.phone if person.phone_visibility == "members" else ""
+        return {
+            "person": person,
+            "role": role,
+            "email": email,
+            "phone": phone,
+            "phone_display": format_phone_number(phone),
+            "address": shared_address(person),
+            "may_message": may_start_direct_conversation(request.user, person, school_class),
+            "is_self": person.user_id == request.user.pk,
+        }
+
     rows = []
     assigned_guardians = set()
     households = (
@@ -3358,37 +3368,31 @@ def contacts(request):
         for adult in adults:
             children.extend(children_by_guardian.get(adult.pk, []))
         children = list({child.pk: child for child in children}.values())
-        representative = next((person for person in adults if person.profile_photo), adults[0])
+        children.sort(key=lambda child: (child.last_name.casefold(), child.first_name.casefold()))
+        adults.sort(key=lambda person: (person.last_name.casefold(), person.first_name.casefold()))
         family_name = normalized_family_name(household.label) or (
             children[0].last_name if children else adults[0].last_name
         )
         family_photo = next(
             (item for item in household.photos.all() if item.school_class_id == school_class.pk), None
         )
-        emails = [
-            person.contact_email or person.user.email
-            for person in adults
-            if person.email_visibility == "members" and (person.contact_email or person.user_id)
-        ]
-        phones = [
-            person.phone
-            for person in adults
-            if person.phone_visibility == "members" and person.phone
-        ]
-        addresses = [address for person in adults if (address := shared_address(person))]
+        people = [contact_person(person, "Erwachsene Person") for person in adults]
+        people.extend(contact_person(person, "Kind") for person in children)
+        emails = [item["email"] for item in people if item["email"]]
+        phones = [item["phone"] for item in people if item["phone"]]
+        phone_displays = [item["phone_display"] for item in people if item["phone_display"]]
+        addresses = [item["address"] for item in people if item["address"]]
         rows.append(
             {
                 "family_name": family_name,
                 "family_initials": family_initials(family_name),
                 "family_photo": family_photo if family_photo and family_photo_is_visible(family_photo) else None,
                 "adults": adults,
-                "children": sorted(
-                    children, key=lambda child: (child.last_name.lower(), child.first_name.lower())
-                ),
-                "person": representative,
-                "message_targets": message_targets(adults),
+                "children": children,
+                "people": people,
                 "emails": list(dict.fromkeys(emails)),
                 "phones": list(dict.fromkeys(phones)),
+                "phone_displays": list(dict.fromkeys(phone_displays)),
                 "addresses": list(dict.fromkeys(addresses)),
             }
         )
@@ -3396,26 +3400,23 @@ def contacts(request):
         if guardian_id in assigned_guardians:
             continue
         children = children_by_guardian.get(guardian_id, [])
+        children.sort(key=lambda child: (child.last_name.casefold(), child.first_name.casefold()))
+        people = [contact_person(guardian, "Erwachsene Person")]
+        people.extend(contact_person(person, "Kind") for person in children)
         rows.append(
             {
                 "family_name": guardian.last_name,
                 "family_initials": family_initials(guardian.last_name),
                 "family_photo": None,
                 "adults": [guardian],
-                "children": sorted(
-                    children, key=lambda child: (child.last_name.lower(), child.first_name.lower())
-                ),
-                "person": guardian,
-                "message_targets": message_targets([guardian]),
-                "emails": [guardian.contact_email or guardian.user.email]
-                if guardian.email_visibility == "members"
-                else [],
-                "phones": [guardian.phone]
-                if guardian.phone_visibility == "members" and guardian.phone
-                else [],
-                "addresses": [address]
-                if (address := shared_address(guardian))
-                else [],
+                "children": children,
+                "people": people,
+                "emails": [item["email"] for item in people if item["email"]],
+                "phones": [item["phone"] for item in people if item["phone"]],
+                "phone_displays": [
+                    item["phone_display"] for item in people if item["phone_display"]
+                ],
+                "addresses": [item["address"] for item in people if item["address"]],
             }
         )
     rows.sort(
