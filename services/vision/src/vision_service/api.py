@@ -24,6 +24,7 @@ from .models import (
     Reference,
     Subject,
 )
+from .safety import SafetyModelUnavailable
 from .schemas import (
     CollectionCreate,
     CollectionRead,
@@ -32,6 +33,7 @@ from .schemas import (
     DismissRequest,
     FaceRead,
     ImageRead,
+    ImageSafetyRead,
     JobRead,
     MatchRead,
     ReferenceCreate,
@@ -54,6 +56,23 @@ def resources():
 
 def hidden_not_found() -> HTTPException:
     return HTTPException(status_code=404, detail="resource_not_found")
+
+
+@router.post("/safety/images/classify", response_model=ImageSafetyRead)
+async def classify_image_safety(file: Annotated[UploadFile, File()]) -> dict:
+    from .main import image_safety
+
+    content = await file.read(settings.max_upload_bytes + 1)
+    try:
+        return image_safety.classify(
+            content,
+            max_bytes=settings.max_upload_bytes,
+            max_pixels=settings.max_pixels,
+        )
+    except ImageValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except SafetyModelUnavailable:
+        raise HTTPException(status_code=503, detail="image_safety_unavailable") from None
 
 
 @router.get("/models")

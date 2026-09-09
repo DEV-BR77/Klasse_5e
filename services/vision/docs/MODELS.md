@@ -17,6 +17,17 @@ verifizierten Dateien samt Manifest in das Modellvolume übertragen.
   `model_not_licensed_or_installed`. Keine Gewichte, kein Download und keine
   Verarbeitung realer Fotos ohne schriftlichen Lizenznachweis, Modell-ID,
   Version und Prüfsumme. SCRFD und RetinaFace wären alternative Detektoren.
+- `Falconsai/nsfw_image_detection`: ViT-Bildklassifikator, fest auf Revision
+  `96cb0d0342c7afb80cab76ecc58b265fa44da256`, Apache-2.0 und lokal als ONNX
+  über ONNX Runtime CPU betrieben. Die Gewichte liegen ausschließlich im
+  Modellvolume unter `falconsai-nsfw-96cb0d0/model.onnx`; die erwartete
+  SHA-256-Prüfsumme ist
+  `1ec2fbe9fd8551fbcce260d8a10d3e012d8818bfeac046d7e2dba5a8aa7c7b55`
+  und wird über `VISION_NSFW_MODEL_SHA256` gesetzt. Der Dienst
+  lädt zur Laufzeit nichts nach. Die im Model Card beschriebene proprietäre
+  Trainingsbasis erlaubt keine unabhängige Repräsentativitätsprüfung. Daher
+  ist das Ergebnis nur eine vorsorgliche Entscheidung zwischen Original- und
+  verpixelter Anzeige und kein Moderationsurteil.
 
 Embeddings tragen Pipeline und Modellversion; inkompatible Versionen werden
 nicht verglichen. Schwellenwerte müssen später mit rechtmäßig freigegebenem

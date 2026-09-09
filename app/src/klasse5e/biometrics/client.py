@@ -94,6 +94,17 @@ class VisionClient:
         )
 
     def upload_image(self, collection_id, image_id, content, content_type="image/jpeg"):
+        return self._upload(
+            f"/v1/collections/{collection_id}/images",
+            content,
+            content_type,
+            {"X-Image-Id": str(image_id)},
+        )
+
+    def classify_image_safety(self, content, content_type="image/jpeg"):
+        return self._upload("/v1/safety/images/classify", content, content_type)
+
+    def _upload(self, path, content, content_type, headers=None):
         boundary = f"klasse5e{secrets.token_hex(12)}"
         body = (
             (
@@ -105,11 +116,11 @@ class VisionClient:
         )
         return self._raw(
             "POST",
-            f"/v1/collections/{collection_id}/images",
+            path,
             body,
             {
                 "Content-Type": f"multipart/form-data; boundary={boundary}",
-                "X-Image-Id": str(image_id),
+                **(headers or {}),
             },
         )
 

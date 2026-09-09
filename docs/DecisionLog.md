@@ -444,3 +444,28 @@ Schreib-API. Der eng begrenzte Formularablauf hält den Monolithen ohne Worker
 oder zusätzliche Dienste und verhindert Erfolgsmeldungen aufgrund lokaler Daten
 oder alter Einträge. Freitexte, Zugangsdaten und Browserantworten bleiben aus
 Audit und Datenbank; das minimierte Sendeprotokoll endet nach 30 Tagen.
+
+## ADR-031: Deutscher Wortfilter und lokale Bildverpixelung
+
+Der Chat bleibt im Django-Monolithen mit Polling. Direkte deutsche Beleidigungen
+maskiert eine kleine, versionierte Regelliste mit Punkten. Das vorgeschlagene
+`profanity-check` wird nicht eingebunden, weil seine veröffentlichte Fassung nur
+englisch trainiert, seit 2019 veraltet und mit Python 3.12 sowie aktuellem
+scikit-learn inkompatibel ist. Flask, Flask-SocketIO, Redis und Worker entstehen
+für diese Funktion nicht.
+
+Der bestehende lokale Vision-Dienst klassifiziert Bildanhänge mit dem auf
+Revision `96cb0d0342c7afb80cab76ecc58b265fa44da256` gepinnten, Apache-2.0-
+lizenzierten Modell `Falconsai/nsfw_image_detection`. Eine problematische oder
+technisch nicht mögliche Klassifikation führt zur sichtbaren, vollständig
+verpixelten JPEG-Ableitung. Der Upload wird nicht abgewiesen und nicht
+automatisch zur Moderation gegeben. Rohscores, Klartext und Bilddaten werden
+nicht protokolliert. Das Original bleibt im geschützten Chat-Anhang und wird
+bei jedem Abruf nur nach aktiver Mitgliedschaft und einer unauffälligen
+Entscheidung ausgegeben. Der normale manuelle Meldeweg bleibt verfügbar.
+
+Grund sind eine für Deutsch überprüfbare Wirkung, ein sicherer Ausfallzustand
+und die gewünschte direkte Verpixelung ohne neue Laufzeitarchitektur. Die
+proprietäre Trainingsbasis des FalconsAI-Modells und mögliche Fehlklassifikationen
+werden durch eine vorsichtige Schwelle, sichtbare Kennzeichnung und den weiterhin
+menschlich ausgelösten Meldeweg berücksichtigt.

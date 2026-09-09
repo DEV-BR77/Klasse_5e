@@ -1049,18 +1049,25 @@ def chat_attachment(request, message_id):
         raise Http404 from None
     if not message.attachment or message.withdrawn_at or message.hidden_at:
         raise Http404
-    if (
-        message.attachment_content_type.startswith("image/")
-        and message.attachment_safety_status != "approved"
-    ):
-        raise Http404
+    content_type = message.attachment_content_type or "application/octet-stream"
+    response_file = message.attachment.open("rb")
+    if content_type.startswith("image/") and message.attachment_safety_status != "approved":
+        from io import BytesIO
+
+        from klasse5e.chat.safety import ImagePixelationError, pixelate_image
+
+        try:
+            response_file = BytesIO(pixelate_image(response_file.read()))
+        except ImagePixelationError:
+            raise Http404 from None
+        content_type = "image/jpeg"
     response = FileResponse(
-        message.attachment.open("rb"),
-        content_type=message.attachment_content_type or "application/octet-stream",
+        response_file,
+        content_type=content_type,
     )
     disposition = (
         "inline"
-        if message.attachment_content_type.startswith(("image/", "audio/"))
+        if content_type.startswith(("image/", "audio/"))
         else "attachment"
     )
     response["Content-Disposition"] = content_disposition_header(

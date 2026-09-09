@@ -1,4 +1,5 @@
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -20,6 +21,23 @@ from .models import (
     DirectConversation,
 )
 from .safety import filter_chat_language
+
+
+def _image_safety_status(attachment):
+    if not attachment or not attachment.content_type.startswith("image/"):
+        return "approved" if attachment else "not_applicable"
+    from klasse5e.biometrics.client import VisionClient, VisionError
+
+    try:
+        content = attachment.read()
+        attachment.seek(0)
+        result = VisionClient(timeout=12).classify_image_safety(
+            content, attachment.content_type
+        )
+    except (OSError, VisionError):
+        return "pending"
+    decision = result.get("decision")
+    return decision if decision in {"approved", "blocked"} else "pending"
 
 
 def _mentioned_users(room, body):
@@ -204,21 +222,30 @@ def create_message(room, user, body, reply_to=None, attachment=None):
         allowed = {"image/jpeg", "image/png", "image/webp", "application/pdf", "audio/webm", "audio/ogg", "audio/mp4"}
         if attachment.size > 8 * 1024 * 1024 or attachment.content_type not in allowed:
             raise ValidationError("invalid_attachment")
+        attachment_name = attachment.name[:180]
+        if attachment.content_type.startswith("image/"):
+            from .safety import ImagePixelationError, sanitize_chat_image
+
+            try:
+                clean_image = sanitize_chat_image(attachment.read())
+            except ImagePixelationError as exc:
+                raise ValidationError("invalid_attachment") from exc
+            attachment = SimpleUploadedFile(
+                "chat-image.jpg", clean_image, content_type="image/jpeg"
+            )
+    else:
+        attachment_name = ""
     if reply_to and reply_to.room_id != room.id:
         raise ValidationError("reply_room_mismatch")
     filtered_body, filter_hits = filter_chat_language(body)
-    attachment_safety_status = "not_applicable"
-    if attachment:
-        attachment_safety_status = (
-            "pending" if attachment.content_type.startswith("image/") else "approved"
-        )
+    attachment_safety_status = _image_safety_status(attachment)
     message = ChatMessage.objects.create(
         room=room,
         author=user,
         body=filtered_body,
         reply_to=reply_to,
         attachment=attachment,
-        attachment_name=(attachment.name[:180] if attachment else ""),
+        attachment_name=attachment_name,
         attachment_content_type=(attachment.content_type[:80] if attachment else ""),
         attachment_safety_status=attachment_safety_status,
         language_filter_hits=filter_hits,
@@ -236,6 +263,13 @@ def create_message(room, user, body, reply_to=None, attachment=None):
             target_type="chat_message",
             target_id=str(message.public_id),
             metadata={"hit_count": filter_hits},
+        )
+    if attachment and attachment.content_type.startswith("image/"):
+        AuditEvent.objects.create(
+            actor=user,
+            action=f"chat.image_safety.{attachment_safety_status}",
+            target_type="chat_message",
+            target_id=str(message.public_id),
         )
     if getattr(room, "direct_conversation", None):
         from .notifications import notify_direct_message

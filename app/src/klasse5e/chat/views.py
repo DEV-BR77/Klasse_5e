@@ -12,6 +12,7 @@ from klasse5e.core.models import AuditEvent
 from klasse5e.core.policies import family_label
 
 from .models import ChatMessage, ChatReport, ChatRoom
+from .safety import filter_chat_language
 from .services import (
     create_message,
     mark_read,
@@ -102,7 +103,7 @@ def edit_or_delete_message(request, message_id):
             body = ""
         if not body or len(body) > 2000:
             return JsonResponse({"error": "invalid_body"}, status=400)
-        message.body = body
+        message.body, message.language_filter_hits = filter_chat_language(body)
         message.edited_at = timezone.now()
         action = "chat.message.edited"
     message.save()
@@ -112,6 +113,14 @@ def edit_or_delete_message(request, message_id):
         target_type="chat_message",
         target_id=str(message.public_id),
     )
+    if request.method == "PATCH" and message.language_filter_hits:
+        AuditEvent.objects.create(
+            actor=request.user,
+            action="chat.language_filter.applied",
+            target_type="chat_message",
+            target_id=str(message.public_id),
+            metadata={"hit_count": message.language_filter_hits},
+        )
     return HttpResponse(status=204)
 
 

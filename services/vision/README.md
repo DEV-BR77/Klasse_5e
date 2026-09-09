@@ -14,6 +14,18 @@ Paket. Modelle werden bewusst separat installiert:
 python scripts/install_models.py --target models
 ```
 
+Das zusätzliche Modell für die Verpixelung von Chatbildern wird aus dem
+Repository-Stamm reproduzierbar installiert:
+
+```powershell
+.\tools\Install-ChatSafetyModel.ps1
+```
+
+Das Skript lädt den festgelegten FalconsAI-Commit in ein temporäres
+Exporter-Image, erzeugt die ONNX-Datei direkt im Modellvolume und bricht bei
+abweichender SHA-256-Prüfsumme ab. Gewichte oder Quelldaten gelangen nicht ins
+Repository oder in das produktive Anwendungsimage.
+
 Der normale Start veröffentlicht keinen Port:
 
 ```text

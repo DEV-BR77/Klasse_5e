@@ -28,12 +28,11 @@
             {% if message.body %}<p>{{ message.body }}</p>{% endif %}
             {% if message.language_filter_hits %}<small class="safety-note">🛡 Direkte Beleidigung automatisch verdeckt</small>{% endif %}
             {% if message.attachment %}
-              {% if message.attachment_content_type|slice:":6" == "image/" and message.attachment_safety_status != "approved" %}
-                <div class="chat-image-quarantine"><span>▦</span><strong>{% if message.attachment_safety_status == 'blocked' %}Bild aus Schutzgründen gesperrt{% else %}Bild wird vor der Anzeige geprüft{% endif %}</strong><small>Ungeeignete Bildinhalte werden nicht direkt angezeigt.</small></div>
-              {% elif message.attachment_content_type|slice:":6" == "audio/" %}
+              {% if message.attachment_content_type|slice:":6" == "audio/" %}
                 <audio controls preload="metadata" src="{% url 'ui-chat-attachment' message.public_id %}"></audio>
               {% elif message.attachment_content_type|slice:":6" == "image/" %}
                 <a href="{% url 'ui-chat-attachment' message.public_id %}" target="_blank"><img class="chat-image" src="{% url 'ui-chat-attachment' message.public_id %}" alt="Gesendetes Bild"></a>
+                {% if message.attachment_safety_status != "approved" %}<small class="safety-note">🛡 Bildinhalt vorsorglich verpixelt</small>{% endif %}
               {% else %}
                 <a class="chat-attachment" href="{% url 'ui-chat-attachment' message.public_id %}">📎 {{ message.attachment_name }}</a>
               {% endif %}

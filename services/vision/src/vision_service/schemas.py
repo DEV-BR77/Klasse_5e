@@ -131,3 +131,9 @@ class HealthRead(ApiModel):
 
 class ErrorRead(ApiModel):
     detail: str = Field(max_length=128)
+
+
+class ImageSafetyRead(ApiModel):
+    decision: str = Field(pattern="^(approved|blocked)$")
+    model_id: str
+    model_revision: str

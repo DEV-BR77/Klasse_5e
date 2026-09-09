@@ -8,17 +8,24 @@ from .config import settings
 from .database import SessionLocal
 from .manifest import ModelManifest
 from .registry import PipelineRegistry
+from .safety import ImageSafetyClassifier
 from .storage import Storage
 from .workflow import resume_jobs
 
 manifest = ModelManifest.load(settings.model_manifest_path)
 registry = PipelineRegistry(manifest, settings.model_dir)
 storage = Storage(settings.data_dir)
+image_safety = ImageSafetyClassifier(
+    settings.nsfw_model_path,
+    settings.nsfw_model_sha256,
+    settings.nsfw_block_threshold,
+)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     storage.cleanup_trash()
+    image_safety.health_check()
     resume_jobs(registry, storage)
     yield
 
@@ -47,7 +54,13 @@ def health() -> dict[str, str]:
     except (KeyError, FileNotFoundError, ValueError):
         ready, pipeline_status = False, "model_not_installed_or_checksum_invalid"
     overall = "ok" if database == "ready" and ready else "degraded"
-    return {"status": overall, "database": database, "pipeline": pipeline_status}
+    _safety_ready, safety_status = image_safety.health_check()
+    return {
+        "status": overall,
+        "database": database,
+        "pipeline": pipeline_status,
+        "image_safety": safety_status,
+    }
 
 
 from .api import router  # noqa: E402

@@ -422,6 +422,16 @@ Die erste Version verwendet kurzes, zeitmarkenbasiertes Polling. Damit entstehen
 keine Redis-, Worker- oder WebSocket-Abhängigkeiten. Inhalte werden standardmäßig
 90 Tage aufbewahrt und über einen expliziten Management-Command gelöscht.
 
+Die Kinderschutzschicht maskiert eine kleine, versionierte deutsche Liste direkter
+Beleidigungen bereits beim Anlegen und Bearbeiten. Bildanhänge werden über den
+intern authentisierten Vision-Dienst lokal klassifiziert. Als problematisch
+eingestufte Bilder und Bilder ohne erfolgreiche Klassifikation liefert Django
+ausschließlich als stark verpixelte, neu codierte JPEG-Fassung aus; die normale
+Anzeige erhält das Original nur bei einer unauffälligen Entscheidung. Modellwerte,
+Nachrichtentexte und Bilddaten gelangen weder in Auditdaten noch in Logs. Der
+allgemeine, bewusst von einem Menschen ausgelöste Meldeweg für Nachrichten bleibt
+erhalten. Details stehen in [Kinderschutz](Kinderschutz.md).
+
 # Phase 8: manueller Kalender und Stundenplan
 
 `schedule` speichert Wochenstunden und terminierte Änderungen im Monolithen.

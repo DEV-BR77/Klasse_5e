@@ -18,7 +18,7 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 | 2 | BL-16 Adapterkatalog und persönliche Zugänge | GPT-6 Astra · hoch | Größtes Daten-, Sicherheits- und Migrationsrisiko. |
 | 3 | BL-17 Abwesenheit melden und rückprüfen | GPT-6 Astra · hoch | Externe Schreib-/Leseprüfung und unklare Fehlerfälle. |
 | 4 | BL-18 Schulmanager-Online-Adapter | GPT-6 Astra · hoch | Playwright-Stabilität, Geheimnisse und Datenschutz. |
-| 5 | Kinderschutz für Sprache und Bilder | GPT-6 Astra · hoch | Modell-, Lizenz-, Fehlklassifikations- und Sicherheitsprüfung. |
+| 5 | Kinderschutz für Sprache und Bilder | GPT-5.6 Sol · hoch | Gute Code-/Sicherheitsprüfung bei geringerem Preis; Modell- und Lizenzprüfung bleibt nötig. |
 | 6 | Rollenänderungen zusammenführen und veröffentlichen | GPT-5.6 Terra · hoch | Abschlussprüfung, Migrationen und kontrollierter Rollout. |
 | 7 | Mobile Kopfzeile verdichten | GPT-5.6 Luna · gering | Begrenzte Template-/CSS-Anpassung. |
 | 8 | Mobile Dashboard-Navigation | GPT-5.6 Luna · mittel | UI- und Tastaturbedienung über mehrere Tabs. |
@@ -126,20 +126,27 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 
 ## Kinderschutz im Chat und bei Bildanhängen
 
-- [ ] **Kinderschutz: Sprache maskieren und Bildanhänge pixeln.** Den bestehenden
+- [x] **Kinderschutz: Sprache maskieren und Bildanhänge pixeln.** Den bestehenden
   Chatfilter zu einer überprüfbaren Kinderschutzfunktion erweitern: erkannte
   Schimpf- und beleidigende Wörter werden in der sichtbaren Nachricht mit
   Punkten maskiert; Bildanhänge mit erkannten problematischen Inhalten werden
-  vor der Auslieferung verpixelt oder gesperrt. Für die spätere Umsetzung sind
-  `profanity-check` für die Sprachbewertung und FalconsAI für die
-  Bildbewertung vorgesehen. Flask, Flask-SocketIO für einen möglichen
-  Echtzeitkanal und deren Betrieb dürfen erst nach einer Architekturentscheidung
-  eingesetzt werden, weil der aktuelle Chat bewusst im Django-Monolithen per
-  Polling arbeitet. Die Aufgabe umfasst eine deutschsprachige Qualitätsprüfung,
-  Modell- und Lizenzprüfung, keine Speicherung von Rohbewertungen oder
-  Klartext-Moderationsprotokollen, sichtbare Kennzeichnung, menschliche
-  Meldung/Überprüfung, unmittelbaren Zugriffsentzug und Regressionstests für
-  Fehlklassifikation, Umgehungsversuche, Klassenisolation sowie Widerruf.
+  vor der Auslieferung stark verpixelt.
+  **Abgeschlossen am 09.09.2026:** Neue und bearbeitete Nachrichten verwenden
+  denselben serverseitigen deutschen Filter einschließlich einfacher
+  Trennzeichen- und Ziffernumgehungen. `profanity-check` wurde nach Prüfung
+  verworfen, weil die veröffentlichte Fassung englisch, seit 2019 veraltet und
+  unter Python 3.12 mit aktuellem scikit-learn nicht lauffähig ist. Der lokal
+  betriebene Vision-Dienst klassifiziert neu codierte, metadatenfreie Bilder
+  mit dem auf eine Revision und SHA-256 gepinnten Apache-2.0-Modell
+  `Falconsai/nsfw_image_detection`. Bei problematischer oder fehlgeschlagener
+  Klassifikation zeigt der Chat das Bild weiterhin an, jedoch ausschließlich
+  als vollständig verpixelte JPEG-Ableitung; es wird weder abgewiesen noch
+  automatisch zur Prüfung eingereicht. Rohscores, Klartext und Bilddaten
+  erscheinen nicht in Audit oder Logs. Der bestehende manuelle Meldeweg bleibt
+  verfügbar. Django-Polling und der vorhandene Vision-Dienst bleiben bestehen;
+  Flask, Flask-SocketIO, Redis und zusätzliche Worker wurden nicht eingeführt.
+  Tests decken Maskierung, harmlose Wortteile, Bearbeitung, Modellfehler,
+  Verpixelung, Klassenmitgliedschaft und unmittelbaren Zugriffsentzug ab.
 
 ## Mobile Startseite und Navigation
 
