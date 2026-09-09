@@ -14,7 +14,7 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 
 | Reihenfolge | Aufgabe | Empfohlenes Modell | Begründung |
 |---:|---|---|---|
-| 1 | Rollenänderungen abschließend veröffentlichen | GPT-5.6 Terra · hoch | Migrationen, Berechtigungen und kontrollierter Rollout. |
+| 1 | Rollenverwaltung und Familien-Datenschutz live abnehmen | GPT-5.6 Terra · hoch | Berechtigungen und sofortigen Zugriffsentzug im laufenden Portal prüfen. |
 | 2 | Mobile Kopfzeile verdichten | GPT-5.6 Luna · gering | Begrenzte Template-/CSS-Anpassung. |
 | 3 | Mobile Dashboard-Navigation | GPT-5.6 Luna · mittel | UI- und Tastaturbedienung über mehrere Tabs. |
 | 4 | Stundenplan kompakt darstellen | GPT-5.6 Luna · gering | Lokales Layout ohne neue Fachlogik. |
@@ -208,14 +208,14 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 
 ## Rollenverwaltung und Familien-Datenschutz veröffentlichen
 
-- [ ] **Implementierte Änderungen zusammenführen, abschließend prüfen und veröffentlichen.**
-  Auf `codex/personal-roles-and-family-privacy` sind Rollenverwaltung mit Benutzerliste,
-  Portal-Admin-/Elternvertretungsrollen und Glockenmeldungen sowie die editierbare
-  Einwilligungstabelle und die Schalterkorrektur umgesetzt und lokal getestet.
-  Noch offen: Integration in den Veröffentlichungsstand, Abschlussprüfung einschließlich
-  Migrationen und Freigabe des Rollouts. Danach im laufenden Portal Rollenvergabe/-entzug,
-  Elternvertreter-Chat und Freigabe/Widerruf beim Kind prüfen. Nicht als bereits
-  ausgerollt behandeln. Umsetzung: `cd3be7f` und `2cef1c4`.
+- [ ] **Rollenverwaltung und Familien-Datenschutz im laufenden Portal abnehmen.**
+  Rollenverwaltung mit Benutzerliste, Portal-Admin-/Elternvertretungsrollen und
+  Glockenmeldungen sowie die gemeinsame Einwilligungsmaske mit einheitlichen
+  Schaltern wurden am 09.09.2026 zusammengeführt, vollständig automatisiert geprüft
+  und mit App-Image `klasse-5e-app:0.3.0b4` ausgerollt. Migrationen und Healthcheck
+  sind erfolgreich. Noch offen ist die angemeldete manuelle Abnahme im laufenden
+  Portal: Rollenvergabe und -entzug, Elternvertreter-Chat sowie Freigabe und Widerruf
+  beim Kind prüfen. Umsetzung: `cd3be7f` und `2cef1c4`.
 
 ## Adapter und Abwesenheitsmeldungen
 
