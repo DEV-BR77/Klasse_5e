@@ -266,8 +266,8 @@ Abwesenheitsübersicht und Schaltfläche „Abwesenheit melden“ bestätigt.
 Das Meldeformular wurde ohne Absenden geprüft: Beginn, Ende und Anmerkung.
 Die Zuordnung erfolgt über den beim Kind hinterlegten persönlichen Zugang;
 bei externen Mehrkindkonten ist eine eindeutige Auswahl erforderlich.
-Commit 622c7c1 ergänzt einmalige Übermittlung mit begrenzter Rückprüfung als
-transportunabhängigen Baustein. Der fertige Ablauf verbindet Dashboard,
+Commit `622c7c1` ergänzt einmalige Übermittlung mit begrenzter Rückprüfung als
+transportunabhängigen Baustein; Commit `3bb8bc6` verbindet Dashboard,
 Kindauswahl, persönliches verschlüsseltes Login, ausschließlich UI-basiertes
 Playwright-Übermitteln, persistente Token-Deduplizierung und maximal drei
 frische Rückleseversuche. Er meldet Erfolg nur für einen neuen, passenden

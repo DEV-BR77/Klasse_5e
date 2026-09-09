@@ -101,13 +101,14 @@ eines Entwurfs nur Actor, Aktion und lokale Objekt-ID.
 `pytest tests/test_absences.py` prüft Opt-in, Idempotenz, atomaren Abbruch bei
 fremden Kindern, Widerruf, Klassenablauf, Kontoaktivität, Datumsstandard,
 Formularintervalle, XSS-Escaping, CSRF, Präferenzspeicherung und Löschung.
-WebUntis-, Profil-/Benachrichtigungs- und Familienkontexttests dienen der
-Regression. Tests verwenden keine echten Schuldaten oder Zugangsdaten.
-Ein Live-Import, Git-Push und Deployment sind nicht ausgeführt.
+Zusätzlich prüfen die synthetischen Browserfälle die einmalige Übermittlung,
+verzögerte Rücklesung, Timeout nach dem Schreibversuch, falsches Kind oder
+Intervall, vorhandene ähnliche Einträge, deaktivierte Adapter und
+Doppelabsenden. Tests verwenden keine echten Schuldaten oder Zugangsdaten.
 
-Abschlussprüfung am 08.09.2026: 62 Tests in den neun genannten Fach-/
-Regressionsmodulen bestanden. Django `check`, Migrationsabgleich und Ruff für
-neue Module/Migration/Tests sind ohne Befund. Die Testdatenbank wurde mit allen
-Migrationen auf SQLite aufgebaut. Warnungen betreffen ausschließlich das im
-Test-Worktree noch nicht durch `collectstatic` erzeugte Staticfiles-Verzeichnis.
-PostgreSQL-/Docker- und Live-Browser-Abnahme bleiben vor Deployment erforderlich.
+Abschlussprüfung am 09.09.2026: Die vollständige Testsuite bestand mit 287
+Tests. Django `check`, Migrationsabgleich und Ruff für die geänderten Module
+sind ohne Befund. Der Docker-Build inklusive Playwright Chromium lief durch;
+`webuntis.0010_absencesubmission` wurde produktiv migriert und der neue
+App-Container ist gesund. Ein realer End-to-End-Test bleibt ausgeschlossen,
+solange keine reale Abwesenheit ausdrücklich freigegeben wird.
