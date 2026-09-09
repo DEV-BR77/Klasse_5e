@@ -39,9 +39,18 @@ try {
     if ($runningContainer) {
         $runningImage = (& docker inspect --format '{{.Image}}' $runningContainer).Trim()
         $rollbackTag = "klasse-5e-app:rollback-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-        & docker image tag $runningImage $rollbackTag
+        & docker image inspect $runningImage 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            & docker image tag $runningImage $rollbackTag
+        }
+        else {
+            # Rebuilding a fixed release tag can remove the old image record even
+            # while its container is still running. Preserve that exact container
+            # filesystem and configuration as the rollback image in this case.
+            & docker commit --pause $runningContainer $rollbackTag | Out-Null
+        }
         if ($LASTEXITCODE -ne 0) {
-            throw "Could not create rollback tag for the running app image."
+            throw "Could not preserve the running app as a rollback image."
         }
         Write-Host "Rollback image retained as $rollbackTag"
     }
