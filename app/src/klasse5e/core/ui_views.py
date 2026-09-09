@@ -2241,30 +2241,6 @@ def theme_management(request):
                 request, f"„{item.name}“ wurde {'aktiviert' if item.is_active else 'deaktiviert'}."
             )
             return redirect("theme-management")
-        if action == "release_template":
-            template_key = request.POST.get("template_key", "")
-            defaults = TEMPLATE_THEME_DEFAULTS.get(template_key)
-            if defaults is None:
-                raise Http404
-            theme, _created = PortalTheme.objects.get_or_create(
-                key=_template_theme_key(template_key),
-                defaults={**defaults, "is_active": True},
-            )
-            if not theme.is_active:
-                theme.is_active = True
-                theme.save(update_fields=["is_active", "updated_at"])
-            messages.success(
-                request,
-                f"„{theme.name}“ ist freigegeben und kann jetzt als persönliches Theme ausgewählt werden.",
-            )
-            return redirect("theme-management")
-        if action == "withdraw_template":
-            template_key = request.POST.get("template_key", "")
-            theme = get_object_or_404(PortalTheme, key=_template_theme_key(template_key))
-            theme.is_active = False
-            theme.save(update_fields=["is_active", "updated_at"])
-            messages.success(request, f"Die Freigabe für „{theme.name}“ wurde zurückgenommen.")
-            return redirect("theme-management")
         import re
 
         colors = {
@@ -2319,46 +2295,9 @@ def theme_management(request):
         {
             "themes": PortalTheme.objects.all(),
             "audiences": PortalTheme.Audience.choices,
-            "template_catalog": _template_catalog_with_release_state(),
         }
     )
     return render(request, "ui/theme_management.html", context)
-
-
-@login_required
-def template_preview(request, template_key, page):
-    if not (
-        request.user.is_superuser
-        or request.user.roleassignment_set.filter(
-            active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
-        ).exists()
-    ):
-        raise Http404
-    page_labels = {"uebersicht": "Übersicht", "kalender": "Kalender"}
-    if page not in page_labels:
-        raise Http404
-    catalog_item = next(
-        (item for item in TEMPLATE_PREVIEW_CATALOG if item["key"] == template_key), None
-    )
-    if catalog_item is None:
-        raise Http404
-    context = _shared(
-        request,
-        f"{catalog_item['name']} · {page_labels[page]}",
-        "management",
-    )
-    context.update(
-        {
-            "catalog_item": catalog_item,
-            "preview_name": catalog_item["name"],
-            "preview_description": catalog_item["style_note"],
-            "preview_page": page,
-            "preview_page_label": page_labels[page],
-            "preview_back_url": "/verwaltung/themes/",
-            "preview_back_label": "Zurück zu allen Vorlagen",
-        }
-    )
-    return render(request, "ui/template_preview.html", context)
 
 
 @login_required

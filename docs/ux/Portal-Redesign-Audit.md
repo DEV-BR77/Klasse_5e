@@ -66,7 +66,9 @@ Codebezüge sind relativ zum Repository; Zeilennummern gelten für den Prüfstan
 
 Empfehlung: Mobil fünf direkte Bereiche **Home, Kalender, Chat, Adressliste, Menü** erhalten. Home → Start ist eine offene Sprachentscheidung. Desktop dieselben Ziele in einer dauerhaften linken Navigation; rechte Zusatzspalte nur bei echtem Nutzen. Formulare und Leseseiten bleiben schmal.
 
-Header: kontextueller Rückweg, Bereich, nötigenfalls sichtbarer Kind-/Schulkontext, Glocke, persönliches Profil. Kinderumschalter für kindbezogene Ansichten; Klassenkontext für Chat/Events. Ein festes Objekt darf nach Kindwechsel nicht still dem neuen Kind zugeschrieben werden. URL, Policy und sichtbarer Kontext müssen zusammenpassen.
+Header: kontextueller Rückweg, Bereich, nötigenfalls sichtbarer Kind-/Schulkontext, **Nachrichten**, **Hinweise** und persönliches Profil. Kinderumschalter für kindbezogene Ansichten; Klassenkontext für Chat/Events. Ein festes Objekt darf nach Kindwechsel nicht still dem neuen Kind zugeschrieben werden. URL, Policy und sichtbarer Kontext müssen zusammenpassen.
+
+**Postfachtrennung:** Der Header erhält zwei gleichwertige, harmonisierte IconButtons mit Textalternative: Briefumschlag „Nachrichten“ und Glocke „Hinweise“. Jeder hat einen eigenen Zählerchip nur bei `> 0`, der Zahlen oberhalb von 99 als `99+` ausgibt. Der Umschlag führt ausschließlich zu ungelesenen Direkt-/Chatnachrichten; die Glocke ausschließlich zu fachlichen In-App-Hinweisen wie Hausaufgaben, Unterrichtsausfall, Termin, Dokument oder Synchronisationsstatus. Ein Chat-@-Hinweis zählt zum Umschlag, nicht zusätzlich zur Glocke. Die Zielseiten und „alles gelesen“-Aktionen bleiben ebenfalls getrennt. Auf kleinen Bildschirmen sind die Buttons mindestens 44×44 px groß; runde Form, abgerundetes Rechteck oder eine andere spätere Form ist ein CSS-Token, keine eigene Sonderkomponente.
 
 Menügruppen: **Klassenleben** (Aktuelles, Dokumente, Events, Mobilität, Fotos, Lehrkräfte), **Schule und Lernen** (freigegebene Schuldaten/Lernangebote/Speiseplan), **Mein Konto** (Profil, Familie, Datenschutz, Geräte/Benachrichtigungen, Sicherheit). Arbeitsbereich für Verwaltung separat. Menükonfiguration steuert Darstellung, niemals Berechtigung.
 
@@ -88,6 +90,7 @@ Empfehlung für die spätere Umsetzung; kein Auftrag für eine allgemeine UI-Bib
 | Komponente | Vertrag |
 |---|---|
 | Shell/Seitenkopf | Ein H1, Kontextzeile, konsistenter Rückweg, höchstens eine Hauptaktion. Feste Leisten reservieren Platz einschließlich Safe Area. |
+| Nachrichten-/Hinweis-Button | Zwei benannte Links, nicht ein gemischtes Postfach. Separater serverseitiger Count, Zähler mit zugänglichem Namen, `99+`, deutlicher Nullzustand und keine Farbe als einziges Neusignal. |
 | Button/IconButton | Primär/sekundär/tertiär/destruktiv; Text oder zugänglicher Name, mindestens 44×44 px Projektziel, empfohlen 48×48 für häufige Touchaktionen. Fokus, Disabled-Grund, Ladezustand ohne Layoutsprung. |
 | Link/Karte | Link navigiert, Button handelt; keine verschachtelten Interaktionen oder Klick-DIVs. Ganze Karte nur bei eindeutigem Ziel. |
 | Field | Eindeutige ID/Label, Hilfe/Fehlerzuordnung, korrektes Type/Autocomplete, verständliche Pflichtangabe. Ein Label nicht für zwei Inputs. |
@@ -329,21 +332,20 @@ Anzeige-/Importvertrag: Quelle/Instanz, externe ID/Fingerprint, Kind-/Klassensco
 
 Migration mit zwei Schulen/gleichen Codes, zwei Kindern/Guardians, abgelaufener Beziehung, Klassenwechsel, Modul-Deaktivierung, entfernter Verbindung und alten Abos testen. Idempotenz/Widerruf/Löschung erhalten. Abwesenheits-Browsermeldung bleibt innerhalb ADR-030; generischer Adaptervertrag erteilt keine Schreibfreigabe.
 
-## 12. Umsetzungsetappen
+## 12. Umsetzungsetappen nach abgeschlossenen Bereichen
 
 Empfehlung für anschließende Freigabe, keine begonnene Umsetzung. Jede Etappe mit eigenem Gate; neue Fachfunktionen außerhalb.
 
-| Etappe | Ergebnis / Gate |
+| Reihenfolge / Bereich | Ergebnis / Gate | Modell |
 |---|---|
-| 0 Befunde/Beschlüsse | P1 synthetisch reproduzieren, Dokumentation/Entscheidungsreichweite klären; fremder Zugriff, verborgene Kommentare und Scope-Nebenwirkungen schließen. |
-| 1 Funktionaler Unterbau | Dokument-/Kommentarwege, Chat, Status, Sendefehler; GET-Seiteneffekte auslagern. Kritische Wege mit Fehler/Abbruch/Rechten bestanden. |
-| 2 Shell/Komponenten | Navigation/Kindkontext, Fields/Buttons/Toggle/Dialog/Status/Table; CSS-Verantwortung. 360 px, Keyboard, Zoom, Themes, Safe Area. |
-| 3 Alltag | Dashboard/Kalender/Aufgaben/Chat/Kontakte; vollständige Wege, Datenstand, Suche, Entwurf, Kontextwechsel. |
-| 4 Avatar | Auswahlkomponente, Manifest/Geometrie, Draft/Savevertrag; Abschnitt 8.4 und Profilregressionen. |
-| 5 Übrige Bereiche | Familie/Consent, Events/Galerie/Mobilität, Verwaltung/Onboarding/öffentliche Seiten; Foto-Ereignismodell, Download-Gate, Rollen-/Klassenisolation und Widerruf. |
-| 6 Abschluss | gezielte Regression, echte Geräte, kurze Doku, kleine nachvollziehbare Commits; Restpunkte explizit. Deployment nur im dafür freigegebenen Auftrag. |
+| 0. Sicherheits- und Datenvertrag | P1-Befunde synthetisch reproduzieren; Objekt-/Klassenscope, verborgene Inhalte, Save-Scopes und GET-Seiteneffekte schließen. WebUntis-Datenvertrag beschließen, bevor Mehrschulfunktion entsteht. | **Astra** für die wenigen Architekturentscheidungen; **Terra** für gezielte Korrekturen und Tests. |
+| 1. Shell, Navigation, Designsystem | Header mit getrennten Nachrichten/Hinweisen, Kindkontext, Desktop-/Mobilnavigation, Tokens, Buttons, Felder, Dialoge, Status, Fokus/Safe Area. Danach ist die gemeinsame Oberfläche sichtbar und getestet. | **Terra**; Astra nur bei einer ungelösten Navigationsentscheidung. |
+| 2. Kommunikation und Alltag | Home, Kalender, Hausaufgaben, Chat, Nachrichtenpostfach, Hinweispostfach und Kontakte als vollständige Wege: Entwurf, Polling, Fehler, Rückweg, Mobil- und Tastaturtest. | **Terra**; Astra für Chat-Schutz-/Datenentscheidungen, nicht für Routine-Implementierung. |
+| 3. Familie und Schulzugänge | Familienzentrale, Freigaben, Profil, Avatar-Grundvertrag, WebUntis-Integration und Adapterverwaltung bis zu einem konsistenten Daten-/Statusmodell. | **Terra**; **Astra** für Mehrschulmigration und Zugangstrennung. |
+| 4. Klassenleben und Medien | Beiträge/Dokumente/Events/Mobilität sowie Fotogalerie mit Ereignismodell, Metadaten, Filter, Modellschaltern, manueller Zuordnung, Widerruf und Download-Gate. | **Terra**; Astra für Modell-/Datenschutzgate. |
+| 5. Avatar, Verwaltung, Abschluss | Vollständiger Avatar-Designer, Themes nur auf dem neuen Tokenvertrag, Onboarding/öffentliche Seiten; echte Geräte, Rechte, Reflow, Screenreader und Regression. | **Terra**; kleines Modell ausschließlich für knappe Zusammenfassungen und Dokumentpflege. |
 
-Modellstrategie laut Nutzer: Astra für Audit/Architektur/Analyse, Terra für klar begrenzte Umsetzung nach Abstimmung, kleines Modell für knappe Zusammenfassung. Keinen technisch nicht erfolgten Modellwechsel behaupten. Keine langen Fortschrittsberichte allein zur Kommentierung.
+Ein Bereich beginnt erst, wenn sein Gate und die offenen Entscheidungen dafür geklärt sind; er endet erst nach seinen Funktions-, Rechte-, Mobil- und Accessibility-Tests. Das verhindert paralleles Stückwerk. Modellstrategie laut Nutzer: Astra für Audit/Architektur/Analyse, Terra für klar begrenzte Umsetzung, kleines Modell für knappe Zusammenfassung. Keinen technisch nicht erfolgten Modellwechsel behaupten. Keine langen Fortschrittsberichte allein zur Kommentierung.
 
 ## 13. Test- und Abnahmekriterien
 
@@ -355,6 +357,7 @@ Modellstrategie laut Nutzer: Astra für Audit/Architektur/Analyse, Terra für kl
 | Dokumente | Suche/Original/Formular/fehlende Variante/fremde Klasse: richtige geschützte Datei oder neutraler Fehler. |
 | Chat | Zwei Clients, neue Nachricht bei lokalem Entwurf, Ausfall/Retry: kein Entwurf-/Fokusverlust, keine doppelten Posts. |
 | Chat-Kinderschutz | Kanonisierung/Regeln, asynchrones Assessment, Ziel-/Verlaufshinweis, Fehlalarmkorrektur, Rechte/Löschung und Messgrenzen nach Abschnitt 10. |
+| Header-Postfächer | Null/1/99/99+ für Chat und Hinweise getrennt, Ziel-URL, eigene „gelesen“-Aktion, Langname/Screenreader, 360 px, Tastatur und Zoom nach Abschnitt 4. |
 | Kontext | Zwei Kinder verschiedener Schulen, Home/Kalender/festes Objekt: sichtbarer korrekter Kontext, kein Datenmix. |
 | Consent | Mehrere Guardians, fehlende/abgelaufene/widerrufene Zustimmung: wirksamen Zustand getrennt von Auswahl zeigen, sensible Verarbeitung sperren. |
 | Kalender | Tag/Woche, parallele Termine, Entfall, lange Namen, Nulltreffer/veraltete Quelle: lesbar und vollständig. |

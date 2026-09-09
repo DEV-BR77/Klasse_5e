@@ -1,45 +1,22 @@
 import pytest
 
 from klasse5e.core.models import PortalTheme
-from klasse5e.core.ui_views import TEMPLATE_PREVIEW_CATALOG
 
 
 @pytest.mark.django_db
-def test_template_catalog_offers_shared_dashboard_and_calendar_previews(client, admin_user):
+def test_theme_management_does_not_offer_removed_template_catalog(client, admin_user):
     client.force_login(admin_user)
 
-    management = client.get("/verwaltung/themes/", secure=True)
+    response = client.get("/verwaltung/themes/", secure=True)
 
-    assert management.status_code == 200
-    assert management.content.count(b">Vorschau</a>") >= len(TEMPLATE_PREVIEW_CATALOG)
-    for item in TEMPLATE_PREVIEW_CATALOG:
-        overview = client.get(
-            f"/verwaltung/themes/vorschau/{item['key']}/uebersicht/", secure=True
-        )
-        calendar = client.get(
-            f"/verwaltung/themes/vorschau/{item['key']}/kalender/", secure=True
-        )
-        assert overview.status_code == 200
-        assert calendar.status_code == 200
-        assert item["name"].encode() in overview.content
-        assert b"Was steht heute an?" in overview.content
-        assert b"07.\xe2\x80\x9313. September 2026" in calendar.content
-        assert b"Sportfest" in calendar.content
+    assert response.status_code == 200
+    assert b"CSS-Vorlagen vergleichen" not in response.content
+    assert b"Tailwind-Vorlagen vergleichen" not in response.content
+    assert b"/verwaltung/themes/vorschau/" not in response.content
 
 
 @pytest.mark.django_db
-def test_catalog_preview_is_hidden_from_guardians(client, guardian):
-    client.force_login(guardian)
-
-    response = client.get(
-        "/verwaltung/themes/vorschau/velora-ui/uebersicht/", secure=True
-    )
-
-    assert response.status_code == 404
-
-
-@pytest.mark.django_db
-def test_every_portal_theme_uses_the_same_previews_without_becoming_active(client, guardian):
+def test_every_portal_theme_uses_the_same_preview_without_becoming_active(client, guardian):
     theme = PortalTheme.objects.create(
         key="future-theme",
         name="Future Theme",
@@ -89,59 +66,10 @@ def test_theme_settings_links_to_preview_instead_of_activating_it(client, guardi
 
 
 @pytest.mark.django_db
-def test_theme_settings_links_administrators_to_the_css_template_catalog(
-    client, admin_user, guardian
-):
-    client.force_login(admin_user)
-
-    management_link = client.get("/einstellungen/profil/?tab=themes", secure=True)
-
-    assert management_link.status_code == 200
-    assert b"6 CSS-Vorlagen vergleichen" in management_link.content
-    assert b'/verwaltung/themes/' in management_link.content
-
-    client.force_login(guardian)
-    guardian_view = client.get("/einstellungen/profil/?tab=themes", secure=True)
-
-    assert b"CSS-Vorlagen vergleichen" not in guardian_view.content
-
-
-@pytest.mark.django_db
-def test_administrator_can_release_a_preview_template_as_a_portal_theme(
-    client, admin_user, guardian
-):
-    client.force_login(admin_user)
-
-    response = client.post(
-        "/verwaltung/themes/",
-        {"action": "release_template", "template_key": "velora-ui"},
-        secure=True,
-    )
-
-    assert response.status_code == 302
-    released = PortalTheme.objects.get(key="template-velora-ui")
-    assert released.is_active is True
-    assert released.name == "Velora UI"
-
-    client.force_login(guardian)
-    personal_themes = client.get("/einstellungen/profil/?tab=themes", secure=True)
-
-    assert b"Velora UI" in personal_themes.content
-
-
-@pytest.mark.django_db
-def test_unknown_preview_page_or_template_returns_404(client, admin_user):
+def test_removed_template_preview_route_returns_404(client, admin_user):
     client.force_login(admin_user)
 
     assert (
-        client.get(
-            "/verwaltung/themes/vorschau/does-not-exist/uebersicht/", secure=True
-        ).status_code
-        == 404
-    )
-    assert (
-        client.get(
-            "/verwaltung/themes/vorschau/velora-ui/unbekannt/", secure=True
-        ).status_code
+        client.get("/verwaltung/themes/vorschau/velora-ui/uebersicht/", secure=True).status_code
         == 404
     )

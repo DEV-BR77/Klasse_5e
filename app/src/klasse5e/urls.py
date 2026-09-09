@@ -142,11 +142,6 @@ urlpatterns = [
         name="family-invitations",
     ),
     path("verwaltung/themes/", ui_views.theme_management, name="theme-management"),
-    path(
-        "verwaltung/themes/vorschau/<slug:template_key>/<slug:page>/",
-        ui_views.template_preview,
-        name="template-preview",
-    ),
     path("verwaltung/menue/", ui_views.menu_management, name="menu-management"),
     path(
         "verwaltung/terminumfrage/",
