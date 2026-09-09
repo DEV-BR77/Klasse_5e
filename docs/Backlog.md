@@ -15,7 +15,7 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 | Reihenfolge | Aufgabe | Empfohlenes Modell | Begründung |
 |---:|---|---|---|
 | 1 | Rollenverwaltung und Familien-Datenschutz live abnehmen | GPT-5.6 Terra · hoch | Berechtigungen und sofortigen Zugriffsentzug im laufenden Portal prüfen. |
-| später | BL-18 Schulmanager-Online-Adapter | GPT-6 Astra · hoch | Auf Wunsch zurückgestellt; Playwright, Geheimnisse und Datenschutz benötigen die stärkere Prüfung. |
+| 2 | BL-18 Schulmanager-Online-Adapter live abnehmen | GPT-5.6 Terra · hoch | Technische Umsetzung ist ausgerollt; echte Schulmanager-Sitzung, Datenzuordnung und Produktivfreigabe stehen noch aus. |
 
 ## Dringend
 
