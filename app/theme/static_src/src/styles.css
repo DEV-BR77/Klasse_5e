@@ -225,6 +225,7 @@ html[data-theme-mode="dark"] {
   }
 
   .app-icon-button {
+    position: relative;
     width: 2.75rem;
     padding: 0;
   }
