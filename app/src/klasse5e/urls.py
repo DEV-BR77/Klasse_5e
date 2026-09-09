@@ -35,6 +35,7 @@ urlpatterns = [
     ),
     path("projekt/", TemplateView.as_view(template_name="core/project.html"), name="project"),
     path("demo/", TemplateView.as_view(template_name="core/demo.html"), name="demo"),
+    path("scan/<path:token>/", views.temporary_scan_access, name="temporary-scan-access"),
     path("onboarding/", onboarding_experience_views.onboarding_step, name="onboarding-resume"),
     path(
         "onboarding/pausiert/",

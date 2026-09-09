@@ -6,7 +6,7 @@ import secrets
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model, logout
+from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
@@ -15,6 +15,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.mail import send_mail
+from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
@@ -53,6 +54,20 @@ from .privacy_services import erase_account_data
 from .registration import activate, create_application, sanitized_profile_photo, verify_email
 
 logger = logging.getLogger(__name__)
+SCAN_LINK_MAX_AGE = 20 * 60
+
+
+def temporary_scan_access(request, token):
+    """Authenticate one signed scan link for twenty minutes, then redirect home."""
+
+    try:
+        user_id = TimestampSigner(salt="klassid-scan-access").unsign(token, max_age=SCAN_LINK_MAX_AGE)
+        user = get_user_model().objects.get(pk=int(user_id), is_active=True)
+    except (BadSignature, SignatureExpired, ValueError, get_user_model().DoesNotExist):
+        return HttpResponse("Dieser Scan-Link ist abgelaufen oder ungültig.", status=410)
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    request.session.set_expiry(SCAN_LINK_MAX_AGE)
+    return redirect("/")
 
 
 def csrf_failure(request, reason=""):
