@@ -71,6 +71,14 @@
               <footer class="form-actions"><button class="button button-primary">Zugangsdaten speichern</button></footer>
             </form>
           {% endif %}
+          {% if adapter_row.adapter.provider == 'schulmanager' and adapter_row.has_enabled_connection %}
+            <form method="post" action="{% url 'ui-family' %}" class="form-stack portal-credential-form">
+              {% csrf_token %}<input type="hidden" name="action" value="schoolmanager_credentials"><input type="hidden" name="relationship_id" value="{{ active_row.relationship.pk }}"><input type="hidden" name="tab" value="modules"><input type="hidden" name="child" value="{{ active_row.relationship.pk }}">
+              <div class="section-heading"><div><strong>Schulmanager-Zugang für {{ active_row.relationship.student_person.first_name }}</strong><small>Benutzername und Passwort werden verschlüsselt gespeichert und nur lesend für Nachrichten und Elternbriefe verwendet.</small></div></div>
+              <div class="field-pair"><label>Benutzername<input name="username" autocomplete="username" required maxlength="160" placeholder="Schulmanager-Benutzername"></label><label>Passwort<input name="password" type="password" autocomplete="new-password" required placeholder="Schulmanager-Passwort"></label></div>
+              <footer class="form-actions"><button class="button button-primary">Zugangsdaten speichern</button></footer>
+            </form>
+          {% endif %}
         </section>
       {% empty %}
         <div class="settings-details-body"><p>Für diese Schule sind noch keine Module freigegeben.</p></div>

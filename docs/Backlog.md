@@ -401,17 +401,20 @@ eine reale, bewusst freigegebene Abwesenheitsmeldung.
 
 ### BL-18 – Schulmanager Online: persönlicher Playwright-Adapter für Nachrichten und Elternbriefe
 
-**Status:** am 09.09.2026 auf Wunsch zurückgestellt; erst nach erneuter
-Freigabe fortsetzen.
+**Status:** technische Umsetzung am 09.09.2026 begonnen; Live-Abnahme und
+Produktivfreigabe bleiben offen.
 Die angemeldete Chrome-Sitzung zeigt Nachrichten unter
 `#/modules/messenger/messages` und Elternbriefe unter `#/modules/letters/view`.
 Noch zu prüfen sind Login, eindeutige Kind-/Schulzuordnung, Detailansichten und
-Nebenwirkungen auf Lesebestätigungen. Browseraktionen brechen derzeit vor
-Ausführung mit Zeitüberschreitung ab. Es wurden keine Nachrichtendaten in Git übernommen.
+Nebenwirkungen auf Lesebestätigungen. Die Browserbrücke konnte die Sitzung
+während der Umsetzung nicht zuverlässig auslesen. Es wurden keine
+Nachrichtendaten in Git übernommen.
 AGB-Erstprüfung: https://www.schulmanager-online.de/agb.html; daraus folgt noch
 keine nachgewiesene schulische Freigabe für den automatisierten Betrieb.
-Nach Abschluss beider Aufgaben sind Abschlussprüfung, GitHub-Push und App-Build
-ausdrücklich beauftragt. Baut auf BL-16 auf.
+Der Adapter besitzt nun einen kontrollierten, rein lesenden Playwright-Transport,
+verschlüsselte Zugangsdaten pro Kind, idempotente neutrale Benachrichtigungen und
+den Befehl `manage.py sync_schoolmanager`. Abschlussprüfung und Live-Abnahme
+bleiben vor einer Veröffentlichung erforderlich. Baut auf BL-16 auf.
 
 Schulmanager Online besitzt keine verwendbare API. Der Adapter verwendet daher
 Playwright ausschließlich als kontrollierten, persönlichen Browseradapter.

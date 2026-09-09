@@ -62,8 +62,10 @@ from klasse5e.portal_adapters.models import (
     ChildModuleConnection,
     PortalAdapter,
     PortalAdapterModule,
+    SchoolmanagerConnection,
 )
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
+from klasse5e.schoolmanager.crypto import encrypt as encrypt_schoolmanager
 from klasse5e.webuntis.models import (
     HomeworkProgress,
     WebUntisConnection,
@@ -3037,6 +3039,7 @@ def family(request):
         "consents",
         "add_child",
         "family_photo",
+        "schoolmanager_credentials",
     }:
         try:
             action = request.POST["action"]
@@ -3064,6 +3067,20 @@ def family(request):
                         subject_ids=request.POST.getlist("subject_ids"),
                     )
                     messages.success(request, "Das Familienbild wurde gespeichert.")
+            elif action == "schoolmanager_credentials":
+                relation = next((r for r in relationships if str(r.pk) == request.POST.get("relationship_id")), None)
+                if not relation or not relation.is_current() or not relation.may_manage_profile:
+                    raise PermissionDenied
+                username = request.POST.get("username", "").strip()
+                password = request.POST.get("password", "")
+                if not username or not password:
+                    raise ValidationError("Benutzername und Passwort sind erforderlich.")
+                SchoolmanagerConnection.objects.update_or_create(
+                    user=request.user,
+                    student=relation.student_person,
+                    defaults={"username_encrypted": encrypt_schoolmanager(username), "password_encrypted": encrypt_schoolmanager(password)},
+                )
+                messages.success(request, "Schulmanager-Zugang wurde verschlüsselt gespeichert.")
             else:
                 person_id = request.POST.get("person_id")
                 person = request.user.person if person_id == str(request.user.person.pk) else None

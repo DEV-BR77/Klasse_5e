@@ -12,6 +12,7 @@ class PortalAdapter(models.Model):
         DSBMOBILE = "dsbmobile", "DSBmobile"
         MUNDO = "mundo", "MUNDO Schule"
         WIR_LERNEN_ONLINE = "wirlernenonline", "WirLernenOnline"
+        SCHULMANAGER = "schulmanager", "Schulmanager Online"
         WOBILA_BBB = "wobila-bbb", "BBB Wobila"
         WOBILA_MAIL = "wobila-mail", "Mail Wobila"
         CUSTOM = "custom", "Eigenes Portal"
@@ -123,3 +124,31 @@ class ChildModuleConnection(models.Model):
 
     def __str__(self):
         return f"{self.student} · {self.module}"
+
+
+class SchoolmanagerConnection(models.Model):
+    """Encrypted personal credentials for the read-only Schulmanager adapter."""
+
+    class Status(models.TextChoices):
+        NOT_TESTED = "not_tested", "Noch nicht geprüft"
+        OK = "ok", "Verbindung eingerichtet"
+        INVALID = "invalid", "Zugangsdaten ungültig"
+        ERROR = "error", "Verbindung fehlerhaft"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="schoolmanager_connections"
+    )
+    student = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="schoolmanager_connections")
+    username_encrypted = models.BinaryField()
+    password_encrypted = models.BinaryField()
+    status = models.CharField(max_length=24, choices=Status.choices, default=Status.NOT_TESTED)
+    status_detail = models.CharField(max_length=160, blank=True)
+    last_checked_at = models.DateTimeField(null=True, blank=True)
+    last_sync_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "student"], name="unique_schoolmanager_user_student")
+        ]

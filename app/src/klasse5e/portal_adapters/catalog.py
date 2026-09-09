@@ -53,6 +53,25 @@ ADAPTER_CATALOG = {
             ),
         ),
     },
+    PortalAdapter.Provider.SCHULMANAGER: {
+        "label": "Schulmanager Online",
+        "default_url": "https://login.schulmanager-online.de/",
+        "hint": "Nachrichten und Elternbriefe werden ausschließlich lesend und kindbezogen abgerufen.",
+        "modules": (
+            (
+                "messages",
+                "Nachrichten",
+                "Neue Schulmanager-Nachrichten als neutrale Benachrichtigung anzeigen.",
+                True,
+            ),
+            (
+                "letters",
+                "Elternbriefe",
+                "Neue Elternbriefe als neutrale Benachrichtigung anzeigen.",
+                True,
+            ),
+        ),
+    },
     PortalAdapter.Provider.MENSAMAX: {
         "label": "MensaMax",
         "default_url": "https://app.mensamax.de/",
