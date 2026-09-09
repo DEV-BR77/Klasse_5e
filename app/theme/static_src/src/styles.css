@@ -104,6 +104,50 @@
   margin: .5rem 0 .25rem;
 }
 
+.welcome-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 18rem);
+  align-items: start;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  color: var(--color-text);
+}
+
+.welcome-card__copy {
+  display: grid;
+  gap: 1rem;
+  line-height: 1.65;
+}
+
+.welcome-card__copy p {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.welcome-card__actions {
+  display: grid;
+  gap: .7rem;
+  padding-left: clamp(1rem, 3vw, 2rem);
+  border-left: 1px solid var(--color-border);
+}
+
+.welcome-card__actions .button {
+  width: 100%;
+}
+
+@media (max-width: 48rem) {
+  .welcome-card {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-card__actions {
+    padding-top: 1.25rem;
+    padding-left: 0;
+    border-top: 1px solid var(--color-border);
+    border-left: 0;
+  }
+}
+
 /*
  * Django writes these values on <html> for every released portal theme.
  * `inline` keeps Tailwind utilities tied to the runtime value instead of

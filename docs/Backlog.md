@@ -73,7 +73,9 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
   Sie verweist auf Familienverwaltung, Profil-/Freigabepflege, persönliche
   WebUntis-Zugänge am Kind und die Präsentationsveranstaltungen. Die bisherigen
   Datenschutzdetails bleiben optional über einen direkten Link erreichbar.
-  **Abgeschlossen am 09.09.2026.**
+  **Abgeschlossen am 09.09.2026:** Die Live-Ansicht wurde zusätzlich für Hell-
+  und Dunkelmodus geprüft; Text und Aktionsbereich sind klar getrennt, lesbar
+  und auf schmalen Bildschirmen untereinander angeordnet.
 
 ## Kommunikation und Kontakte
 
