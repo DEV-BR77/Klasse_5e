@@ -1,5 +1,8 @@
 [CmdletBinding()]
-param([switch]$NoBuild)
+param(
+    [switch]$NoBuild,
+    [string]$RollbackImage
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -35,8 +38,18 @@ try {
             [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
         }
     }
-    $runningContainer = (& docker compose ps -q klasse-5e-app).Trim()
-    if ($runningContainer) {
+    if ($RollbackImage) {
+        & docker image inspect $RollbackImage | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "The specified rollback image does not exist."
+        }
+        Write-Host "Rollback image retained as $RollbackImage"
+    }
+    else {
+        $runningContainer = (& docker compose ps -q klasse-5e-app).Trim()
+        if (-not $runningContainer) {
+            throw "No running app container is available for rollback preservation."
+        }
         $runningImage = (& docker inspect --format '{{.Image}}' $runningContainer).Trim()
         $rollbackTag = "klasse-5e-app:rollback-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         & docker image inspect $runningImage 2>$null | Out-Null
