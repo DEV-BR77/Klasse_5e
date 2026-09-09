@@ -168,6 +168,8 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
   Bestätigung löschen. Aktive Klassenmitglieder können sich mit „Ich nehme
   teil“ anmelden; die Teilnehmerliste zeigt dann den Familiennamen und lässt
   sich jederzeit zurücknehmen. Änderungen und Teilnahme werden auditiert.
+  Die alte Terminabstimmung wird nicht mehr in Veranstaltungen gezeigt; neue
+  Veranstaltungen erfassen eine Beschreibung und optional einen Teams-Meeting-Link.
 
 ## Eingabe und E-Mail-Ablauf
 

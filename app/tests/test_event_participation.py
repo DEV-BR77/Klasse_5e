@@ -34,6 +34,33 @@ def published_event(guardian, school_class, year):
 
 
 @pytest.mark.django_db
+def test_portal_admin_can_create_an_event_with_description_and_teams_link(
+    client, admin_user, school_class, year
+):
+    client.force_login(admin_user)
+
+    response = client.post(
+        reverse("ui-events"),
+        {
+            "title": "Portal vorstellen",
+            "description": "Wir zeigen die wichtigsten Bereiche des Portals.",
+            "location": "Online",
+            "meeting_url": "https://teams.example.test/portal",
+            "starts_at": (timezone.localtime() + timedelta(days=4)).strftime("%Y-%m-%dT%H:%M"),
+            "ends_at": (timezone.localtime() + timedelta(days=4, hours=1)).strftime("%Y-%m-%dT%H:%M"),
+        },
+        secure=True,
+    )
+
+    assert response.status_code == 302
+    event = Event.objects.get(title="Portal vorstellen")
+    assert event.description == "Wir zeigen die wichtigsten Bereiche des Portals."
+    assert event.meeting_url == "https://teams.example.test/portal"
+    page = client.get(reverse("ui-events"), secure=True)
+    assert "Termin abstimmen" not in page.content.decode()
+
+
+@pytest.mark.django_db
 def test_event_organizer_can_edit_and_delete_only_their_own_event(
     client, guardian, published_event, school_class
 ):

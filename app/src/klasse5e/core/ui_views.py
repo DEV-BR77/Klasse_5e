@@ -15,6 +15,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
+from django.core.validators import URLValidator
 from django.db.models import Count, Exists, OuterRef, Q
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -2348,14 +2349,27 @@ def events(request):
         if not title:
             messages.error(request, "Bitte gib einen Titel ein.")
             return redirect("ui-events")
+        description = request.POST.get("description", "").strip()
+        location = request.POST.get("location", "").strip()[:200]
+        meeting_url = request.POST.get("meeting_url", "").strip()[:200]
+        if not description or not location:
+            messages.error(request, "Bitte gib Beschreibung und Ort an.")
+            return redirect("ui-events")
+        if meeting_url:
+            try:
+                URLValidator(schemes=["http", "https"])(meeting_url)
+            except ValidationError:
+                messages.error(request, "Bitte gib einen gültigen Teams-Meeting-Link an.")
+                return redirect("ui-events")
         item = Event.objects.create(
             school_class=school_class,
             school_year=school_class.school_year,
             title=title,
-            description=request.POST.get("description", "").strip(),
+            description=description,
             starts_at=starts_at,
             ends_at=ends_at,
-            location=request.POST.get("location", "").strip()[:200],
+            location=location,
+            meeting_url=meeting_url,
             change_deadline=ends_at,
             status=Event.Status.PUBLISHED,
         )
@@ -2397,11 +2411,6 @@ def events(request):
     context["events"] = Event.objects.filter(
         school_class=school_class, status=Event.Status.PUBLISHED
     ).order_by("starts_at")
-    context["event_polls"] = (
-        EventPoll.objects.filter(school_class=school_class, finalized_event__isnull=True)
-        .prefetch_related("options__votes")
-        .order_by("closes_at")
-    )
     return render(request, "ui/events.html", context)
 
 
