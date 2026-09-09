@@ -3,6 +3,7 @@ services:
     ports: ["127.0.0.1:8085:8000"]
     environment:
       DJANGO_DEBUG: "1"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
     networks: [klasse_5e_internal, klasse_5e_diagnostic]
   klasse-5e-vision:
     ports: ["127.0.0.1:8091:8000"]
