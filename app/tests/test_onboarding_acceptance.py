@@ -65,6 +65,24 @@ def test_student_login_gets_child_friendly_resumable_flow(client):
 
 
 @pytest.mark.django_db
+def test_first_login_shows_class_portal_welcome_with_direct_setup_links(client, guardian):
+    guardian.email_verified_at = timezone.now()
+    guardian.save(update_fields=["email_verified_at"])
+    client.force_login(guardian)
+
+    response = client.get("/onboarding/")
+    html = response.content.decode()
+
+    assert response.status_code == 200
+    assert "Herzlich willkommen im Klassenportal der Klasse 5e" in html
+    assert "Familienverwaltung öffnen" in html
+    assert "Profil vervollständigen" in html
+    assert "WebUntis-Zugang pflegen" in html
+    assert "Vorstellungstermine ansehen" in html
+    assert "Station 1 von" not in html
+
+
+@pytest.mark.django_db
 def test_denying_every_optional_purpose_keeps_every_feature_off(guardian):
     for consent_type in ConsentType.objects.all():
         record_decision(

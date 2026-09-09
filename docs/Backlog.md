@@ -68,10 +68,12 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
   „Aktuelles“. Aktive Klassenmitglieder erhalten beim ersten Portalaufruf
   idempotent eine ungelesene, neutrale In-App-Benachrichtigung mit direktem Link
   zur Veranstaltung; spätere Konten werden dadurch ebenfalls erreicht.
-- [ ] **Erstlogin als Willkommensseite.** Den bisherigen Cloud-/Schrittablauf
-  durch eine kurze Willkommensseite für die Klasse 5e ersetzen. Sie verweist auf
-  Familienverwaltung, Profil-/Freigabepflege, persönliche WebUntis-Zugänge am
-  Kind und die Präsentationsveranstaltungen.
+- [x] **Erstlogin als Willkommensseite.** Der bisherige Cloud-/Schrittablauf
+  ist beim Erstlogin durch eine kurze Willkommensseite für die Klasse 5e ersetzt.
+  Sie verweist auf Familienverwaltung, Profil-/Freigabepflege, persönliche
+  WebUntis-Zugänge am Kind und die Präsentationsveranstaltungen. Die bisherigen
+  Datenschutzdetails bleiben optional über einen direkten Link erreichbar.
+  **Abgeschlossen am 09.09.2026.**
 
 ## Kommunikation und Kontakte
 

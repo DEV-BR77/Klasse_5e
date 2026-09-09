@@ -21,6 +21,7 @@ from .onboarding import (
     subjects_for_user,
 )
 from .onboarding_content import CONSENT_GUIDANCE, STEP_GUIDANCE, TUTORIAL_STEPS
+from .policies import active_class_for_user
 
 
 def _subjects_for_step(user, step):
@@ -67,10 +68,20 @@ def onboarding_step(request, step=None):
     state, _ = OnboardingState.objects.get_or_create(user=request.user)
     if step is None and request.method == "GET":
         request.session["setup_intro_seen"] = True
+        school_class = active_class_for_user(request.user)
         return render(
             request,
             "onboarding/overview.html",
-            {"state": state, "page_title": "Gut starten", "active_section": "more"},
+            {
+                "state": state,
+                "page_title": "Willkommen im Klassenportal",
+                "active_section": "more",
+                "welcome_class_name": (
+                    f"Klasse {school_class.code}"
+                    if school_class and school_class.code
+                    else "Klasse 5e"
+                ),
+            },
         )
     step = step or state.current_step
     if step < 1 or step > TOTAL_ONBOARDING_STEPS:
