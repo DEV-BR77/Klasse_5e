@@ -21,6 +21,7 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.csrf import csrf_failure as django_csrf_failure
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -54,6 +55,21 @@ from .registration import activate, create_application, sanitized_profile_photo,
 logger = logging.getLogger(__name__)
 
 
+def csrf_failure(request, reason=""):
+    """Refresh an expired login form instead of leaving the user at a 403 page.
+
+    A form restored from the browser's back/forward cache can carry an obsolete
+    token after the automatic idle logout. The failed request stays protected;
+    only the login form is reloaded as a fresh GET response.
+    """
+
+    if request.path == reverse("account_login") and request.method == "POST":
+        response = redirect(f"{reverse('account_login')}?csrf=1")
+        response["Cache-Control"] = "private, no-store, max-age=0"
+        return response
+    return django_csrf_failure(request, reason)
+
+
 def health(request):
     return JsonResponse({"status": "ok"})
 
@@ -64,6 +80,24 @@ def _rate_limit(request, purpose, limit=5):
     count = cache.get(key, 0) + 1
     cache.set(key, count, 3600)
     return count > limit
+
+
+def _send_registration_confirmation(application, token, *, fail_silently):
+    """Send one clear, personal confirmation message for every registration path."""
+
+    link = f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/registrieren/email/{token}/"
+    subject = "Bitte bestätige deine E-Mail-Adresse für KlassID"
+    body = (
+        f"Hallo {application.first_name},\n\n"
+        "willkommen bei KlassID. Bitte bestätige jetzt deine E-Mail-Adresse, "
+        "damit die Klassenverwaltung deinen Antrag prüfen kann.\n\n"
+        "E-Mail-Adresse bestätigen:\n"
+        f"{link}\n\n"
+        "Der Link ist einmalig und 24 Stunden gültig. Falls du dich nicht bei "
+        "KlassID angemeldet hast, kannst du diese E-Mail einfach ignorieren.\n\n"
+        "Viele Grüße\nDein KlassID-Team"
+    )
+    return send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [application.email], fail_silently=fail_silently)
 
 
 @csrf_protect
@@ -78,14 +112,7 @@ def register(request):
                 password=request.POST.get("password", ""),
             )
             if item and token:
-                link = f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/registrieren/email/{token}/"
-                send_mail(
-                    "E-Mail-Adresse für KlassID bestätigen",
-                    f"Öffne diesen einmaligen Link innerhalb von 24 Stunden: {link}",
-                    settings.DEFAULT_FROM_EMAIL,
-                    [item.email],
-                    fail_silently=False,
-                )
+                _send_registration_confirmation(item, token, fail_silently=False)
         except Exception:
             # The public response deliberately does not reveal accounts or mail state.
             pass
@@ -298,14 +325,7 @@ def family_register(request, token):
                 locked.submitted_at = timezone.now()
                 locked.use_count += 1
                 locked.save(update_fields=["submitted_at", "use_count"])
-                link = f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/registrieren/email/{email_token}/"
-                sent = send_mail(
-                    "E-Mail-Adresse für KlassID bestätigen",
-                    f"Öffne diesen einmaligen Link innerhalb von 24 Stunden: {link}",
-                    settings.DEFAULT_FROM_EMAIL,
-                    [item.email],
-                    fail_silently=False,
-                )
+                sent = _send_registration_confirmation(item, email_token, fail_silently=False)
                 if sent != 1:
                     raise RuntimeError("Confirmation email was not accepted by the mail backend")
             return render(request, "core/family_registration_received.html", status=202)
@@ -353,7 +373,13 @@ def verify_registration_email(request, token):
 
 def activate_registration(request, token):
     user = activate(token)
-    return render(request, "core/registration_activated.html", {"valid": bool(user)})
+    if user:
+        messages.success(
+            request,
+            "Dein KlassID-Konto ist aktiviert. Melde dich jetzt mit deiner E-Mail-Adresse und deinem Passwort an.",
+        )
+        return redirect("account_login")
+    return render(request, "core/registration_activated.html", {"valid": False})
 
 
 @login_required

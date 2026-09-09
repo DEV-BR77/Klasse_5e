@@ -13,6 +13,12 @@
             <button class="status-banner__dismiss" type="button" data-timeout-notice-close>Verstanden</button>
         </section>
     {% endif %}
+    {% if request.GET.csrf %}
+        <section class="status-banner" role="status" aria-live="polite">
+            <p>Die Anmeldeseite wurde erneuert. Bitte melde dich jetzt an.</p>
+        </section>
+    {% endif %}
+    <span data-login-form hidden></span>
     {% element form form=form method="post" action=login_url tags="entrance,login" %}
         {% slot body %}
             {% csrf_token %}

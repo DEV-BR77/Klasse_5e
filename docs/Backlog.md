@@ -15,15 +15,6 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 | Reihenfolge | Aufgabe | Empfohlenes Modell | Begründung |
 |---:|---|---|---|
 | 1 | Rollenverwaltung und Familien-Datenschutz live abnehmen | GPT-5.6 Terra · hoch | Berechtigungen und sofortigen Zugriffsentzug im laufenden Portal prüfen. |
-| 2 | Mobile Kopfzeile verdichten | GPT-5.6 Luna · gering | Begrenzte Template-/CSS-Anpassung. |
-| 3 | Mobile Dashboard-Navigation | GPT-5.6 Luna · mittel | UI- und Tastaturbedienung über mehrere Tabs. |
-| 4 | Stundenplan kompakt darstellen | GPT-5.6 Luna · gering | Lokales Layout ohne neue Fachlogik. |
-| 5 | Hausaufgaben vor Tagesmenü | GPT-5.6 Luna · gering | Begrenzte Dashboard-Anordnung. |
-| 6 | Abmeldebestätigung | GPT-5.6 Luna · gering | Kleine, isolierte Dialogänderung. |
-| 7 | Chatraum-Aktionen verdichten | GPT-5.6 Luna · mittel | Responsive Aktionen und Wischbedienung über mehrere Ansichten. |
-| 8 | Einstellungen sortieren | GPT-5.6 Luna · gering | Reihenfolge und Standardöffnung der Navigation. |
-| 9 | Bestätigungs-E-Mail überarbeiten | GPT-5.6 Luna · mittel | Text und Authentifizierungs-Regressionstest. |
-| 10 | Doppelten Bestätigungsschritt entfernen | GPT-5.6 Luna · mittel | Zustandswechsel im Registrierungsablauf. |
 | später | BL-18 Schulmanager-Online-Adapter | GPT-6 Astra · hoch | Auf Wunsch zurückgestellt; Playwright, Geheimnisse und Datenschutz benötigen die stärkere Prüfung. |
 
 ## Dringend
@@ -144,14 +135,27 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 
 ## Mobile Startseite und Navigation
 
-- [ ] **Mobile Kopfzeile verdichten.** Rechtliche Links einklappbar machen,
+- [x] **Mobile Kopfzeile verdichten.** Rechtliche Links einklappbar machen,
   ohne Benachrichtigungen und Profilzugriff zu verdecken.
-- [ ] **Mobile Dashboard-Navigation.** Aktuelles, Stundenplan,
+  **Abgeschlossen am 09.09.2026:** Auf kleinen Displays fasst ein zugänglicher
+  Aufklapper „Rechtliches“ Datenschutz, Impressum und Hinweise zusammen.
+  Benachrichtigungsglocke und Profilmenü bleiben dauerhaft als eigene,
+  ausreichend große Bedienelemente sichtbar.
+- [x] **Mobile Dashboard-Navigation.** Aktuelles, Stundenplan,
   Hausaufgaben und Speiseplan als kleine Icon-Tabs darstellen.
-- [ ] **Stundenplan kompakt darstellen.** Zeit in einer Zeile, Fach/Raum/
+  **Abgeschlossen am 09.09.2026:** Vier gleich breite Tabs mit Icon und Text
+  schalten tastaturbedienbar zwischen Stundenplan, Hausaufgaben, Aktuellem
+  und Speiseplan; Veranstaltungen stehen unter „Aktuelles“.
+- [x] **Stundenplan kompakt darstellen.** Zeit in einer Zeile, Fach/Raum/
   Lehrkraft darunter; drei Einträge ohne übergroße Karten sichtbar machen.
-- [ ] **Hausaufgaben vor Tagesmenü.** Hausaufgaben im Tagesbereich vor dem
+  **Abgeschlossen am 09.09.2026:** Die Startseite zeigt maximal drei
+  Stundenplanzeilen. Auf Mobilgeräten stehen Zeit, Fach sowie Raum/Lehrkraft
+  übersichtlich untereinander; weitere Einträge führen in die Tagesansicht.
+- [x] **Hausaufgaben vor Tagesmenü.** Hausaufgaben im Tagesbereich vor dem
   Menü platzieren; Tagesmenü ein- und ausklappbar machen.
+  **Abgeschlossen am 09.09.2026:** Hausaufgaben haben einen eigenen,
+  unmittelbar erreichbaren Tab. Das Tagesmenü liegt im Speiseplan als
+  geschlossener Aufklapper vor der Wochenansicht.
 - [x] **Fahrgemeinschaft verschieben.** Aus der Startnavigation entfernen
   und in Klassengemeinschaft einordnen; Adressliste in die direkte
   Navigation aufnehmen.
@@ -165,12 +169,31 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 
 ## Bedienung und Einstellungen
 
-- [ ] **Abmeldebestätigung.** Dialog mit „Abbrechen“ und „Abmelden“ statt
+- [x] **Abmeldebestätigung.** Dialog mit „Abbrechen“ und „Abmelden“ statt
   eigener ungestalteter Bestätigungsseite.
-- [ ] **Chatraum-Aktionen verdichten.** Bearbeiten und Löschen als kleine
+  **Abgeschlossen am 09.09.2026:** Das Profilmenü öffnet eine zugängliche
+  Bestätigung mit eindeutigem Abbrechen- und Abmelden-Schalter. Die Abmeldung
+  wird erst über den CSRF-geschützten POST ausgelöst.
+- [x] **Anmeldung nach automatischer Abmeldung stabilisieren.** Ein aus dem
+  Browser-Zwischenspeicher wiederhergestelltes Loginformular darf keinen
+  CSRF-Fehler anzeigen.
+  **Abgeschlossen am 09.09.2026:** Loginseiten werden nicht zwischengespeichert
+  und bei einer aus dem Vor-/Zurück-Cache wiederhergestellten Seite neu
+  geladen. Falls dennoch ein altes Token abgesendet wird, bleibt der
+  CSRF-Schutz wirksam und es folgt eine frische Anmeldeseite statt einer
+  403-Fehlerseite.
+- [x] **Chatraum-Aktionen verdichten.** Bearbeiten und Löschen als kleine
   Aktionen unter dem Raum; auf Mobilgeräten Wischaktion nach rechts.
-- [ ] **Einstellungen sortieren.** Konto zuerst und geöffnet, dann
+  **Abgeschlossen am 09.09.2026:** Eigene Nachrichten zeigen kompakte
+  Bearbeiten- und Löschen-Aktionen. Beide öffnen eine eindeutige Bestätigung
+  beziehungsweise Bearbeitungsmaske und nutzen weiter die vorhandenen,
+  CSRF-geschützten Nachrichtenschnittstellen. Auf Mobilgeräten blendet ein
+  Wischen nach rechts die Aktionen ein.
+- [x] **Einstellungen sortieren.** Konto zuerst und geöffnet, dann
   Kommunikation, anschließend Klassenleben.
+  **Abgeschlossen am 09.09.2026:** Das Menü beginnt mit dem geöffneten Bereich
+  „Mein Konto“, gefolgt von „Kommunikation“ und „Klassenleben“. Die
+  Verwaltungsgruppe bleibt für Berechtigte anschließend erreichbar.
 - [x] **Veranstaltungen und Termine verwalten.** Berechtigte Ersteller:innen
   können eigene Einträge bearbeiten oder löschen.
   **Abgeschlossen am 09.09.2026:** Organisator:innen können ihre eigenen
@@ -200,10 +223,19 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
   erzeugt weiterhin erst nach bestätigtem E-Mail-Link und anschließender
   Freigabe ein aktives Konto. Regressionstests decken ungültige Eingaben und
   atomare Profilspeicherung ab.
-- [ ] **Bestätigungs-E-Mail überarbeiten.** KlassID statt Klassenkennung im
+- [x] **Bestätigungs-E-Mail überarbeiten.** KlassID statt Klassenkennung im
   Betreff und Text, persönliche Du-Anrede und klarer Bestätigungslink.
-- [ ] **Doppelten Bestätigungsschritt entfernen.** Nach dem E-Mail-Link
+  **Abgeschlossen am 09.09.2026:** Beide Registrierungswege verwenden dieselbe
+  persönliche KlassID-Mail mit Anrede, eindeutig benanntem Bestätigungslink,
+  24-Stunden-Hinweis und neutralem Sicherheitsausweg für nicht selbst
+  ausgelöste Anmeldungen.
+- [x] **Doppelten Bestätigungsschritt entfernen.** Nach dem E-Mail-Link
   direkt die Anmeldung mit dem vorhandenen Erfolgshinweis anzeigen.
+  **Abgeschlossen am 09.09.2026:** Ein gültiger Aktivierungslink führt ohne
+  Zwischenansicht direkt zur Anmeldung. Dort erklärt ein einmaliger
+  Erfolgshinweis, dass das persönliche KlassID-Konto bereit ist; ungültige,
+  abgelaufene oder bereits verwendete Links bleiben als neutrale Fehlerseite
+  sichtbar.
 
 
 ## Rollenverwaltung und Familien-Datenschutz veröffentlichen

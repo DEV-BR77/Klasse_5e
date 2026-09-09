@@ -45,8 +45,14 @@ def test_dashboard_selected_day_and_weekly_meals(rf, guardian):
     assert 'href="/?tag=2026-09-07"' in html
     assert 'href="/?tag=2026-09-08" aria-current="date"' in html
     assert "Tagesmenü · 08.09." in html
-    day_panel = html.split('id="dashboard-panel-news"')[0]
-    assert "Dienstagsmenü" in day_panel and "Montagsmenü" not in day_panel
+    assert 'id="dashboard-tab-schedule"' in html
+    assert 'id="dashboard-tab-homework"' in html
+    assert 'id="dashboard-tab-news"' in html
+    assert 'id="dashboard-tab-meals"' in html
+    assert 'data-dashboard-panel="homework"' in html
+    assert 'class="timeline-list compact-timeline dashboard-timetable"' in html
+    meals_panel = html.split('id="dashboard-panel-meals"', 1)[1]
+    assert "Dienstagsmenü" in meals_panel and "Montagsmenü" in meals_panel
     assert "Montagsmenü" in html and "Freitag, 11.09." in html
     all_weeks = render_to_string("meals/plans.html", {"plans": [plan]})
     assert "Allergen: Getreide" in all_weeks

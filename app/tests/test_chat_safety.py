@@ -130,3 +130,19 @@ def test_edited_message_is_filtered_too(client, room):
     message.refresh_from_db()
     assert message.body == "Du bist ein •••••"
     assert message.language_filter_hits == 1
+
+
+@pytest.mark.django_db
+def test_own_chat_message_exposes_compact_edit_and_delete_actions(client, room):
+    author = member(room)
+    message = ChatMessage.objects.create(room=room, author=author, body="Eigene Nachricht")
+    client.force_login(author)
+
+    response = client.get(f"/chat/{room.public_id}/ansicht/", secure=True)
+    html = response.content.decode()
+
+    assert response.status_code == 200
+    assert 'data-chat-message-swipe' in html
+    assert f'data-url="/chat/messages/{message.public_id}/"' in html
+    assert f'id="edit-message-{message.public_id}"' in html
+    assert f'id="delete-message-{message.public_id}"' in html

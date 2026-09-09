@@ -42,3 +42,20 @@ def test_login_timeout_notice_is_centered_and_dismissible(client):
     assert 'data-timeout-notice' in content
     assert 'data-timeout-notice-close' in content
     assert "Verstanden" in content
+
+
+@pytest.mark.django_db
+def test_stale_login_csrf_redirects_to_a_fresh_login_form():
+    from django.test import Client
+
+    client = Client(enforce_csrf_checks=True)
+    response = client.post("/accounts/login/", {"login": "parent@example.test"}, secure=True)
+
+    assert response.status_code == 302
+    assert response.url == "/accounts/login/?csrf=1"
+    assert "no-store" in response["Cache-Control"]
+
+    fresh = client.get(response.url, secure=True)
+    assert fresh.status_code == 200
+    assert "Die Anmeldeseite wurde erneuert" in fresh.content.decode()
+    assert "no-store" in fresh["Cache-Control"]

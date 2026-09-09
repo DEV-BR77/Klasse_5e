@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#5558a6">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
-  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}?v=contacts-v1">
+  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}?v=mobile-header-v1">
   {% block extra_head %}{% endblock %}
   <title>{{ page_title|default:"Home" }} · KlassID</title>
 </head>
@@ -22,12 +22,15 @@
       {% if active_section != "start" and request.path != "/mehr/" %}
         <a class="app-topbar__back" href="/">← <span>Zur Startseite</span></a>
       {% else %}
-        <nav class="app-topbar__legal" aria-label="Rechtliche Informationen">
-          <span>© 2026 KlassID</span>
-          <a href="{% url 'privacy-information' %}">Datenschutz</a>
-          <a href="{% url 'imprint' %}">Impressum</a>
-          <a href="{% url 'terms' %}">Hinweise</a>
-        </nav>
+        <details class="app-topbar__legal">
+          <summary>Rechtliches</summary>
+          <nav aria-label="Rechtliche Informationen">
+            <span>© 2026 KlassID</span>
+            <a href="{% url 'privacy-information' %}">Datenschutz</a>
+            <a href="{% url 'imprint' %}">Impressum</a>
+            <a href="{% url 'terms' %}">Hinweise</a>
+          </nav>
+        </details>
       {% endif %}
     </div>
     <div class="app-topbar__actions">
@@ -44,7 +47,7 @@
         </summary>
         <nav class="app-profile-menu__panel" aria-label="Profilmenü">
           <a href="/einstellungen/profil/">Mein Profil</a>
-          <a href="/accounts/logout/">Abmelden</a>
+          <button class="app-profile-menu__action" type="button" data-dialog-open="logout-confirmation">Abmelden</button>
         </nav>
       </details>
     </div>
@@ -87,11 +90,19 @@
 </div>
 
 {% if request.user.is_authenticated %}
+<dialog id="logout-confirmation" class="app-dialog logout-confirmation" aria-labelledby="logout-confirmation-title">
+  <form method="post" action="{% url 'account_logout' %}" class="form-stack">
+    {% csrf_token %}
+    <header class="dialog-head"><div><p class="eyebrow">Sitzung beenden</p><h2 id="logout-confirmation-title">Jetzt abmelden?</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header>
+    <p>Du kannst dich jederzeit wieder mit deiner E-Mail-Adresse und deinem Passwort anmelden.</p>
+    <footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-primary" type="submit">Abmelden</button></footer>
+  </form>
+</dialog>
 <dialog id="pilot-report" class="app-dialog"><form method="post" action="/pilot/melden/" enctype="multipart/form-data" class="form-stack">{% csrf_token %}<header class="dialog-head"><div><p class="eyebrow">Feedback</p><h2>Idee oder Fehler melden</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header><label>Art<select name="kind"><option value="idea">Idee</option><option value="note">Anmerkung</option><option value="bug">Fehler</option></select></label><label>Beschreibung<textarea name="description" rows="5" required maxlength="3000"></textarea></label><label>Screenshot (optional)<input type="file" name="screenshot" accept="image/png,image/jpeg,image/webp"></label><input type="hidden" name="page_path" value="{{ request.get_full_path }}"><footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-primary" type="submit">Meldung senden</button></footer></form></dialog>
 {% endif %}
 <div id="live-status" class="sr-only" aria-live="polite"></div>
 <script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
-  <script src="{% static 'app.js' %}?v=11" defer></script>
+  <script src="{% static 'app.js' %}?v=login-csrf-v1" defer></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js')}</script>
 </body>
 </html>

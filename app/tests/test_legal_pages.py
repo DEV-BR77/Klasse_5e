@@ -33,6 +33,22 @@ def test_shared_footer_groups_copyright_and_legal_links(client):
     assert 'href="/nutzung/"' in html
 
 
+def test_mobile_topbar_groups_legal_links_without_hiding_profile_actions(client, guardian):
+    client.force_login(guardian)
+
+    response = client.get("/", secure=True)
+
+    html = response.content.decode()
+    assert '<details class="app-topbar__legal">' in html
+    assert "<summary>Rechtliches</summary>" in html
+    assert 'aria-label="Rechtliche Informationen"' in html
+    assert 'href="/benachrichtigungen/"' in html
+    assert 'class="app-profile-menu"' in html
+    assert 'data-dialog-open="logout-confirmation"' in html
+    assert 'id="logout-confirmation"' in html
+    assert 'action="/accounts/logout/"' in html
+
+
 def test_open_source_page_lists_the_main_runtime_components(client):
     response = client.get("/open-source-lizenzen/")
 

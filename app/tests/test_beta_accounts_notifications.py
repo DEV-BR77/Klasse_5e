@@ -72,6 +72,30 @@ def test_expired_or_revoked_activation_never_creates_access(school, school_class
 
 
 @pytest.mark.django_db
+def test_activation_link_redirects_directly_to_login_with_success_notice(client, school, school_class, admin_user):
+    application, _ = RegistrationApplication.issue(
+        email="ready@example.test",
+        first_name="Erika",
+        last_name="Beispiel",
+        password_hash="not-used",
+    )
+    application.status = RegistrationApplication.Status.APPROVED
+    application.school = school
+    application.school_class = school_class
+    application.reviewed_by = admin_user
+    application.email_verified_at = timezone.now()
+    application.save()
+    _, token = ActivationGrant.issue(application)
+
+    response = client.get(f"/aktivieren/{token}/", secure=True)
+
+    assert response.status_code == 302
+    assert response.url == "/accounts/login/"
+    login_page = client.get(response.url, secure=True)
+    assert "Dein KlassID-Konto ist aktiviert" in login_page.content.decode()
+
+
+@pytest.mark.django_db
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 def test_public_registration_is_neutral_and_sends_verification(client):
     response = client.post(
@@ -80,6 +104,10 @@ def test_public_registration_is_neutral_and_sends_verification(client):
     )
     assert response.status_code == 202
     assert len(mail.outbox) == 1
+    assert mail.outbox[0].subject == "Bitte bestätige deine E-Mail-Adresse für KlassID"
+    assert "Hallo Erika," in mail.outbox[0].body
+    assert "E-Mail-Adresse bestätigen:" in mail.outbox[0].body
+    assert "einmalig und 24 Stunden gültig" in mail.outbox[0].body
     assert re.search(r"/registrieren/email/[A-Za-z0-9_-]+/", mail.outbox[0].body)
     duplicate = client.post(
         "/registrieren/",
@@ -261,3 +289,15 @@ def test_settings_navigation_shows_admin_link_only_to_authorized_admins(client, 
     admin_page = client.get("/mehr/").content.decode()
     assert "Benachrichtigungen" in admin_page
     assert "Portal verwalten" in admin_page
+
+
+@pytest.mark.django_db
+def test_settings_navigation_starts_with_open_account_group(client, guardian):
+    client.force_login(guardian)
+    page = client.get("/mehr/").content.decode()
+
+    account = page.index("Mein Konto")
+    communication = page.index("Kommunikation")
+    class_life = page.index("Klassenleben")
+    assert account < communication < class_life
+    assert "<details open" in page[:communication]

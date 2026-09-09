@@ -16,7 +16,7 @@
 
   <div class="space-y-4">
     {% for group in menu_groups %}
-      <details {% if forloop.first %}open{% endif %} class="group overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-sm transition-all duration-200 open:shadow-md">
+      <details {% if group.key == "account" %}open{% endif %} class="group overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-sm transition-all duration-200 open:shadow-md">
         <summary class="flex cursor-pointer list-none items-center justify-between p-4 font-bold text-app-main transition-colors select-none hover:bg-app-primary-soft [&::-webkit-details-marker]:hidden">
           <div class="flex items-center gap-2.5">
             <span class="text-base tracking-tight">{{ group.label }}</span>

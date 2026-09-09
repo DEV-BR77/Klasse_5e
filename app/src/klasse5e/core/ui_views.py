@@ -1971,7 +1971,9 @@ def more(request):
     labels = {"class": "Klassenleben", "communication": "Kommunikation", "account": "Mein Konto"}
     labels.update(stored.get("group_labels") or {})
     groups = []
-    for group_key in ("class", "communication", "account"):
+    # Personal settings are the most frequent entry point, so they lead the
+    # menu and are the only group opened initially in the template.
+    for group_key in ("account", "communication", "class"):
         entries = []
         for row in configured:
             if (

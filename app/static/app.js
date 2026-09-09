@@ -2,6 +2,13 @@
   const live = document.querySelector("#live-status");
   const announce = (text) => { if (live) live.textContent = text; };
   const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || "";
+  if (document.querySelector("[data-login-form]")) {
+    // Safari and Chromium may restore an old login form from bfcache. Its
+    // token no longer matches a renewed cookie after idle logout.
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) window.location.reload();
+    });
+  }
   const timeoutSeconds = Number(document.body.dataset.idleSessionTimeout || 0);
   if (Number.isFinite(timeoutSeconds) && timeoutSeconds > 0) {
     let timeoutId;
@@ -47,7 +54,7 @@
         select(tabs[target].dataset.dashboardTab, true);
       });
     });
-    select(tabs.find((tab) => tab.classList.contains("is-active"))?.dataset.dashboardTab || "day");
+    select(tabs.find((tab) => tab.classList.contains("is-active"))?.dataset.dashboardTab || "schedule");
   });
   const presentation = document.querySelector("[data-presentation]");
   if (presentation) {
@@ -270,6 +277,50 @@
       event.preventDefault();
       const toggle = row.querySelector("[data-homework-toggle]");
       if (toggle && !toggle.checked && !toggle.disabled) saveHomeworkState(toggle, true);
+    });
+  });
+
+  const submitChatAction = async (form, method, body) => {
+    const status = form.querySelector("[data-chat-action-status]");
+    const submit = form.querySelector("button[type='submit']");
+    if (status) status.textContent = "Wird gespeichert …";
+    if (submit) submit.disabled = true;
+    try {
+      const response = await fetch(form.dataset.url, {
+        method,
+        headers: {"X-CSRFToken": csrf(), ...(body ? {"Content-Type": "application/json"} : {})},
+        credentials: "same-origin",
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!response.ok) throw new Error("chat-action-failed");
+      window.location.reload();
+    } catch (_) {
+      if (status) status.textContent = "Die Änderung konnte nicht gespeichert werden. Bitte versuche es erneut.";
+      if (submit) submit.disabled = false;
+    }
+  };
+  document.querySelectorAll("[data-chat-edit-form]").forEach((form) => form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    submitChatAction(form, "PATCH", {body: form.elements.body.value.trim()});
+  }));
+  document.querySelectorAll("[data-chat-delete-form]").forEach((form) => form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    submitChatAction(form, "DELETE");
+  }));
+  document.querySelectorAll("[data-chat-message-swipe]").forEach((row) => {
+    let start = null;
+    row.addEventListener("touchstart", (event) => {
+      if (event.target.closest("button, dialog")) return;
+      const touch = event.touches[0];
+      start = {x: touch.clientX, y: touch.clientY};
+    }, {passive: true});
+    row.addEventListener("touchend", (event) => {
+      if (!start) return;
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      start = null;
+      if (dx > 52 && Math.abs(dx) > Math.abs(dy)) row.classList.toggle("is-actions-visible");
     });
   });
 

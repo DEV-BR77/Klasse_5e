@@ -58,12 +58,19 @@ class IdleSessionTimeoutMiddleware:
                 and now - previous >= timeout_seconds
             ):
                 logout(request)
-                return redirect(f"{reverse('account_login')}?timeout=1")
+                response = redirect(f"{reverse('account_login')}?timeout=1")
+                response["Cache-Control"] = "private, no-store, max-age=0"
+                return response
             # Background polls must not prolong a session while the device is unattended.
             if request.headers.get("X-KlassID-Background-Poll") != "1":
                 request.session["idle_session_last_activity"] = now
                 request.session.set_expiry(timeout_seconds)
-        return self.get_response(request)
+        response = self.get_response(request)
+        if request.path == reverse("account_login"):
+            # A login form contains a one-time CSRF value and must not be
+            # restored from a browser cache entry after an idle logout.
+            response["Cache-Control"] = "private, no-store, max-age=0"
+        return response
 
 
 class LoginRateLimitMiddleware:

@@ -13,8 +13,9 @@
 
   <ol class="message-thread">
     {% for message in chat_messages %}
-      <li class="message-row {% if message.author_id == request.user.id %}is-own{% endif %}">
+      <li class="message-row {% if message.author_id == request.user.id %}is-own{% endif %}"{% if message.author_id == request.user.id and not message.hidden_at and not message.withdrawn_at %} data-chat-message-swipe{% endif %}>
         {% if message.author_id != request.user.id %}<span class="message-avatar">{{ message.author.person.chat_display_name|default:message.author.person.first_name|first|default:"?" }}</span>{% endif %}
+        <div class="message-content">
         <article class="message-bubble">
           <header class="message-bubble-meta">
             <strong>{{ message.author.person.chat_display_name|default:message.author.person.first_name|default:message.author.email }}</strong>
@@ -50,6 +51,30 @@
             {% endif %}
           {% endif %}
         </article>
+        {% if message.author_id == request.user.id and not message.hidden_at and not message.withdrawn_at %}
+          <div class="message-actions" data-chat-message-actions>
+            <button type="button" class="message-action" data-dialog-open="edit-message-{{ message.public_id }}">Bearbeiten</button>
+            <button type="button" class="message-action message-action--danger" data-dialog-open="delete-message-{{ message.public_id }}">Löschen</button>
+          </div>
+          <dialog id="edit-message-{{ message.public_id }}" class="app-dialog message-action-dialog" aria-labelledby="edit-message-title-{{ message.public_id }}">
+            <form class="form-stack" data-chat-edit-form data-url="{% url 'chat-message' message.public_id %}">
+              <header class="dialog-head"><div><p class="eyebrow">Eigene Nachricht</p><h2 id="edit-message-title-{{ message.public_id }}">Nachricht bearbeiten</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header>
+              <label>Nachricht<textarea name="body" rows="5" maxlength="2000" required>{{ message.body }}</textarea></label>
+              <output class="form-error" data-chat-action-status aria-live="polite"></output>
+              <footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-primary" type="submit">Speichern</button></footer>
+            </form>
+          </dialog>
+          <dialog id="delete-message-{{ message.public_id }}" class="app-dialog message-action-dialog" aria-labelledby="delete-message-title-{{ message.public_id }}">
+            <form class="form-stack" data-chat-delete-form data-url="{% url 'chat-message' message.public_id %}">
+              {% csrf_token %}
+              <header class="dialog-head"><div><p class="eyebrow">Eigene Nachricht</p><h2 id="delete-message-title-{{ message.public_id }}">Nachricht löschen?</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header>
+              <p>Die Nachricht wird für alle Beteiligten zurückgezogen.</p>
+              <output class="form-error" data-chat-action-status aria-live="polite"></output>
+              <footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-danger" type="submit">Löschen</button></footer>
+            </form>
+          </dialog>
+        {% endif %}
+        </div>
       </li>
     {% empty %}
       <li class="empty-state">Noch keine Nachrichten. Schreib die erste.</li>
