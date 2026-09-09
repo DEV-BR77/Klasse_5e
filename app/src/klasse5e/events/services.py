@@ -4,10 +4,54 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
 from web_push_kit import DeliveryStatus, NotificationPayload, Subscription
 
-from klasse5e.core.models import AuditEvent, PushSubscription
+from klasse5e.core.models import AuditEvent, Household, PushSubscription
 from klasse5e.core.policies import has_active_membership
 
-from .models import ContributionItem, ReminderDelivery, Reservation
+from .models import ContributionItem, Event, EventParticipation, ReminderDelivery, Reservation
+
+
+def _family_name_for_event(user):
+    household = Household.objects.filter(members=user.person).order_by("pk").first()
+    if household and household.label.strip():
+        label = household.label.strip()
+        if label.lower().startswith("familie "):
+            label = label[8:].strip()
+        if label:
+            return label[:160]
+    return user.person.last_name.strip()[:160] or user.person.first_name.strip()[:160]
+
+
+@transaction.atomic
+def set_event_participation(*, event, user, participating):
+    locked_event = Event.objects.select_for_update().get(pk=event.pk)
+    if locked_event.status != Event.Status.PUBLISHED or not has_active_membership(
+        user, locked_event.school_class
+    ):
+        raise PermissionDenied
+    if participating:
+        participation, created = EventParticipation.objects.get_or_create(
+            event=locked_event,
+            user=user,
+            defaults={"family_name": _family_name_for_event(user)},
+        )
+        if created:
+            AuditEvent.objects.create(
+                actor=user,
+                action="event.participation.created",
+                target_type="event_participation",
+                target_id=str(participation.pk),
+                metadata={"event_id": locked_event.pk},
+            )
+        return participation, created
+    deleted, _ = EventParticipation.objects.filter(event=locked_event, user=user).delete()
+    if deleted:
+        AuditEvent.objects.create(
+            actor=user,
+            action="event.participation.withdrawn",
+            target_type="event",
+            target_id=str(locked_event.pk),
+        )
+    return None, bool(deleted)
 
 
 @transaction.atomic

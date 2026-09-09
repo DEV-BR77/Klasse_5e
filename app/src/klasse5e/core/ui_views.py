@@ -30,12 +30,17 @@ from klasse5e.events.models import (
     ContributionCategory,
     ContributionItem,
     Event,
+    EventParticipation,
     EventPoll,
     EventPollOption,
     EventPollVote,
     Reservation,
 )
-from klasse5e.events.services import cancel_reservation_for_user, create_reservation
+from klasse5e.events.services import (
+    cancel_reservation_for_user,
+    create_reservation,
+    set_event_participation,
+)
 from klasse5e.events.spoonacular import SpoonacularUnavailable, search_food_items
 from klasse5e.itslearning.models import (
     ItslearningCalendarItem,
@@ -2328,21 +2333,19 @@ def events(request):
     school_class = _class_or_404(request.user, request)
     if request.method == "POST":
         _require_portal_admin(request.user)
-        try:
-            starts_at = timezone.datetime.fromisoformat(request.POST.get("starts_at", ""))
-            ends_at = timezone.datetime.fromisoformat(request.POST.get("ends_at", ""))
-            if timezone.is_naive(starts_at):
-                starts_at = timezone.make_aware(starts_at)
-                ends_at = timezone.make_aware(ends_at)
-            if ends_at <= starts_at:
-                raise ValueError
-        except (TypeError, ValueError):
+        event_times = _event_times_from_request(request)
+        if not event_times:
             messages.error(request, "Bitte prüfe Beginn und Ende.")
+            return redirect("ui-events")
+        starts_at, ends_at = event_times
+        title = request.POST.get("title", "").strip()[:200]
+        if not title:
+            messages.error(request, "Bitte gib einen Titel ein.")
             return redirect("ui-events")
         item = Event.objects.create(
             school_class=school_class,
             school_year=school_class.school_year,
-            title=request.POST.get("title", "").strip()[:200],
+            title=title,
             description=request.POST.get("description", "").strip(),
             starts_at=starts_at,
             ends_at=ends_at,
@@ -2394,6 +2397,96 @@ def events(request):
         .order_by("closes_at")
     )
     return render(request, "ui/events.html", context)
+
+
+def _event_times_from_request(request):
+    try:
+        starts_at = timezone.datetime.fromisoformat(request.POST.get("starts_at", ""))
+        ends_at = timezone.datetime.fromisoformat(request.POST.get("ends_at", ""))
+        if timezone.is_naive(starts_at):
+            starts_at = timezone.make_aware(starts_at)
+        if timezone.is_naive(ends_at):
+            ends_at = timezone.make_aware(ends_at)
+        if ends_at <= starts_at:
+            raise ValueError
+    except (TypeError, ValueError):
+        return None
+    return starts_at, ends_at
+
+
+def _owned_event_or_404(request, event_id):
+    school_class = _class_or_404(request.user, request)
+    item = get_object_or_404(
+        Event, id=event_id, school_class=school_class, status=Event.Status.PUBLISHED
+    )
+    if not item.organizers.filter(id=request.user.id).exists():
+        raise Http404
+    return item
+
+
+@login_required
+@require_POST
+def edit_event(request, event_id):
+    item = _owned_event_or_404(request, event_id)
+    event_times = _event_times_from_request(request)
+    title = request.POST.get("title", "").strip()[:200]
+    if not event_times or not title:
+        return redirect(f"/mehr/veranstaltungen/{item.pk}/?status=edit-invalid")
+    starts_at, ends_at = event_times
+    item.title = title
+    item.description = request.POST.get("description", "").strip()
+    item.location = request.POST.get("location", "").strip()[:200]
+    item.meeting_url = request.POST.get("meeting_url", "").strip()[:200]
+    item.starts_at = starts_at
+    item.ends_at = ends_at
+    item.change_deadline = ends_at
+    try:
+        item.full_clean()
+    except ValidationError:
+        return redirect(f"/mehr/veranstaltungen/{item.pk}/?status=edit-invalid")
+    item.save()
+    ChatRoom.objects.filter(event=item).update(title=item.title)
+    AuditEvent.objects.create(
+        actor=request.user,
+        action="event.updated",
+        target_type="event",
+        target_id=str(item.pk),
+    )
+    return redirect(f"/mehr/veranstaltungen/{item.pk}/?status=updated")
+
+
+@login_required
+@require_POST
+def delete_event(request, event_id):
+    item = _owned_event_or_404(request, event_id)
+    item_id = item.pk
+    item.delete()
+    AuditEvent.objects.create(
+        actor=request.user,
+        action="event.deleted",
+        target_type="event",
+        target_id=str(item_id),
+    )
+    messages.success(request, "Die Veranstaltung wurde gelöscht.")
+    return redirect("ui-events")
+
+
+@login_required
+@require_POST
+def set_event_attendance(request, event_id):
+    school_class = _class_or_404(request.user, request)
+    item = get_object_or_404(
+        Event, id=event_id, school_class=school_class, status=Event.Status.PUBLISHED
+    )
+    participating = request.POST.get("participating") == "yes"
+    try:
+        _participation, changed = set_event_participation(
+            event=item, user=request.user, participating=participating
+        )
+    except PermissionDenied:
+        raise Http404 from None
+    status = "participating" if participating else "not-participating"
+    return redirect(f"/mehr/veranstaltungen/{item.pk}/?status={status}")
 
 
 def _contribution_items_from_request(request):
@@ -2545,6 +2638,10 @@ def event(request, event_id):
     food_results = []
     food_error = ""
     is_organizer = item.organizers.filter(id=request.user.id).exists()
+    attendee_names = sorted(
+        set(item.participations.order_by("family_name").values_list("family_name", flat=True)),
+        key=str.casefold,
+    )
     contribution_items = []
     contribution_lists = []
     for category in categories:
@@ -2603,6 +2700,8 @@ def event(request, event_id):
             "idempotency_key": secrets.token_urlsafe(18),
             "status": request.GET.get("status", ""),
             "is_organizer": is_organizer,
+            "is_participating": EventParticipation.objects.filter(event=item, user=request.user).exists(),
+            "attendee_names": attendee_names,
             "food_query": food_query,
             "food_results": food_results,
             "food_error": food_error,

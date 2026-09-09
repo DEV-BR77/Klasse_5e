@@ -94,6 +94,22 @@ class Reservation(models.Model):
         ]
 
 
+class EventParticipation(models.Model):
+    """An explicit, revocable family attendance confirmation for one event."""
+
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="participations")
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+    family_name = models.CharField(max_length=160)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["event", "user"], name="unique_event_participation_per_user"
+            )
+        ]
+
+
 class ReminderDelivery(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)

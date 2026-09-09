@@ -215,6 +215,17 @@ urlpatterns = [
     ),
     path("mehr/veranstaltungen/<int:event_id>/", ui_views.event, name="ui-event"),
     path(
+        "mehr/veranstaltungen/<int:event_id>/bearbeiten/", ui_views.edit_event, name="ui-edit-event"
+    ),
+    path(
+        "mehr/veranstaltungen/<int:event_id>/loeschen/", ui_views.delete_event, name="ui-delete-event"
+    ),
+    path(
+        "mehr/veranstaltungen/<int:event_id>/teilnahme/",
+        ui_views.set_event_attendance,
+        name="ui-event-attendance",
+    ),
+    path(
         "mehr/veranstaltungen/<int:event_id>/mitbringliste/",
         ui_views.add_contribution_list,
         name="ui-add-contribution-list",
