@@ -199,7 +199,7 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 ## Adapter und Abwesenheitsmeldungen
 
 - [x] **BL-16: Zentraler Adapterkatalog, Schulzuordnung und persönliche Zugänge.**
-- [ ] **BL-17: Abwesenheit direkt vom Dashboard melden und bei WebUntis rückprüfen.**
+- [x] **BL-17: Abwesenheit direkt vom Dashboard melden und bei WebUntis rückprüfen.**
 
 Die folgenden Details sind aus den bisherigen Aufgaben 16 und 17 in `Nextsteps.md`
 übernommen. Status und Anforderungen werden ausschließlich hier weitergepflegt.
@@ -256,9 +256,26 @@ Verbindungen und werden protokolliert.
 
 ### BL-17 – Abwesenheit melden und unmittelbar bei WebUntis rückprüfen
 
-**Status:** offen; als Folgeaufgabe ausdrücklich beauftragt. Baut auf BL-16 auf.
-Aktuell existieren nur die vorbereitete Einwilligung und ein technischer Lese-Endpunkt;
-kein vollständiger Fachabruf und kein Formular zum Melden einer Abwesenheit.
+**Status:** abgeschlossen am 09.09.2026. Schulmanager Online ist auf Wunsch
+zurückgestellt und nicht Teil dieses Releases.
+Der vorhandene Abwesenheitsimport und lokale Meldeentwurf bleiben die Ausgangsbasis.
+Der Benutzer hat Playwright für Übermittlung und Rücklesen ausdrücklich festgelegt;
+eine direkte API-Schreibintegration gehört nicht zum Auftrag.
+Die Chrome-Prüfung hat die WebUntis-Seite `/student-absences` mit eingebetteter
+Abwesenheitsübersicht und Schaltfläche „Abwesenheit melden“ bestätigt.
+Das Meldeformular wurde ohne Absenden geprüft: Beginn, Ende und Anmerkung.
+Die Zuordnung erfolgt über den beim Kind hinterlegten persönlichen Zugang;
+bei externen Mehrkindkonten ist eine eindeutige Auswahl erforderlich.
+Commit 622c7c1 ergänzt einmalige Übermittlung mit begrenzter Rückprüfung als
+transportunabhängigen Baustein. Der fertige Ablauf verbindet Dashboard,
+Kindauswahl, persönliches verschlüsseltes Login, ausschließlich UI-basiertes
+Playwright-Übermitteln, persistente Token-Deduplizierung und maximal drei
+frische Rückleseversuche. Er meldet Erfolg nur für einen neuen, passenden
+Eintrag; bei jeder Mehrdeutigkeit bleibt die Meldung unbestätigt. Sendeprotokolle
+sind frei von Freitext und Zugangsdaten und werden nach 30 Tagen gelöscht.
+Die Browserstrecke wurde am echten Formular ohne Absenden geprüft; die Tests
+verwenden ausschließlich synthetische Daten. Ein realer End-to-End-Test blieb
+aus, weil keine reale Abwesenheit freigegeben wurde.
 
 #### Einstieg und Testbarkeit
 
@@ -279,9 +296,9 @@ eine reale, bewusst freigegebene Abwesenheitsmeldung.
 1. Berechtigter Benutzer trägt die Abwesenheit für sein ausgewähltes Kind ein und
    sendet sie ausdrücklich ab. Schule, aktiver Adapter, persönliche Zugangspflicht,
    bestätigte Beziehung und erforderliche Freigaben werden serverseitig geprüft.
-2. Der Adapter übermittelt die Meldung über eine zuvor geprüfte, unterstützte
-   WebUntis-Schreibschnittstelle. Der bisher ausschließlich lesende Adapter erhält
-   dafür eine eng begrenzte, gesondert geprüfte Schreibfunktion.
+2. Der Adapter übermittelt die Meldung über das zuvor geprüfte WebUntis-Formular
+   mit Playwright. Der Browserablauf erhält dafür eine eng begrenzte,
+   gesondert geprüfte Schreibfunktion; keine direkten API-Schreibaufrufe.
 3. Direkt danach wird automatisch ein frischer Abruf der Abwesenheiten ausgelöst;
    weder der lokale Datensatz noch eine erfolgreiche HTTP-Antwort genügen als Bestätigung.
 4. Den zurückgelesenen Eintrag eindeutig dem Kind und der gerade gemeldeten Abwesenheit
@@ -318,7 +335,16 @@ eine reale, bewusst freigegebene Abwesenheitsmeldung.
 
 ### BL-18 – Schulmanager Online: persönlicher Playwright-Adapter für Nachrichten und Elternbriefe
 
-**Status:** offen; am 09.09.2026 als Folgeaufgabe erfasst. Baut auf BL-16 auf.
+**Status:** in Bearbeitung; am 09.09.2026 gemeinsam mit BL-17 freigegeben.
+Die angemeldete Chrome-Sitzung zeigt Nachrichten unter
+`#/modules/messenger/messages` und Elternbriefe unter `#/modules/letters/view`.
+Noch zu prüfen sind Login, eindeutige Kind-/Schulzuordnung, Detailansichten und
+Nebenwirkungen auf Lesebestätigungen. Browseraktionen brechen derzeit vor
+Ausführung mit Zeitüberschreitung ab. Es wurden keine Nachrichtendaten in Git übernommen.
+AGB-Erstprüfung: https://www.schulmanager-online.de/agb.html; daraus folgt noch
+keine nachgewiesene schulische Freigabe für den automatisierten Betrieb.
+Nach Abschluss beider Aufgaben sind Abschlussprüfung, GitHub-Push und App-Build
+ausdrücklich beauftragt. Baut auf BL-16 auf.
 
 Schulmanager Online besitzt keine verwendbare API. Der Adapter verwendet daher
 Playwright ausschließlich als kontrollierten, persönlichen Browseradapter.

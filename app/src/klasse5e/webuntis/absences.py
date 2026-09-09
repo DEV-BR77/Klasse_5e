@@ -1,6 +1,9 @@
-"""Private absence reads and local drafts; no browser or write transport."""
+"""Private absence reads, drafts, and explicitly requested browser submissions."""
 
-from datetime import time, timedelta
+import hashlib
+import json
+import uuid
+from datetime import datetime, time, timedelta
 
 from django import forms
 from django.contrib.auth.decorators import login_required
@@ -22,9 +25,16 @@ from klasse5e.core.models import (
 )
 from klasse5e.core.module_flags import module_enabled
 from klasse5e.core.policies import consent_state, has_active_membership, visible_student_people
+from klasse5e.portal_adapters.models import PortalAdapter
+from klasse5e.portal_adapters.policies import provider_available_for_student
 
+from .absence_submission import SubmissionOutcome, submit_once
+from .absence_verification import AbsenceRecord
+from .browser_absences import PlaywrightAbsenceClient
+from .crypto import decrypt
+from .forms import AbsenceSubmissionForm
 from .importer import MissingStudentId, _date_value
-from .models import AbsenceDraft, WebUntisAbsence, WebUntisConnection
+from .models import AbsenceDraft, AbsenceSubmission, WebUntisAbsence, WebUntisConnection
 
 
 def child_contexts(user):
@@ -72,6 +82,99 @@ def visible_absence_students(user):
         student.pk for student in visible_student_people(user) if absence_data_allowed(student)
     ]
     return Person.objects.filter(pk__in=allowed_ids)
+
+
+def submission_connections(user):
+    """Only current guardian-owned, school-approved personal browser logins."""
+    contexts = child_contexts(user)
+    allowed_ids = [
+        context.student.pk
+        for context in contexts
+        if provider_available_for_student(context.student, PortalAdapter.Provider.WEBUNTIS)
+    ]
+    connections = (
+        WebUntisConnection.objects.filter(
+            user=user,
+            student_id__in=allowed_ids,
+            features__key="absences",
+            features__enabled=True,
+        )
+        .select_related("student")
+        .distinct()
+    )
+    return {connection.student_id: connection for connection in connections}
+
+
+def submission_children(user):
+    connections = submission_connections(user)
+    return [context for context in child_contexts(user) if context.student.pk in connections], connections
+
+
+def _submission_fingerprint(student_id, starts_at, ends_at, note):
+    payload = json.dumps(
+        {"student": student_id, "starts": starts_at.isoformat(), "ends": ends_at.isoformat(), "note": note},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _submit_browser(connection, expected, user):
+    def authorize():
+        fresh = submission_connections(user).get(connection.student_id)
+        if fresh is None or fresh.pk != connection.pk:
+            raise PermissionDenied
+
+    with PlaywrightAbsenceClient(
+        decrypt(connection.username_encrypted),
+        decrypt(connection.password_encrypted),
+        server=connection.server,
+        school=connection.school,
+        student_key=str(connection.student_id),
+    ) as browser:
+        return submit_once(browser, expected, authorize=authorize)
+
+
+def create_submission(user, form, connections):
+    """Claim a token once, then issue exactly one browser write for its owner."""
+    if not form.is_valid():
+        return form, None
+    student_id = form.cleaned_data["student"]
+    starts_at = datetime.combine(form.cleaned_data["starts_on"], form.cleaned_data["starts_time"])
+    ends_at = datetime.combine(form.cleaned_data["ends_on"], form.cleaned_data["ends_time"])
+    note = form.cleaned_data["note"].strip()
+    fingerprint = _submission_fingerprint(student_id, starts_at, ends_at, note)
+    with transaction.atomic():
+        submission, created = AbsenceSubmission.objects.get_or_create(
+            token=form.cleaned_data["token"],
+            defaults={"user": user, "student_id": student_id, "fingerprint": fingerprint},
+        )
+    if submission.user_id != user.id or submission.fingerprint != fingerprint:
+        raise Http404
+    if not created:
+        return form, submission
+    connection = connections.get(student_id)
+    if connection is None:
+        outcome = SubmissionOutcome.NOT_SENT
+    else:
+        expected = AbsenceRecord(str(student_id), starts_at, ends_at, note)
+        try:
+            outcome = _submit_browser(connection, expected, user)
+        except Exception:
+            # Login and browser start happen before any form action.  Keep the
+            # technical detail out of the response and audit trail.
+            outcome = SubmissionOutcome.NOT_SENT
+    submission.status = outcome
+    submission.completed_at = timezone.now()
+    submission.save(update_fields=["status", "completed_at"])
+    AuditEvent.objects.create(
+        actor=user,
+        action="absence.browser_submission",
+        target_type="absence_submission",
+        target_id=str(submission.token),
+        metadata={"student_id": str(student_id), "outcome": outcome},
+    )
+    return form, submission
 
 
 def _clock(value):
@@ -217,6 +320,32 @@ def absence_portal(request):
     visible_ids = list(visible_absence_students(request.user).values_list("pk", flat=True))
     if not visible_ids:
         raise Http404
+    submission_children_list, _connections = submission_children(request.user)
+    from klasse5e.core.family_context import active_child_context
+
+    _all_children, active_child = active_child_context(request)
+    selected_id = (
+        active_child.student.pk
+        if active_child and any(item.student.pk == active_child.student.pk for item in submission_children_list)
+        else None
+    )
+    submission_token = request.POST.get("submission-token") or request.GET.get("submission") or uuid.uuid4()
+    try:
+        submission_token = uuid.UUID(str(submission_token))
+    except (TypeError, ValueError):
+        raise Http404 from None
+    submission_form = AbsenceSubmissionForm(
+        request.POST if request.method == "POST" and request.POST.get("action") == "submit" else None,
+        prefix="submission",
+        children=submission_children_list,
+        selected_id=selected_id,
+        initial={"token": submission_token},
+    )
+    if request.method == "POST" and request.POST.get("action") == "submit":
+        # The token is part of the submitted form; no query-string trust is used.
+        submission_form, submission = create_submission(request.user, submission_form, _connections)
+        if submission:
+            return redirect(f"{redirect('absence-portal').url}?submission={submission.token}")
     draft_ids = [child.student.pk for child in children]
     form = (
         AbsenceDraftForm(request.POST if request.method == "POST" else None, children=children)
@@ -251,6 +380,12 @@ def absence_portal(request):
         "webuntis/absences.html",
         {
             "page_title": "Abwesenheiten",
+            "submission_form": submission_form if submission_children_list else None,
+            "submission_children": submission_children_list,
+            "submission_result": AbsenceSubmission.objects.filter(
+                token=submission_token, user=request.user
+            ).select_related("student").first(),
+            "webuntis_url": "https://thgwob.webuntis.com/student-absences",
             "form": form,
             "absences": WebUntisAbsence.objects.filter(
                 connection__student_id__in=visible_ids,

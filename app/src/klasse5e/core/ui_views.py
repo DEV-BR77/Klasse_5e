@@ -777,9 +777,9 @@ def dashboard(request):
             ).select_related("course")[:3],
         }
     )
-    from klasse5e.webuntis.absences import visible_absence_students
+    from klasse5e.webuntis.absences import submission_connections
 
-    context["absences_available"] = visible_absence_students(request.user).exists()
+    context["absences_available"] = bool(submission_connections(request.user))
     return render(request, "ui/dashboard_v2.html", context)
 
 

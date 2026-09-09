@@ -1,4 +1,4 @@
-# Abwesenheiten und lokaler Meldeprototyp
+# Abwesenheiten und WebUntis-Meldung
 
 Stand: 08.09.2026. Ausdrücklich freigegebener Folgeauftrag im Django-Modul
 `webuntis`, ohne zusätzliche Dienste.
@@ -19,7 +19,32 @@ und nachträgliche Aktivierung erzeugen keine weiteren Hinweise. Push bleibt
 für diese Kategorie deaktiviert. Hinweise enthalten weder Kind noch Zeitraum,
 Grund oder Freitext. Der Link prüft den aktuellen Zugriff erneut.
 
-„Abwesenheit melden“ speichert einen **lokalen, nicht übertragenen Entwurf**:
+„Abwesenheit bei WebUntis melden“ ist ein ausdrücklicher Schreibvorgang. Er ist
+nur sichtbar, wenn die Schule den WebUntis-Adapter samt Abwesenheitsmodul für
+das Kind freigegeben hat, der aktuelle Benutzer rechtlich sorgeberechtigt ist,
+die Beziehung, Klasse und Einwilligung aktuell sind und genau dieser Benutzer
+einen eigenen, verschlüsselten Zugang beim Kind hinterlegt hat. Das im Dashboard
+gewählte Kind wird vorgewählt; bei mehreren berechtigten Kindern erscheint eine
+eindeutige Auswahl.
+
+Der begrenzte Playwright-Transport öffnet ausschließlich den freigegebenen
+WebUntis-Host, meldet sich mit diesem persönlichen Zugang an und bedient das
+geprüfte Formular in der eingebetteten Abwesenheitsansicht. Er nutzt keine
+WebUntis-Schreib-API. Eine zufällige Token-Zeile reserviert den Vorgang vor dem
+Browserstart und verhindert Doppelmeldungen bei wiederholtem Absenden. Nach
+dem einmaligen Klick auf „Speichern“ wird die Liste höchstens dreimal frisch
+gelesen. Eine Erfolgsmeldung erscheint ausschließlich für einen neuen Eintrag
+mit passendem Kind, Zeitraum und Anmerkung; vorhandene oder mehrdeutige Einträge
+bestätigen nichts. Ein Timeout löst keinen zweiten Schreibversuch aus. Bei einem
+unklaren Ergebnis bleibt die Meldung unbestätigt und die Oberfläche verweist
+ohne Zugangsdaten oder Meldeinhalt direkt auf WebUntis.
+
+Die Browserstrecke wurde mit dem echten Formular ohne Absenden geprüft. Die
+automatisierten Tests verwenden ausschließlich synthetische Browserantworten;
+ein echter Ende-zu-Ende-Test erfordert weiterhin einen Testzugang oder eine
+ausdrücklich freigegebene reale Meldung.
+
+Daneben kann „Lokalen Entwurf speichern“ weiterhin einen **nicht übertragenen Entwurf** anlegen:
 Kind, Von/Bis (Standard heute), unabhängige optionale Uhrzeiten, Krank,
 Arztbesuch oder Sonstiges und maximal 2.000 Zeichen Freitext. Ungültige
 Intervalle werden abgewiesen. Entwürfe lassen sich löschen. HTML wird escaped,
@@ -51,20 +76,21 @@ WebUntis importierte Schuldaten: eine bestimmte Lehrkraft als Urheber wird
 nicht ohne Quellmetadaten behauptet. Gründe, Diagnosen und Lehrkraftnamen
 werden nicht aus der Quelle gespeichert.
 
-**Schreiben nach WebUntis ist nicht implementiert.** Es gibt keinen Sendejob,
-Submit-Endpunkt, Browserstart oder versteckten Versand. Ein späterer gemeinsamer
-Browserdurchlauf muss Kind, Zeitraum und Inhalt überprüfen und die Schulmeldung
-ausdrücklich ausführen. Ein lokaler Entwurf bestätigt keine Meldung bei der Schule.
+Die Browsermeldung startet nie verdeckt: Sie folgt ausschließlich auf das
+verbindliche Absenden im Formular. Freitext, Zugangsdaten und Browserrohdaten
+werden nicht protokolliert. Die Protokollzeile enthält nur einen zufälligen Token,
+den handelnden Benutzer, das Kind, eine Einweg-Prüfsumme und den neutralen
+Ergebnisstatus.
 
 ## Migration und Aufbewahrung
 
-Migration `webuntis.0009` ergänzt `WebUntisAbsence`, `AbsenceDraft` und die
-Feature-Auswahl additiv. Vor produktivem Upgrade gilt der vorhandene
-Backup-/Restore-Prozess. Rollback auf `0008` entfernt die neuen Tabellen und
+Migration `webuntis.0010` ergänzt das minimierte, tokenbasierte
+Sendeprotokoll additiv. Vor produktivem Upgrade gilt der vorhandene
+Backup-/Restore-Prozess. Rollback auf `0009` entfernt die neue Tabelle und
 deren Daten; bei Bedarf vorher einen geschützten Export erstellen.
 
 `python manage.py purge_absences` täglich über den bestehenden Betriebslauf
-aufrufen. Es löscht Importe älter als 90 Tage, Entwürfe nach 30 Tagen sowie
+aufrufen. Es löscht Importe älter als 90 Tage, Entwürfe und Sendeprotokolle nach 30 Tagen sowie
 Datensätze ohne aktuelle Berechtigung/Einwilligung. Zugriff endet bereits vor
 dem Löschlauf unmittelbar. Kontolöschung entfernt auch lokale Entwürfe;
 Verbindungslöschung entfernt zugehörige Importe. Audit speichert beim Anlegen

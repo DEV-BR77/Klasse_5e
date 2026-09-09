@@ -427,3 +427,20 @@ Für private Verläufe gilt eine automatische Aufbewahrung von 180 Tagen. Offene
 Meldungen verhindern die Löschung bis zur menschlichen Prüfung. In-App- und
 Push-Hinweise enthalten weder Absender noch Nachrichtentext oder Kindernamen.
 Details und Abnahmekriterien stehen in [Private Nachrichten](Private-Nachrichten.md).
+
+## ADR-030: Einmalige WebUntis-Browsermeldung mit Rückprüfung
+
+Der Auftrag vom 09.09.2026 ersetzt den reinen Meldeprototyp für Abwesenheiten
+durch eine eng begrenzte Playwright-Browserstrecke. Sie ist nur für den
+freigegebenen WebUntis-Host, einen aktuellen rechtlich berechtigten Benutzer,
+sein eigenes Kind und dessen persönliche verschlüsselte Verbindung verfügbar.
+Der Vorgang benötigt eine ausdrückliche Formularbestätigung und eine persistente
+Einmal-Token-Sperre. Nach dem einzelnen Browser-Schreibversuch liest er die
+Abwesenheitsliste frisch und höchstens dreimal; nur ein neuer, passender Eintrag
+bestätigt den Erfolg. Timeouts und Fehler lösen keine Wiederholung aus.
+
+Grund ist die erforderliche Rückmeldung an die Schule trotz fehlender zulässiger
+Schreib-API. Der eng begrenzte Formularablauf hält den Monolithen ohne Worker
+oder zusätzliche Dienste und verhindert Erfolgsmeldungen aufgrund lokaler Daten
+oder alter Einträge. Freitexte, Zugangsdaten und Browserantworten bleiben aus
+Audit und Datenbank; das minimierte Sendeprotokoll endet nach 30 Tagen.

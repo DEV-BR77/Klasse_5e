@@ -14,8 +14,19 @@ from klasse5e.core.models import (
     PushPreference,
     UserNotification,
 )
+from klasse5e.portal_adapters.models import (
+    ChildModuleConnection,
+    PortalAdapter,
+    PortalAdapterModule,
+)
+from klasse5e.webuntis.absence_submission import SubmissionOutcome
 from klasse5e.webuntis.absences import AbsenceDraftForm, sync_absences
-from klasse5e.webuntis.models import AbsenceDraft, WebUntisConnection, WebUntisFeaturePreference
+from klasse5e.webuntis.models import (
+    AbsenceDraft,
+    AbsenceSubmission,
+    WebUntisConnection,
+    WebUntisFeaturePreference,
+)
 
 
 @pytest.fixture
@@ -74,6 +85,29 @@ def adapter():
                 }
             }
         )
+    )
+
+
+def enable_browser_submission(connection, school_class):
+    adapter = PortalAdapter.objects.create(
+        provider=PortalAdapter.Provider.WEBUNTIS,
+        name="Synthetic WebUntis",
+        is_enabled=True,
+    )
+    adapter.schools.add(school_class.school)
+    module = PortalAdapterModule.objects.create(
+        adapter=adapter,
+        key="absences",
+        label="Abwesenheiten",
+        is_enabled=True,
+        requires_child_credentials=True,
+    )
+    ChildModuleConnection.objects.create(
+        student=connection.student,
+        module=module,
+        is_enabled=True,
+        connection_state=ChildModuleConnection.ConnectionState.CONNECTED,
+        configured_by=connection.user,
     )
 
 
@@ -200,14 +234,95 @@ def test_draft_delete_and_retention(client, absence_connection):
     assert response.status_code == 302
     assert not AbsenceDraft.objects.exists()
     draft = AbsenceDraft.objects.create(user=c.user, student=c.student, reason="other")
+    submission = AbsenceSubmission.objects.create(
+        token="00000000-0000-0000-0000-000000000001",
+        user=c.user,
+        student=c.student,
+        fingerprint="a" * 64,
+    )
     AbsenceDraft.objects.filter(pk=draft.pk).update(created_at=timezone.now() - timedelta(days=31))
+    AbsenceSubmission.objects.filter(pk=submission.pk).update(
+        created_at=timezone.now() - timedelta(days=31)
+    )
     sync_absences(c, adapter())
     call_command("purge_absences")
     assert not AbsenceDraft.objects.exists()
+    assert not AbsenceSubmission.objects.exists()
     assert c.absences.exists()
     ConsentDecision.objects.filter(subject_person=c.student).update(revoked_at=timezone.now())
     call_command("purge_absences")
     assert not c.absences.exists()
+
+
+@pytest.mark.django_db
+def test_browser_submission_is_explicit_idempotent_and_neutral(client, absence_connection, school_class, monkeypatch):
+    enable_browser_submission(absence_connection, school_class)
+    client.force_login(absence_connection.user)
+    response = client.get("/abwesenheiten/")
+    form = response.context["submission_form"]
+    assert form is not None
+    assert str(absence_connection.student_id) in response.content.decode()
+    submitted = []
+
+    def fake_submit(connection, expected, user):
+        submitted.append((connection.pk, expected.student_key, user.pk))
+        return SubmissionOutcome.CONFIRMED
+
+    monkeypatch.setattr("klasse5e.webuntis.absences._submit_browser", fake_submit)
+    data = {
+        "action": "submit",
+        "submission-student": absence_connection.student_id,
+        "submission-starts_on": "2026-09-10",
+        "submission-ends_on": "2026-09-10",
+        "submission-starts_time": "08:00",
+        "submission-ends_time": "17:00",
+        "submission-note": "Synthetic private note",
+        "submission-token": form["token"].value(),
+    }
+    response = client.post("/abwesenheiten/", data)
+    assert response.status_code == 302
+    assert len(submitted) == 1
+    submission = AbsenceSubmission.objects.get()
+    assert submission.status == "confirmed"
+    assert "Synthetic private note" not in submission.fingerprint
+    assert client.post("/abwesenheiten/", data).status_code == 302
+    assert len(submitted) == 1
+
+
+@pytest.mark.django_db
+def test_browser_submission_denies_disabled_adapter(client, absence_connection):
+    client.force_login(absence_connection.user)
+    response = client.get("/abwesenheiten/")
+    assert response.context["submission_form"] is None
+
+
+@pytest.mark.django_db
+def test_browser_start_failure_is_neutral_and_never_reports_confirmation(
+    client, absence_connection, school_class, monkeypatch
+):
+    enable_browser_submission(absence_connection, school_class)
+    client.force_login(absence_connection.user)
+    form = client.get("/abwesenheiten/").context["submission_form"]
+    monkeypatch.setattr(
+        "klasse5e.webuntis.absences._submit_browser", Mock(side_effect=RuntimeError("private detail"))
+    )
+    response = client.post(
+        "/abwesenheiten/",
+        {
+            "action": "submit",
+            "submission-student": absence_connection.student_id,
+            "submission-starts_on": "2026-09-10",
+            "submission-ends_on": "2026-09-10",
+            "submission-starts_time": "08:00",
+            "submission-ends_time": "17:00",
+            "submission-note": "",
+            "submission-token": form["token"].value(),
+        },
+    )
+    result = client.get(response.url)
+    assert AbsenceSubmission.objects.get().status == "not_sent"
+    assert "private detail" not in result.content.decode()
+    assert "nicht übermittelt" in result.content.decode()
 
 
 @pytest.mark.django_db

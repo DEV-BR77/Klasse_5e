@@ -179,6 +179,33 @@ class AbsenceDraft(models.Model):
         ordering = ["-created_at"]
 
 
+class AbsenceSubmission(models.Model):
+    """A data-minimised idempotency claim for one user-requested write.
+
+    The free-text note is deliberately represented only by a one-way digest.
+    It remains in process memory long enough for the browser fill and fresh
+    confirmation, but is never persisted with the submission attempt.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Bestätigung wird geprüft"
+        CONFIRMED = "confirmed", "Angemeldet"
+        NOT_SENT = "not_sent", "Nicht übermittelt"
+        UNCONFIRMED = "unconfirmed", "Nicht bestätigt"
+
+    token = models.UUIDField(unique=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    student = models.ForeignKey(Person, on_delete=models.CASCADE)
+    fingerprint = models.CharField(max_length=64)
+    status = models.CharField(max_length=16, choices=Status, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["user", "token"])]
+
+
 class HomeworkProgress(models.Model):
     """A child's local completion state for one stable WebUntis homework item."""
 

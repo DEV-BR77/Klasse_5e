@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load meal_tags %}
 {% block content %}
-{% if absences_available %}<a class="button button-secondary" href="{% url 'absence-portal' %}">Abwesenheiten · Abwesenheit melden</a>{% endif %}
+{% if absences_available %}<a class="button button-secondary" href="{% url 'absence-portal' %}">Abwesenheit melden</a>{% endif %}
 <section class="dashboard-page">
   <header class="welcome-panel">
     <div><p class="eyebrow">{{ greeting }}, {{ request.user.person.first_name|default:request.user.email }}</p><h1>{{ dashboard_heading }}</h1>{% if active_child %}<p>{{ family_name }} · {{ active_child.school_name }}{% if active_child.class_name %} · {{ active_child.class_name }}{% endif %}</p>{% elif family_children %}<p><strong>Familie im Blick</strong> · Wichtige Termine und Informationen für {% for child in family_children %}{{ child.student.first_name }}{% if not forloop.last %}, {% endif %}{% endfor %}.</p>{% elif membership %}<p>{{ family_name }} · {{ membership.school_class.display_name|default:membership.school_class.name }}</p>{% endif %}</div>
