@@ -36,6 +36,13 @@ Abnahmetests.
   **Abgeschlossen am 09.09.2026:** Unter „KlassID als App installieren“
   erklären zwei responsive Kacheln die Installation über Chrome beziehungsweise
   Safari; der direkte Browser-Installationsknopf bleibt zusätzlich erhalten.
+- [ ] **Portalvorstellung sichtbar ankündigen.** Die Präsentationsveranstaltung
+  im Bereich Aktuelles verlinken und allen berechtigten Konten eine ungelesene,
+  neutrale In-App-Benachrichtigung mit direktem Link zur Veranstaltung geben.
+- [ ] **Erstlogin als Willkommensseite.** Den bisherigen Cloud-/Schrittablauf
+  durch eine kurze Willkommensseite für die Klasse 5e ersetzen. Sie verweist auf
+  Familienverwaltung, Profil-/Freigabepflege, persönliche WebUntis-Zugänge am
+  Kind und die Präsentationsveranstaltungen.
 
 ## Kommunikation und Kontakte
 
@@ -123,8 +130,13 @@ Abnahmetests.
   Aktionen unter dem Raum; auf Mobilgeräten Wischaktion nach rechts.
 - [ ] **Einstellungen sortieren.** Konto zuerst und geöffnet, dann
   Kommunikation, anschließend Klassenleben.
-- [ ] **Veranstaltungen und Termine verwalten.** Berechtigte Ersteller:innen
+- [x] **Veranstaltungen und Termine verwalten.** Berechtigte Ersteller:innen
   können eigene Einträge bearbeiten oder löschen.
+  **Abgeschlossen am 09.09.2026:** Organisator:innen können ihre eigenen
+  veröffentlichten Veranstaltungen bearbeiten oder nach einer sichtbaren
+  Bestätigung löschen. Aktive Klassenmitglieder können sich mit „Ich nehme
+  teil“ anmelden; die Teilnehmerliste zeigt dann den Familiennamen und lässt
+  sich jederzeit zurücknehmen. Änderungen und Teilnahme werden auditiert.
 
 ## Eingabe und E-Mail-Ablauf
 
