@@ -163,3 +163,19 @@ def test_profile_rejects_invalid_avatar_without_a_server_error(client, guardian)
         secure=True,
     )
     assert response.status_code == 302
+
+
+@pytest.mark.django_db
+def test_app_installation_help_has_separate_android_and_ios_guides(client, guardian):
+    client.force_login(guardian)
+
+    page = client.get(f"{reverse('personal-profile')}?tab=app", secure=True)
+
+    assert page.status_code == 200
+    content = page.content.decode()
+    assert "KlassID als App installieren" in content
+    assert "ständigen Zugriff" in content
+    assert "Android" in content
+    assert "iOS-Geräte" in content
+    assert "Zum Startbildschirm hinzufügen" in content
+    assert "Zum Home-Bildschirm" in content

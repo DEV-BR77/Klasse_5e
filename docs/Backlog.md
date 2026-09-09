@@ -31,6 +31,12 @@ Abnahmetests.
   Sorgeberechtigten auf die Schuldaten des Kindes sowie den sofortigen Entzug
   nach Widerruf.
 
+- [x] **Installationsanleitung für Android und iOS.** Die App-Einstellung zeigt
+  getrennte, kurze Anleitungen für Android sowie iOS-Geräte.
+  **Abgeschlossen am 09.09.2026:** Unter „KlassID als App installieren“
+  erklären zwei responsive Kacheln die Installation über Chrome beziehungsweise
+  Safari; der direkte Browser-Installationsknopf bleibt zusätzlich erhalten.
+
 ## Kommunikation und Kontakte
 
 - [x] **Private Nachrichten.** In der Kontaktkarte eine Person auswählen,
