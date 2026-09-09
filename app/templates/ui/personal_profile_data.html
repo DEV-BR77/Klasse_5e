@@ -24,7 +24,7 @@
         </div>
         <div class="profile-field"><label for="profile-chat-name">Anzeigename im Chat</label><input id="profile-chat-name" name="chat_display_name" value="{{ person.chat_display_name }}" maxlength="80"></div>
         <div class="profile-field profile-field--sharing">
-          <label for="profile-phone">Telefonnummer</label><input id="profile-phone" name="phone" value="{{ person.phone }}" type="tel">
+          <label for="profile-phone">Telefonnummer</label><input id="profile-phone" name="phone" value="{{ phone_display }}" type="tel" autocomplete="tel">
           <label class="sharing-toggle" for="share-phone"><span class="sharing-toggle__text">Im Portal anzeigen</span><span class="switch"><input id="share-phone" type="checkbox" name="share_phone" value="yes" {% if person.phone_visibility == 'members' %}checked{% endif %}><span></span></span></label>
         </div>
         <div class="profile-field profile-field--sharing">

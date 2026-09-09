@@ -9,6 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .avatar_designer import validate_avatar_seed
+from .contact_data import format_phone_number, normalize_email_address, normalize_phone_number
 from .models import (
     AuditEvent,
     ChildJoinRequest,
@@ -30,6 +31,17 @@ class FamilyPersonForm(forms.ModelForm):
         labels = {"first_name": "Vorname", "last_name": "Nachname", "birth_date": "Geburtsdatum", "street": "Straße und Hausnummer",
                   "postal_code": "Postleitzahl", "city": "Ort", "contact_email": "Kontakt-E-Mail",
                   "phone": "Telefonnummer", "chat_display_name": "Anzeigename im Chat"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and self.instance.phone:
+            self.initial["phone"] = format_phone_number(self.instance.phone)
+
+    def clean_contact_email(self):
+        return normalize_email_address(self.cleaned_data.get("contact_email"), required=False)
+
+    def clean_phone(self):
+        return normalize_phone_number(self.cleaned_data.get("phone"))
 
 
 def person_card(person, user, editable):

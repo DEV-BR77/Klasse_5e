@@ -103,7 +103,8 @@ def test_profile_stores_contact_visibility_and_notification_preferences(client, 
         {
             "tab": "data", "save_scope": "data", "first_name": "Alex", "last_name": "Beispiel",
             "street": "Musterstraße 1", "postal_code": "38440", "city": "Wolfsburg",
-            "email": "new-address@example.test", "share_email": "yes", "share_phone": "yes",
+            "email": "new-address@example.test", "phone": "05361 123456",
+            "share_email": "yes", "share_phone": "yes",
             "share_address": "yes",
         },
         secure=True,
@@ -112,6 +113,7 @@ def test_profile_stores_contact_visibility_and_notification_preferences(client, 
     guardian.refresh_from_db()
     guardian.person.refresh_from_db()
     assert guardian.email == "new-address@example.test"
+    assert guardian.person.phone == "+495361123456"
     assert guardian.person.email_visibility == "members"
     assert guardian.person.phone_visibility == "members"
     assert all(
@@ -128,6 +130,28 @@ def test_profile_stores_contact_visibility_and_notification_preferences(client, 
     assert response.status_code == 302
     page = client.get(f"{reverse('personal-profile')}?tab=notifications", secure=True)
     assert b"Fahrgemeinschaft" in page.content
+
+
+@pytest.mark.django_db
+def test_profile_rejects_invalid_contact_data_atomically(client, guardian):
+    client.force_login(guardian)
+    response = client.post(
+        reverse("personal-profile"),
+        {
+            "tab": "data",
+            "save_scope": "data",
+            "first_name": "Alex",
+            "last_name": "Beispiel",
+            "email": "changed@example.test",
+            "phone": "keine Telefonnummer",
+        },
+        secure=True,
+    )
+
+    assert response.status_code == 302
+    guardian.refresh_from_db()
+    assert guardian.email == "guardian@example.test"
+    assert guardian.person.phone == ""
 
 
 @pytest.mark.django_db

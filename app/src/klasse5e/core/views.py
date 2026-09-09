@@ -15,7 +15,6 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.mail import send_mail
-from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
@@ -26,6 +25,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .avatar_designer import avatar_designer_context, validate_avatar_seed
+from .contact_data import format_phone_number, normalize_email_address, normalize_phone_number
 from .models import (
     PROFILE_AVATAR_PRESETS,
     AccountDeletionRequest,
@@ -46,7 +46,6 @@ from .models import (
     RoleAssignment,
     UserAccount,
     UserNotification,
-    normalize_login_email,
 )
 from .policies import active_class_for_user
 from .privacy_services import erase_account_data
@@ -170,7 +169,7 @@ def family_register(request, token):
         for index in child_indexes or [1]:
             first = request.POST.get(f"child_{index}_first_name", "").strip()[:100]
             last = request.POST.get(f"child_{index}_last_name", "").strip()[:100]
-            email = normalize_login_email(request.POST.get(f"child_{index}_email", ""))
+            email = request.POST.get(f"child_{index}_email", "").strip()
             password = request.POST.get(f"child_{index}_password", "")
             if any((first, last, email, password)) and not all((first, last, email, password)):
                 raise_error = (
@@ -185,7 +184,7 @@ def family_register(request, token):
                 )
             if first and last:
                 try:
-                    validate_email(email)
+                    email = normalize_email_address(email)
                     validate_password(password)
                 except ValidationError as exc:
                     return render(
@@ -207,7 +206,7 @@ def family_register(request, token):
                     }
                 )
         adults = []
-        second_email = normalize_login_email(request.POST.get("adult_2_email", ""))
+        second_email = request.POST.get("adult_2_email", "").strip()
         second_first = request.POST.get("adult_2_first_name", "").strip()[:100]
         second_last = request.POST.get("adult_2_last_name", "").strip()[:100]
         second_password = request.POST.get("adult_2_password", "")
@@ -230,7 +229,8 @@ def family_register(request, token):
             )
         try:
             if adults:
-                validate_email(second_email)
+                second_email = normalize_email_address(second_email)
+                adults[0]["email"] = second_email
                 validate_password(second_password)
                 if (
                     UserAccount.objects.filter(email__iexact=second_email).exists()
@@ -244,7 +244,7 @@ def family_register(request, token):
                 raise ValidationError("Bitte bestätige die Datenschutzinformationen.")
             if not children:
                 raise ValidationError("Bitte gib mindestens ein Kind an.")
-            first_email = normalize_login_email(request.POST.get("email", ""))
+            first_email = normalize_email_address(request.POST.get("email", ""))
             all_emails = [first_email, second_email] + [child["email"] for child in children]
             all_emails = [email for email in all_emails if email]
             if len(all_emails) != len(set(all_emails)):
@@ -377,6 +377,7 @@ def personal_profile(request):
         {
             "page_title": "Persönliches Profil",
             "person": person,
+            "phone_display": format_phone_number(person.phone),
             "active_tab": active_tab,
             "avatar_presets": PROFILE_AVATAR_PRESETS,
             "avatar_designer": avatar_designer_context(),
@@ -395,6 +396,7 @@ def personal_profile(request):
     )
 
 
+@transaction.atomic
 def _save_personal_profile(request, person):
     save_scope = request.POST.get("save_scope", "data")
     if save_scope == "themes":
@@ -436,12 +438,13 @@ def _save_personal_profile(request, person):
         "street": 180,
         "postal_code": 10,
         "city": 120,
-        "phone": 50,
         "chat_display_name": 80,
     }
     for field, limit in text_fields.items():
         if field in request.POST:
             setattr(person, field, request.POST[field].strip()[:limit])
+    if "phone" in request.POST:
+        person.phone = normalize_phone_number(request.POST.get("phone", ""))
     if "home_latitude" in request.POST or "home_longitude" in request.POST:
         try:
             person.home_latitude = request.POST.get("home_latitude") or None
@@ -454,8 +457,7 @@ def _save_personal_profile(request, person):
             mode if mode in {"family", "child", "personal"} else "family"
         )
     if "email" in request.POST:
-        email = normalize_login_email(request.POST.get("email", ""))
-        validate_email(email)
+        email = normalize_email_address(request.POST.get("email", ""))
         if UserAccount.objects.exclude(pk=request.user.pk).filter(email__iexact=email).exists():
             raise ValidationError("Diese E-Mail-Adresse wird bereits verwendet.")
         request.user.email = email

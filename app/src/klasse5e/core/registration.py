@@ -12,6 +12,7 @@ from django.db import transaction
 from django.utils import timezone
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from .contact_data import normalize_email_address
 from .models import (
     ActivationGrant,
     AuditEvent,
@@ -28,16 +29,16 @@ from .models import (
     StudentProfile,
     UserAccount,
     UserNotification,
-    normalize_login_email,
 )
 from .policies import active_class_for_user
 
 
 def create_application(*, email, first_name, last_name, password, refresh_unverified=False):
-    email = normalize_login_email(email)
+    email = normalize_email_address(email, required=False)
     first_name, last_name = first_name.strip(), last_name.strip()
     if not email or not first_name or not last_name:
         raise ValidationError("Bitte fülle alle Pflichtfelder aus.")
+    email = normalize_email_address(email)
     validate_password(password)
     if UserAccount.objects.filter(email__iexact=email).exists():
         return None, None

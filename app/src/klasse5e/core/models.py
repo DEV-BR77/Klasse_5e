@@ -8,13 +8,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
-
-def normalize_login_email(value):
-    email = (value or "").strip().casefold()
-    local_part, separator, domain = email.partition("@")
-    if separator and domain == "googlemail.com":
-        domain = "gmail.com"
-    return f"{local_part}@{domain}" if separator else email
+from .contact_data import normalize_email_address, normalize_login_email, normalize_phone_number
 
 
 class UserAccountManager(BaseUserManager):
@@ -23,7 +17,7 @@ class UserAccountManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError("email_required")
-        user = self.model(email=normalize_login_email(self.normalize_email(email)), **extra_fields)
+        user = self.model(email=normalize_email_address(self.normalize_email(email)), **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -178,6 +172,11 @@ class Person(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def clean(self):
+        super().clean()
+        self.contact_email = normalize_email_address(self.contact_email, required=False)
+        self.phone = normalize_phone_number(self.phone)
+
     @property
     def avatar_static_path(self):
         return f"vendor/open-peeps/{self.avatar_key or 'peep-1'}.svg"
@@ -309,7 +308,7 @@ class RegistrationApplication(models.Model):
     def issue(cls, *, email, first_name, last_name, password_hash, lifetime=timedelta(hours=24)):
         token = secrets.token_urlsafe(32)
         item = cls.objects.create(
-            email=normalize_login_email(email),
+            email=normalize_email_address(email),
             first_name=first_name,
             last_name=last_name,
             password_hash=password_hash,
