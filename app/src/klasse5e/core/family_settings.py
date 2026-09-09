@@ -3,7 +3,7 @@ import secrets
 
 from django import forms
 from django.conf import settings
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
@@ -112,6 +112,52 @@ def save_consent(request, person):
                         decision=decision, source="settings")
     else:
         raise ValidationError("Bitte eine gültige Entscheidung auswählen.")
+
+
+@transaction.atomic
+def save_consents(request, person):
+    """Store the compact child-privacy form without weakening consent checks."""
+
+    consents = [
+        consent
+        for consent in ConsentType.objects.order_by("category", "label")
+        if latest_text(consent) and may_decide(request.user, person, consent)
+    ]
+    if not consents:
+        raise PermissionDenied
+    allowed_keys = {consent.key for consent in consents}
+    submitted_keys = {
+        key.removeprefix("consent_")
+        for key in request.POST
+        if key.startswith("consent_")
+    }
+    if not submitted_keys.issubset(allowed_keys):
+        raise PermissionDenied
+    for consent in consents:
+        if consent.key == "biometric_face_search" and not settings.BIOMETRIC_SEARCH_ENABLED:
+            continue
+        current = active_decision(consent, person, request.user.person)
+        requested = request.POST.get(f"consent_{consent.key}") == "on"
+        if requested:
+            if current and current.decision == ConsentDecision.Decision.GRANTED:
+                continue
+            record_decision(
+                user=request.user,
+                subject=person,
+                key=consent.key,
+                decision=ConsentDecision.Decision.GRANTED,
+                source="settings",
+            )
+        elif current and current.decision == ConsentDecision.Decision.GRANTED:
+            withdraw_decision(user=request.user, subject=person, key=consent.key)
+        elif current is None:
+            record_decision(
+                user=request.user,
+                subject=person,
+                key=consent.key,
+                decision=ConsentDecision.Decision.DENIED,
+                source="settings",
+            )
 
 
 @transaction.atomic

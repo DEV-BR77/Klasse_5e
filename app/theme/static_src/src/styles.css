@@ -63,6 +63,47 @@
   color: var(--color-text-muted);
 }
 
+.child-privacy-list {
+  display: grid;
+}
+
+.child-privacy-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.child-privacy-row:last-child {
+  border-bottom: 0;
+}
+
+.child-privacy-row > div {
+  display: grid;
+  gap: .3rem;
+}
+
+.child-privacy-row small {
+  color: var(--color-text-muted);
+}
+
+.child-privacy-row details {
+  margin-top: .2rem;
+}
+
+.child-privacy-row summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.child-privacy-row details p {
+  margin: .5rem 0 .25rem;
+}
+
 /*
  * Django writes these values on <html> for every released portal theme.
  * `inline` keeps Tailwind utilities tied to the runtime value instead of

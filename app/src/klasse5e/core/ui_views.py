@@ -3002,6 +3002,7 @@ def family(request):
         person_card,
         request_child,
         save_consent,
+        save_consents,
         save_person,
     )
     from .models import ChildJoinRequest
@@ -3023,6 +3024,7 @@ def family(request):
     if request.method == "POST" and request.POST.get("action") in {
         "profile",
         "consent",
+        "consents",
         "add_child",
         "family_photo",
     }:
@@ -3062,7 +3064,7 @@ def family(request):
                             for r in relationships
                             if str(r.student_person_id) == person_id
                             and r.is_current()
-                            and (action == "consent" or r.may_manage_profile)
+                            and (action in {"consent", "consents"} or r.may_manage_profile)
                         ),
                         None,
                     )
@@ -3086,6 +3088,8 @@ def family(request):
                             school_class=school_class,
                             defaults={"status": "active", "valid_from": today, "valid_until": None},
                         )
+                elif action == "consents":
+                    save_consents(request, person)
                 else:
                     save_consent(request, person)
                 messages.success(request, "Die Änderungen wurden gespeichert.")

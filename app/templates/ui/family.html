@@ -15,16 +15,26 @@
   {% if active_tab == 'data' %}
   <form method="post" enctype="multipart/form-data" class="form-stack">{% csrf_token %}<input type="hidden" name="action" value="profile"><input type="hidden" name="person_id" value="{{ active_row.card.person.pk }}"><input type="hidden" name="tab" value="data"><input type="hidden" name="child" value="{{ active_row.relationship.pk }}"><input type="hidden" name="avatar_seed" value="{{ active_row.card.person.avatar_seed }}" data-avatar-seed><article class="settings-panel"><header><div><h2>Stammdaten und Kontaktfreigaben</h2><p>Jedes Feld lässt sich getrennt im Portal sichtbar machen.</p></div></header><div class="settings-details-body family-fields">{% for item in active_row.card.fields %}<div class="family-field"><label for="{{ item.field.id_for_label }}">{{ item.field.label }}{{ item.field }}</label>{% if item.field.name == 'contact_email' or item.field.name == 'phone' %}<label class="switch family-share"><span class="sr-only">{{ item.field.label }} im Portal anzeigen</span><input type="checkbox" name="share_{{ item.field.name }}" {% if item.shared %}checked{% endif %}><span></span><small>Im Portal anzeigen</small></label>{% endif %}</div>{% endfor %}<div class="family-field"><label for="child-school-class">Schule und Klasse<select id="child-school-class" name="school_class" required><option value="">Bitte auswählen</option>{% for school_class in active_row.school_classes %}<option value="{{ school_class.pk }}" {% if active_row.membership and active_row.membership.school_class_id == school_class.pk %}selected{% endif %}>{{ school_class.school.name }} · {{ school_class.display_name|default:school_class.name }}</option>{% endfor %}</select></label></div></div></article><footer class="form-actions"><button class="button button-primary">Angaben speichern</button></footer></form>
   {% elif active_tab == 'privacy' %}
-  <article class="settings-panel"><header><div><h2>Datenschutz und Einwilligungen</h2><p>Deine Entscheidung gilt für {{ active_row.card.person.first_name }}. Jede Freigabe ist einzeln widerrufbar. Weitere erforderliche Sorgeberechtigte entscheiden unabhängig.</p></div></header>
-    <div class="consent-table-wrap"><table class="consent-table"><thead><tr><th scope="col">Funktion</th><th scope="col">Deine Entscheidung</th><th scope="col">Wirksamer Status</th><th scope="col">Ändern</th></tr></thead><tbody>
-    {% for consent in active_row.card.consents %}<tr><th scope="row">{{ consent.type.label }}<details><summary>Details zur Einwilligung</summary><p>{{ consent.type.purpose }}</p><p>{{ consent.text.text }}</p><small>Textversion {{ consent.text.version }}</small></details></th>
-      <td>{% if consent.enabled %}Freigegeben{% elif consent.decision %}{{ consent.decision.get_decision_display }}{% else %}Noch nicht entschieden{% endif %}</td>
-      <td>{% if consent.disabled %}Funktion zentral deaktiviert{% elif consent.effective %}Freigegeben{% else %}Nicht freigegeben{% endif %}</td>
-      <td><form method="post">{% csrf_token %}<input type="hidden" name="action" value="consent"><input type="hidden" name="person_id" value="{{ active_row.card.person.pk }}"><input type="hidden" name="consent_key" value="{{ consent.type.key }}"><input type="hidden" name="tab" value="privacy"><input type="hidden" name="child" value="{{ active_row.relationship.pk }}">
-      <label for="consent-{{ consent.type.pk }}">Entscheidung für {{ consent.type.label }}</label><select id="consent-{{ consent.type.pk }}" name="decision"><option value="denied" {% if not consent.enabled %}selected{% endif %}>Nicht freigeben</option><option value="granted" {% if consent.enabled %}selected{% endif %} {% if consent.disabled %}disabled{% endif %}>Freigeben</option><option value="revoked">Freigabe widerrufen</option></select><button class="button button-secondary" type="submit">Speichern</button></form></td>
-    </tr>{% empty %}<tr><td colspan="4">Für dieses Kind sind derzeit keine entscheidbaren Einwilligungen verfügbar.</td></tr>{% endfor %}
-    </tbody></table></div>
-  </article>
+  <form method="post" class="form-stack child-privacy-form">{% csrf_token %}<input type="hidden" name="action" value="consents"><input type="hidden" name="person_id" value="{{ active_row.card.person.pk }}"><input type="hidden" name="tab" value="privacy"><input type="hidden" name="child" value="{{ active_row.relationship.pk }}">
+    <article class="settings-panel"><header><div><h2>Datenschutz und Einwilligungen</h2><p>Diese Freigaben gelten für {{ active_row.card.person.first_name }}. Weitere erforderliche Sorgeberechtigte entscheiden unabhängig.</p></div></header>
+      <div class="child-privacy-list">
+        {% for consent in active_row.card.consents %}
+          <div class="child-privacy-row">
+            <div>
+              <strong>{{ consent.type.label }}</strong>
+              <small>{{ consent.type.purpose }}</small>
+              <details><summary>Details zur Einwilligung</summary><p>{{ consent.text.text }}</p><small>Textversion {{ consent.text.version }}</small></details>
+              {% if consent.disabled %}<span class="status status-info">Funktion derzeit zentral deaktiviert</span>{% endif %}
+            </div>
+            <label class="switch"><span class="sr-only">{{ consent.type.label }} aktivieren oder deaktivieren</span><input type="checkbox" name="consent_{{ consent.type.key }}" {% if consent.enabled %}checked{% endif %} {% if consent.disabled %}disabled{% endif %}><span></span></label>
+          </div>
+        {% empty %}
+          <div class="settings-details-body"><p>Für dieses Kind sind derzeit keine Einwilligungen verfügbar.</p></div>
+        {% endfor %}
+      </div>
+    </article>
+    <footer class="form-actions"><a class="button button-secondary" href="{% url 'ui-family' %}">Zurück</a><button class="button button-primary">Freigaben speichern</button></footer>
+  </form>
   {% else %}
   <article class="settings-panel">
     <header><div><h2>Schulzugänge und aktive Module</h2><p>Aktiviere nur die von der Schule bereitgestellten Funktionen. Zugangsdaten werden je Kind gepflegt.</p></div></header>

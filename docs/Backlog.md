@@ -220,6 +220,11 @@ beim ausgewählten Kind, ohne gespeicherte Zugangsdaten zurückzugeben. MUNDO un
 öffentliche Lernangebote sind zusätzlich über den eigenen Menüpunkt „Lernportale“
 erreichbar.
 
+Die Datenschutzfreigaben eines Kindes verwenden ebenfalls kompakte, einheitliche
+Schalter. Kurze Wirkungsbeschreibungen stehen direkt an der Freigabe; der vollständige
+Einwilligungstext ist aufklappbar. Alle Änderungen werden mit einem gemeinsamen
+Speichern-Button übernommen, während zentral deaktivierte Funktionen gesperrt bleiben.
+
 #### Ziel und Ablauf
 
 1. Portal-Admins legen Adapter einmal im zentralen Katalog an und bearbeiten sie dort.

@@ -14,7 +14,7 @@ from klasse5e.core.models import (
 pytestmark = pytest.mark.django_db
 
 
-def test_child_privacy_table_save_and_withdraw_without_javascript(client, guardian):
+def test_child_privacy_toggles_save_together_without_javascript(client, guardian):
     child = Person.objects.create(first_name="Testkind", last_name="Beispiel")
     relation = GuardianChildRelationship.objects.create(
         guardian_person=guardian.person, student_person=child, relationship_type="mother",
@@ -29,16 +29,26 @@ def test_child_privacy_table_save_and_withdraw_without_javascript(client, guardi
     url = f"{reverse('ui-family')}?tab=privacy&child={relation.pk}"
     response = client.get(url, secure=True)
     assert response.status_code == 200
-    assert b'<table class="consent-table">' in response.content
+    assert b'<table class="consent-table">' not in response.content
+    assert response.content.count(b"Freigaben speichern") == 1
+    assert b'name="consent_test_optional"' in response.content
     assert b"Konkrete Testbedingungen" in response.content
-    assert b"Noch nicht entschieden" in response.content
-    for choice in ["granted", "revoked", "denied"]:
-        response = client.post(url, {"action": "consent", "person_id": child.pk,
-            "consent_key": consent.key, "decision": choice, "tab": "privacy", "child": relation.pk}, secure=True)
-        assert response.status_code == 302
-        assert ConsentDecision.objects.filter(subject_person=child).latest("id").decision == choice
+    response = client.post(url, {"action": "consents", "person_id": child.pk,
+        "consent_test_optional": "on", "tab": "privacy", "child": relation.pk}, secure=True)
+    assert response.status_code == 302
+    assert ConsentDecision.objects.filter(
+        subject_person=child, consent_type=consent
+    ).latest("id").decision == "granted"
+    response = client.post(url, {"action": "consents", "person_id": child.pk,
+        "tab": "privacy", "child": relation.pk}, secure=True)
+    assert response.status_code == 302
+    assert ConsentDecision.objects.filter(
+        subject_person=child, consent_type=consent
+    ).latest("id").decision == "revoked"
     relation.may_manage_general_consents = False
     relation.save()
-    assert client.post(url, {"action": "consent", "person_id": child.pk,
-        "consent_key": consent.key, "decision": "granted"}, secure=True).status_code == 403
-    assert ConsentDecision.objects.filter(subject_person=child).count() == 3
+    assert client.post(url, {"action": "consents", "person_id": child.pk,
+        "consent_test_optional": "on"}, secure=True).status_code == 403
+    assert ConsentDecision.objects.filter(
+        subject_person=child, consent_type=consent
+    ).count() == 2
