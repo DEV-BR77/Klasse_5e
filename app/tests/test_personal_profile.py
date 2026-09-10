@@ -81,18 +81,19 @@ def test_profile_home_area_persists_one_current_location(client, guardian):
             "contribution_name_mode": "family",
             "profile_image_mode": "avatar",
             "avatar_key": "peep-1",
-            "home_latitude": "52.423991",
-            "home_longitude": "10.786221",
+            "home_latitude": "52.42399149",
+            "home_longitude": "10.78622151",
         },
         secure=True,
     )
     assert response.status_code == 302
     guardian.person.refresh_from_db()
     assert str(guardian.person.home_latitude) == "52.423991"
-    assert str(guardian.person.home_longitude) == "10.786221"
+    assert str(guardian.person.home_longitude) == "10.786222"
     page = client.get(reverse("personal-profile"), secure=True)
     assert b"Mein Wohnbereich" in page.content
     assert b"Wohnbereich gespeichert" in page.content
+    assert b"Dein Profil wurde gespeichert." in page.content
 
 
 @pytest.mark.django_db

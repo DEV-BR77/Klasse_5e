@@ -186,7 +186,7 @@ def test_contacts_show_one_clean_family_name_and_only_shared_address(
     assert body.count('class="contact-person"') == 2
     assert "Wähle die Person aus" not in body
     assert 'href="/mehr/mobilitaet/" class="app-bottom-nav__item"' not in body
-    assert 'href="/kontakte/" class="app-bottom-nav__item"' in body
+    assert 'href="/kontakte/" class="app-bottom-nav__item app-bottom-nav__contacts"' in body
 
     guardian.person.field_visibility["city"] = False
     guardian.person.save(update_fields=["field_visibility"])
