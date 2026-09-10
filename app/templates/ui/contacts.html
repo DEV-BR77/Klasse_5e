@@ -20,22 +20,14 @@
       <small><span data-contact-count>{{ contacts|length }}</span> Familien</small>
     </div>
 
-    <div class="contacts-table" role="table" aria-label="Adressliste">
-      <div class="contacts-table__head" role="row">
-        <button type="button" data-contact-sort="family">Familie</button>
-        <button type="button" data-contact-sort="children">Kinder</button>
-        <button type="button" data-contact-sort="phone">Telefon</button>
-        <button type="button" data-contact-sort="email">E-Mail</button>
-        <span aria-hidden="true"></span>
-      </div>
-      <div data-contact-rows>
+    <div class="contacts-list" data-contact-rows>
         {% for contact in contacts %}
-          <article class="contacts-table__row" role="row" data-contact-row
+          <article class="contact-summary-card" data-contact-row
                    data-family="{{ contact.family_name|lower }}"
                    data-children="{% for child in contact.children %}{{ child.first_name }} {% endfor %}"
                    data-phone="{{ contact.phones|join:' ' }}"
                    data-email="{{ contact.emails|join:' ' }}">
-            <button type="button" class="contact-family" data-dialog-open="contact-{{ forloop.counter }}" role="cell">
+            <button type="button" class="contact-family" data-dialog-open="contact-{{ forloop.counter }}">
               <span class="contact-avatar">
                 {% if contact.family_photo %}
                   <img src="{% url 'family-photo' contact.family_photo.pk %}" alt="Familienbild {{ contact.family_name }}">
@@ -48,19 +40,19 @@
                 <small>{% for adult in contact.adults %}{{ adult.first_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>
               </span>
             </button>
-            <div class="contact-children contact-overview-cell" role="cell" data-label="Kinder">
+            <div class="contact-children contact-overview-cell" data-label="Kinder">
               {% for child in contact.children %}<span>{{ child.first_name }}</span>{% empty %}<span class="muted">Keine Kinder dieser Klasse</span>{% endfor %}
             </div>
-            <div class="contact-values contact-overview-cell" role="cell" data-label="Telefon">
+            <div class="contact-values contact-overview-cell" data-label="Telefon">
               {% for phone in contact.phone_displays %}<span>{{ phone }}</span>{% empty %}<span class="muted">Nicht freigegeben</span>{% endfor %}
             </div>
-            <div class="contact-values contact-overview-cell" role="cell" data-label="E-Mail">
+            <div class="contact-values contact-overview-cell" data-label="E-Mail">
               {% for email in contact.emails %}<span>{{ email }}</span>{% empty %}<span class="muted">Nicht freigegeben</span>{% endfor %}
             </div>
             <button type="button" class="button button-secondary contact-more" data-dialog-open="contact-{{ forloop.counter }}" aria-label="Kontaktkarte für Familie {{ contact.family_name }} öffnen">Kontakt</button>
           </article>
 
-          <dialog id="contact-{{ forloop.counter }}" class="app-dialog contact-dialog">
+          <dialog id="contact-{{ forloop.counter }}" class="app-dialog contact-dialog" aria-labelledby="contact-title-{{ forloop.counter }}">
             <div class="contact-card">
               <header class="dialog-head">
                 <div class="contact-card__identity">
@@ -71,7 +63,7 @@
                       <span class="family-initials" aria-hidden="true">{{ contact.family_initials }}</span>
                     {% endif %}
                   </span>
-                  <div><p class="eyebrow">Kontakt</p><h2>Familie {{ contact.family_name }}</h2></div>
+                  <div><p class="eyebrow">Kontakt</p><h2 id="contact-title-{{ forloop.counter }}">Familie {{ contact.family_name }}</h2></div>
                 </div>
                 <button type="button" class="icon-button" data-dialog-close aria-label="Schließen">×</button>
               </header>
@@ -119,7 +111,6 @@
         {% empty %}
           <div class="settings-details-body"><p>Für diese Klasse sind noch keine Familien gelistet.</p></div>
         {% endfor %}
-      </div>
     </div>
   </section>
 </section>

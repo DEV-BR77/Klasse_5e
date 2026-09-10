@@ -1259,6 +1259,21 @@ html[data-theme-mode="dark"] {
 .chat-room-page .composer-tool { width: 2.75rem; height: 2.75rem; }
 .chat-room-page .composer-tool:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 
+/* Contact directory: cards retain labels at every width instead of changing a
+ * desktop table into a visually broken pseudo-table on a phone. */
+.contacts-list { display: grid; gap: .85rem; padding: 1rem; }
+.contact-summary-card { display: grid; grid-template-columns: minmax(12rem, 1.3fr) minmax(7rem, .7fr) minmax(9rem, .9fr) minmax(10rem, 1fr) auto; gap: 1rem; align-items: center; border: 1px solid var(--color-border); border-radius: 1rem; background: var(--color-surface); padding: 1rem; }
+.contact-summary-card .contact-more { width: auto; min-width: 6.5rem; }
+.contact-dialog .dialog-head { position: sticky; top: 0; z-index: 2; background: var(--app-raised); padding-bottom: 1rem; }
+
+@media (max-width: 52rem) {
+  .contact-summary-card { grid-template-columns: minmax(0, 1fr); gap: .65rem; }
+  .contact-summary-card .contact-family { min-height: 3.5rem; }
+  .contact-summary-card .contact-overview-cell { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: .6rem; padding-left: 3.5rem; }
+  .contact-summary-card .contact-overview-cell::before { content: attr(data-label); color: var(--color-text-muted); font-size: .72rem; font-weight: 800; text-transform: uppercase; }
+  .contact-summary-card .contact-more { width: 100%; margin: .25rem 0 0; }
+}
+
 @media (max-width: 40rem) {
   .chat-live-status { align-items: flex-start; flex-direction: column; }
   .chat-live-status .button { width: 100%; }
