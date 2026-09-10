@@ -1,6 +1,7 @@
 from datetime import date
 
 import pytest
+from allauth.mfa.models import Authenticator
 from cryptography.fernet import Fernet
 from django.test import override_settings
 from django.utils import timezone
@@ -88,6 +89,11 @@ def test_school_admin_cannot_read_or_change_another_schools_adapter(
         provider="mensamax", name="Fremde", school=other_school
     )
     RoleAssignment.objects.create(user=guardian, role=Role.SCHOOL_ADMIN, school=school)
+    Authenticator.objects.create(
+        user=guardian,
+        type=Authenticator.Type.TOTP,
+        data={"secret": "synthetic-test-only"},
+    )
     client.force_login(guardian)
 
     listing = client.get("/verwaltung/adapter/", secure=True)
@@ -197,6 +203,7 @@ def test_guardian_can_only_activate_school_approved_modules_for_own_child(
         provider="webuntis",
         name="Schuldaten-Zugang",
         is_enabled=True,
+        base_url="https://thgwob.webuntis.com/",
     )
     allowed_module = PortalAdapterModule.objects.create(
         adapter=adapter,
