@@ -2192,6 +2192,17 @@ html[data-theme-mode="dark"] {
 .avatar-category-tabs [role="tab"] { flex: 0 0 auto; min-height: 2.55rem; border: 1px solid var(--app-border-strong); border-radius: .7rem; padding: .45rem .75rem; background: var(--color-surface); color: var(--color-text-muted); font: inherit; font-weight: 800; }
 .avatar-category-tabs [role="tab"][aria-selected="true"] { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-on-primary); }
 .avatar-option-group[hidden] { display: none; }
+.avatar-options-carousel { position: relative; min-width: 0; }
+.avatar-options-carousel :is(.avatar-option-grid, .avatar-swatch-grid) { display: flex; gap: .8rem; overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: inline mandatory; padding: .25rem 2.8rem .7rem; scrollbar-width: thin; }
+.avatar-options-carousel .avatar-option { flex: 0 0 clamp(8.4rem, 28%, 11.5rem); min-height: 8.7rem; scroll-snap-align: start; }
+.avatar-options-carousel .avatar-swatch-grid .avatar-option { flex-basis: 8.1rem; min-height: 5.7rem; }
+.avatar-carousel-control { position: absolute; z-index: 1; top: 50%; width: 2.45rem; height: 2.45rem; transform: translateY(-50%); border: 1px solid var(--app-border-strong); border-radius: 999px; background: var(--app-raised); color: var(--color-text); font-size: 2rem; line-height: 1; box-shadow: 0 .4rem 1rem rgb(18 25 54 / 18%); }
+.avatar-carousel-control--previous { left: .15rem; }
+.avatar-carousel-control--next { right: .15rem; }
+.avatar-carousel-control:disabled { opacity: .45; }
+.avatar-options-carousel::before, .avatar-options-carousel::after { position: absolute; z-index: 0; top: 0; bottom: .45rem; width: 2.2rem; content: ""; pointer-events: none; }
+.avatar-options-carousel::before { left: 0; background: linear-gradient(90deg, var(--app-raised), transparent); }
+.avatar-options-carousel::after { right: 0; background: linear-gradient(270deg, var(--app-raised), transparent); }
 
 /* Every directory and contact detail uses the same calm card vocabulary. */
 .contacts-page { max-width: 72rem; margin-inline: auto; }
@@ -2237,6 +2248,7 @@ html[data-theme-mode="dark"] {
   .avatar-designer__preview-panel { padding: 1rem; border-right: 0; border-bottom: 1px solid var(--color-border); }
   .avatar-designer__choices { overflow: visible; }
   .avatar-category-tabs { margin-inline: -.1rem; }
+  .avatar-options-carousel .avatar-option { flex-basis: min(68vw, 11rem); }
   .avatar-designer > .dialog-head, .avatar-designer > .dialog-actions { padding: 1rem; }
   .contact-dialog { width: calc(100vw - 1rem); }
   .contact-people { grid-template-columns: 1fr; }

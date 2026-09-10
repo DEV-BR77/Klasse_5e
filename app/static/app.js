@@ -825,6 +825,19 @@
     const holder = dialog.querySelector(`[data-avatar-options="${key}"]`); if (!holder) return;
     const options = key === "background" ? data.backgrounds.map((_, index) => ["", `Farbe ${index + 1}`]) : data.components[key];
     options.forEach((item, index) => holder.append(optionButton(key, index, item[1])));
+    const carousel = document.createElement("div"); carousel.className = "avatar-options-carousel";
+    const previous = document.createElement("button"); previous.type = "button"; previous.className = "avatar-carousel-control avatar-carousel-control--previous"; previous.setAttribute("aria-label", `Vorherige ${key === "background" ? "Hintergründe" : "Optionen"}`); previous.textContent = "‹";
+    const next = document.createElement("button"); next.type = "button"; next.className = "avatar-carousel-control avatar-carousel-control--next"; next.setAttribute("aria-label", `Weitere ${key === "background" ? "Hintergründe" : "Optionen"}`); next.textContent = "›";
+    holder.parentNode.insertBefore(carousel, holder); carousel.append(previous, holder, next);
+    const updateControls = () => {
+      const maxScroll = Math.max(0, holder.scrollWidth - holder.clientWidth - 2);
+      previous.disabled = holder.scrollLeft <= 1;
+      next.disabled = holder.scrollLeft >= maxScroll;
+    };
+    previous.addEventListener("click", () => holder.scrollBy({left: -Math.max(160, holder.clientWidth * .8), behavior: "smooth"}));
+    next.addEventListener("click", () => holder.scrollBy({left: Math.max(160, holder.clientWidth * .8), behavior: "smooth"}));
+    holder.addEventListener("scroll", updateControls, {passive: true});
+    requestAnimationFrame(updateControls);
   });
   const selectCategory = (key) => {
     dialog.querySelectorAll("[data-avatar-category]").forEach((tab) => {
