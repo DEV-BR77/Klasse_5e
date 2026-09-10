@@ -1000,6 +1000,7 @@ html[data-theme-mode="dark"] {
 
 @media (max-width: 640px) {
   .app-topbar {
+    flex-wrap: wrap;
     min-height: 3.75rem;
     gap: .4rem;
     padding: .45rem max(.75rem, env(safe-area-inset-right)) .45rem max(.75rem, env(safe-area-inset-left));
@@ -1083,9 +1084,33 @@ html[data-theme-mode="dark"] {
 
   .app-child-context > summary {
     min-width: 0;
-    max-width: 7.25rem;
+    max-width: none;
     min-height: 2.5rem;
     padding-left: .55rem;
+  }
+
+  /* On phones the family context gets its own full-width control row. This
+     keeps legal links and the notification/profile actions readable. */
+  .app-child-context {
+    order: 3;
+    flex: 1 0 100%;
+    width: 100%;
+  }
+
+  .app-child-context > summary {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: .8rem 2rem;
+  }
+
+  .app-child-context__label {
+    max-width: none;
+  }
+
+  .app-child-context__panel {
+    width: 100%;
   }
 
   .app-topbar__back,
