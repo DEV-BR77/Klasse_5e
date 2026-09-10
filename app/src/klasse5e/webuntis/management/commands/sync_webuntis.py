@@ -15,7 +15,7 @@ class Command(BaseCommand):
         if options["automatic"] and not schedule.enabled:
             self.stdout.write("Automatische WebUntis-Synchronisierung ist deaktiviert.")
             return
-        for connection in WebUntisConnection.objects.all().iterator():
+        for connection in WebUntisConnection.objects.filter(adapter__isnull=False).iterator():
             try:
                 run = run_connection(
                     connection,

@@ -65,11 +65,14 @@ def provider_available_for_student(student, provider):
     return personal_modules(student, provider).exists()
 
 
-def set_connection_state(student, provider, state):
+def set_connection_state(student, provider, state, *, adapter=None):
     """Reflect a credential change without storing credentials in the catalogue."""
 
-    ChildModuleConnection.objects.filter(
+    connections = ChildModuleConnection.objects.filter(
         student=student,
         module__in=personal_modules(student, provider),
         module__requires_child_credentials=True,
-    ).update(connection_state=state)
+    )
+    if adapter is not None:
+        connections = connections.filter(module__adapter=adapter)
+    connections.update(connection_state=state)

@@ -4,7 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from klasse5e.portal_adapters.models import PortalAdapter
-from klasse5e.portal_adapters.policies import provider_available_for_student
+from klasse5e.portal_adapters.policies import personal_modules
 
 from .models import SyncRun, SyncSchedule, WebUntisConnection
 from .scheduling import next_run
@@ -40,10 +40,12 @@ def run_due_schedules(*, now=None):
         if not schedule or schedule.source != "webuntis":
             continue
         started = timezone.now()
-        for connection in WebUntisConnection.objects.filter(sync_enabled=True).iterator():
-            if not provider_available_for_student(
+        for connection in WebUntisConnection.objects.filter(
+            sync_enabled=True, adapter__isnull=False
+        ).select_related("adapter").iterator():
+            if not personal_modules(
                 connection.student, PortalAdapter.Provider.WEBUNTIS
-            ):
+            ).filter(adapter=connection.adapter).exists():
                 continue
             try:
                 key = f"due:{schedule.pk}:{connection.pk}:{schedule.last_started_at.isoformat()}"

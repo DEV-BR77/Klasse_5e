@@ -28,7 +28,7 @@ def connection(request):
     if selected and not can_manage_connection(request.user, selected):
         raise Http404
     current = (
-        WebUntisConnection.objects.filter(user=request.user, student=selected)
+        WebUntisConnection.objects.filter(user=request.user, student=selected, adapter__isnull=False)
         .prefetch_related("features")
         .first()
         if selected
@@ -110,7 +110,7 @@ def connection(request):
 @login_required
 def calendar_settings(request):
     connections = list(
-        WebUntisConnection.objects.filter(user=request.user)
+        WebUntisConnection.objects.filter(user=request.user, adapter__isnull=False)
         .select_related("student")
         .order_by("student__first_name")
     )

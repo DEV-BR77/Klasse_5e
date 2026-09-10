@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 
 from klasse5e.core.models import Person
+from klasse5e.portal_adapters.models import PortalAdapter
 
 
 class ConnectionStatus(models.TextChoices):
@@ -25,6 +26,14 @@ class WebUntisConnection(models.Model):
     )
     student = models.ForeignKey(
         Person, on_delete=models.CASCADE, related_name="webuntis_connections"
+    )
+    adapter = models.ForeignKey(
+        PortalAdapter,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="webuntis_connections",
+        help_text="Die geprüfte Schulintegration dieses persönlichen Zugangs.",
     )
     server = models.CharField(max_length=255, default="thgwob.webuntis.com")
     school = models.CharField(max_length=80, default="thgwob")
