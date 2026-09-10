@@ -169,6 +169,7 @@ def test_child_profile_keeps_invalid_form_values_visible(client, guardian, manag
     assert response.status_code == 200
     assert b"Die Angaben wurden noch nicht gespeichert." in response.content
     assert b"keine Telefonnummer" in response.content
+    assert b"Mila verwalten" in response.content
     managed_child.refresh_from_db()
     assert managed_child.phone == ""
 

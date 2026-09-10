@@ -3094,6 +3094,16 @@ def family(request):
             form_error = " ".join(error.messages)
             bound_person_id = request.POST.get("person_id", "")
             bound_form_data = request.POST
+            active_tab = request.POST.get("tab", active_tab)
+            requested_child = request.POST.get("child", "")
+            active_relationship = next(
+                (
+                    item
+                    for item in relationships
+                    if str(item.pk) == requested_child and item.is_current()
+                ),
+                active_relationship,
+            )
         else:
             tab = request.POST.get("tab", "overview")
             child = request.POST.get("child", "")
