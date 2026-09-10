@@ -179,6 +179,8 @@ def test_contacts_show_one_clean_family_name_and_only_shared_address(
     assert 'href="mailto:guardian@example.test"' in body
     assert 'href="tel:+4915123456789"' in body
     assert 'href="mailto:mila@example.test"' in body
+    assert body.count(">Anrufen</a>") == 2
+    assert body.count(">E-Mail</a>") == 2
     assert body.count('class="contact-person"') == 2
     assert "Wähle die Person aus" not in body
     assert 'href="/mehr/mobilitaet/" class="app-bottom-nav__item"' not in body
