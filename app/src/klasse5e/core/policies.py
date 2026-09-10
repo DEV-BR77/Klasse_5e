@@ -39,7 +39,13 @@ def active_roles(user, school_class=None):
         return set()
     query = RoleAssignment.objects.filter(user=user, active=True)
     if school_class is not None:
-        query = query.filter(school_class=school_class)
+        # A role may be global, assigned to the whole school or limited to one
+        # class. All three scopes apply when a concrete class is evaluated.
+        query = query.filter(
+            models.Q(school_class=school_class)
+            | models.Q(school=school_class.school, school_class__isnull=True)
+            | models.Q(school__isnull=True, school_class__isnull=True)
+        )
     return set(query.values_list("role", flat=True))
 
 

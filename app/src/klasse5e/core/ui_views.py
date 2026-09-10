@@ -401,7 +401,7 @@ def _class_or_404(user, request=None):
         Role.SCHOOL_ADMIN,
         Role.CLASS_ADMIN,
     }:
-        school_class = SchoolClass.objects.filter(status="active").order_by("id").first()
+        school_class = _manageable_classes(user).first()
         if school_class:
             return school_class
     raise Http404

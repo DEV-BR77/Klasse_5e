@@ -5,7 +5,8 @@ from django.db import transaction
 from klasse5e.chat.models import ChatRoom
 from klasse5e.chat.notifications import notify_parent_representatives
 from klasse5e.chat.services import create_message
-from klasse5e.core.models import AuditEvent, Role, RoleAssignment, UserNotification
+from klasse5e.core.models import AuditEvent, Role, RoleAssignment, School, SchoolClass, UserNotification
+from klasse5e.core.policies import active_roles
 from klasse5e.core.role_management import set_user_role
 
 pytestmark = pytest.mark.django_db
@@ -29,6 +30,40 @@ def test_delegated_roles_cannot_escalate(guardian, admin_user, school_class, rol
     RoleAssignment.objects.filter(user=guardian).update(role=role)
     with pytest.raises(PermissionDenied):
         set_user_role(guardian, admin_user, Role.PRIMARY_ADMIN)
+
+
+def test_roles_are_additive_and_respect_global_school_and_class_scope(
+    guardian, school_class, year
+):
+    other_school = School.objects.create(name="Andere Schule", slug="andere-schule")
+    other_class = SchoolClass.objects.create(
+        school=other_school, school_year=year, name="Andere 5e", code="other-5e"
+    )
+    RoleAssignment.objects.create(
+        user=guardian, role=Role.SCHOOL_LEADERSHIP, school=school_class.school
+    )
+    RoleAssignment.objects.create(
+        user=guardian,
+        role=Role.DEPUTY_PARENT_REPRESENTATIVE,
+        school_class=school_class,
+    )
+    RoleAssignment.objects.create(user=guardian, role=Role.CONTENT_MANAGER)
+
+    assert active_roles(guardian, school_class) == {
+        Role.GUARDIAN,
+        Role.SCHOOL_LEADERSHIP,
+        Role.DEPUTY_PARENT_REPRESENTATIVE,
+        Role.CONTENT_MANAGER,
+    }
+    assert active_roles(guardian, other_class) == {Role.CONTENT_MANAGER}
+
+
+def test_same_role_can_be_assigned_for_two_school_scopes(guardian, school_class, year):
+    other_school = School.objects.create(name="Zweite Schule", slug="zweite-schule")
+    RoleAssignment.objects.create(user=guardian, role=Role.SCHOOL_ADMIN, school=school_class.school)
+    RoleAssignment.objects.create(user=guardian, role=Role.SCHOOL_ADMIN, school=other_school)
+
+    assert RoleAssignment.objects.filter(user=guardian, role=Role.SCHOOL_ADMIN).count() == 2
 
 
 def test_membership_and_role_validation(admin_user, guardian, school_class):

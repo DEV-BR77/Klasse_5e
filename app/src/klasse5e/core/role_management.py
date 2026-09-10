@@ -20,7 +20,11 @@ def set_user_role(actor, user, role, *, school_class=None, active=True):
     # Serialize role administration, including simultaneous administrator revocations.
     list(UserAccount.objects.select_for_update().order_by("pk").values_list("pk", flat=True))
     require_role_manager(actor)
-    if role not in {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.PARENT_REPRESENTATIVE}:
+    representative_roles = {
+        Role.PARENT_REPRESENTATIVE,
+        Role.DEPUTY_PARENT_REPRESENTATIVE,
+    }
+    if role not in {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, *representative_roles}:
         raise ValidationError("Diese Rolle kann hier nicht vergeben werden.")
     if role in {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN}:
         if school_class is not None:
@@ -50,7 +54,10 @@ def set_user_role(actor, user, role, *, school_class=None, active=True):
 
 def parent_representatives(school_class):
     users = UserAccount.objects.filter(
-        roleassignment__role=Role.PARENT_REPRESENTATIVE,
+        roleassignment__role__in=[
+            Role.PARENT_REPRESENTATIVE,
+            Role.DEPUTY_PARENT_REPRESENTATIVE,
+        ],
         roleassignment__school_class=school_class, roleassignment__active=True,
         is_active=True, locked_at__isnull=True,
     ).distinct()

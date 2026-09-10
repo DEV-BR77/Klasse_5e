@@ -589,12 +589,16 @@ class Role(models.TextChoices):
     SCHOOL_ADMIN = "school_admin", "Schuladministrator"
     CLASS_ADMIN = "class_admin", "Klassenadministrator"
     DEPUTY_ADMIN = "deputy_admin", "Stellvertretender Administrator"
-    TEACHER = "teacher", "Klassenlehrer"
+    TEACHER = "teacher", "Lehrer"
+    SCHOOL_LEADERSHIP = "school_leadership", "Schulleitung"
+    CONTENT_MANAGER = "content_manager", "Content Manager"
     EDITOR = "editor", "Redakteur"
     MODERATOR = "moderator", "Moderator"
     ORGANIZER = "organizer", "Organisator"
     GUARDIAN = "guardian", "Elternteil"
+    STUDENT = "student", "Schüler"
     PARENT_REPRESENTATIVE = "parent_representative", "Elternvertretung"
+    DEPUTY_PARENT_REPRESENTATIVE = "deputy_parent_representative", "Stellvertretende Elternvertretung"
     PUSH_SUBSCRIBER = "push_subscriber", "Benachrichtigungs-Abonnent"
 
 
@@ -612,7 +616,8 @@ class RoleAssignment(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "school_class", "role"], name="unique_user_class_role"
+                fields=["user", "school", "school_class", "role"],
+                name="unique_user_role_scope",
             )
         ]
 
