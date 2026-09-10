@@ -4,10 +4,10 @@
   <header class="page-heading compact-heading"><div><p class="eyebrow">Gemeinsam planen</p><h1>Veranstaltungen</h1></div>{% if can_manage_portal %}<div class="flow-actions"><button class="button button-primary" type="button" data-dialog-open="new-event-dialog">Neue Veranstaltung</button></div>{% endif %}</header>
   <div class="event-card-grid">{% for item in events %}<a class="event-list-card" href="/mehr/veranstaltungen/{{ item.id }}/"><time><strong>{{ item.starts_at|date:"d" }}</strong><span>{{ item.starts_at|date:"M" }}</span></time><div><span class="soft-badge">Veranstaltung</span><h2>{{ item.title }}</h2><p>{{ item.starts_at|date:"H:i" }} Uhr · {{ item.location }}</p><small>{{ item.description|truncatechars:120 }}</small></div><span class="card-arrow">→</span></a>{% empty %}<p class="empty-state">Noch keine Veranstaltungen geplant.</p>{% endfor %}</div>
   {% if can_manage_portal %}
-  <dialog id="new-event-dialog" class="app-dialog app-dialog-wide">
+  <dialog id="new-event-dialog" class="app-dialog app-dialog-wide" aria-labelledby="new-event-title">
     <form method="post" class="form-stack">
       {% csrf_token %}
-      <header class="dialog-head"><div><p class="eyebrow">Neuer Termin</p><h2>Veranstaltung anlegen</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header>
+      <header class="dialog-head"><div><p class="eyebrow">Neuer Termin</p><h2 id="new-event-title">Veranstaltung anlegen</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header>
       <label>Titel<input name="title" maxlength="200" placeholder="z. B. Klassenfrühstück" required></label>
       <label>Beschreibung<textarea name="description" rows="3" required></textarea></label>
       <div class="field-pair"><label>Ort<input name="location" maxlength="200" required placeholder="z. B. Klassenraum oder Online"></label><label>Teams-Meeting-Link<input type="url" name="meeting_url" maxlength="200" placeholder="https://teams.microsoft.com/…"></label><label>Beginn<input type="datetime-local" name="starts_at" required></label><label>Ende<input type="datetime-local" name="ends_at" required></label></div>

@@ -6,7 +6,13 @@
   </header>
   <div class="card-grid">
     {% for item in posts %}
-      <article class="content-card"><p class="eyebrow">Information</p><h2><a href="/mehr/aktuelles/{{ item.id }}/">{{ item.title }}</a></h2><a class="button button-secondary button-compact" href="/mehr/aktuelles/{{ item.id }}/">Beitrag öffnen</a></article>
+      <article class="content-card post-list-card">
+        <p class="eyebrow">{{ item.category }}{% if item.important %} · Wichtig{% endif %}</p>
+        <h2><a href="{% url 'ui-post-detail' item.id %}">{{ item.title }}</a></h2>
+        <p class="muted">{{ item.body|truncatechars:150 }}</p>
+        <p class="post-list-card__meta">Aktualisiert {{ item.updated_at|date:"d.m.Y, H:i" }}{% if item.pinned %} · Angeheftet{% endif %}</p>
+        <a class="button button-secondary button-compact" href="{% url 'ui-post-detail' item.id %}">Beitrag öffnen</a>
+      </article>
     {% empty %}
       <p class="empty-state card">Zurzeit gibt es keine neuen Beiträge.</p>
     {% endfor %}

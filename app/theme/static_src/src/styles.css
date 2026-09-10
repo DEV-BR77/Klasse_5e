@@ -2222,6 +2222,7 @@ html[data-theme-mode="dark"] {
 .content-card :is(h2, p) { margin: 0; }
 .content-card .button { width: fit-content; margin-top: auto; }
 .document-card__meta { margin: 0; color: var(--color-text-muted); font-size: .92rem; }
+.post-list-card__meta { margin: 0; color: var(--color-text-muted); font-size: .9rem; }
 .event-card-grid, .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
 .event-list-card { min-height: 10rem; border-radius: 1.2rem; text-decoration: none; }
 .post-detail-page { max-width: 48rem; margin-inline: auto; }
