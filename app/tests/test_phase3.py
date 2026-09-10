@@ -83,6 +83,27 @@ def test_teacher_fields_default_hidden(school_class):
 
 
 @pytest.mark.django_db
+def test_teacher_directory_respects_contact_visibility(client, guardian, school_class):
+    person = Person.objects.create(first_name="Tessa", last_name="Synthetic")
+    TeacherProfile.objects.create(
+        person=person, school_class=school_class, subjects="Mathematik",
+        class_function="Klassenleitung", school_email="tessa@example.test",
+        office_hours="Dienstag nach Vereinbarung", email_visibility=Visibility.MEMBERS,
+        office_hours_visibility=Visibility.HIDDEN,
+    )
+    client.force_login(guardian)
+
+    page = client.get("/mehr/lehrkraefte/", secure=True)
+
+    content = page.content.decode()
+    assert page.status_code == 200
+    assert "Klassenleitung" in content
+    assert "Mathematik" in content
+    assert 'href="mailto:tessa@example.test"' in content
+    assert "Dienstag nach Vereinbarung" not in content
+
+
+@pytest.mark.django_db
 def test_comments_require_membership_and_open_topic(client, guardian, school_class, year):
     post = Post.objects.create(
         school_class=school_class,
