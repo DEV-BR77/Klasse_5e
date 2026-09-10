@@ -385,7 +385,11 @@ def absence_portal(request):
             "submission_result": AbsenceSubmission.objects.filter(
                 token=submission_token, user=request.user
             ).select_related("student").first(),
-            "webuntis_url": "https://thgwob.webuntis.com/student-absences",
+            "webuntis_url": (
+                f"https://{next(iter(_connections.values())).server}/student-absences"
+                if _connections
+                else ""
+            ),
             "form": form,
             "absences": WebUntisAbsence.objects.filter(
                 connection__student_id__in=visible_ids,

@@ -20,6 +20,7 @@ services:
       BIOMETRIC_SEARCH_ENABLED: ${BIOMETRIC_SEARCH_ENABLED:-0}
       BIOMETRIC_PIPELINE_ID: ${BIOMETRIC_PIPELINE_ID:-yunet-sface-2023mar-2021dec}
       WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY: ${WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY:?Provide WebUntis credential encryption key}
+      WEBUNTIS_ALLOWED_HOSTS: ${WEBUNTIS_ALLOWED_HOSTS:-thgwob.webuntis.com,heinrich-nordhoff.webuntis.com}
       ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY: ${ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY:?Provide itslearning credential encryption key}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:?Provide VAPID public key}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:?Provide VAPID private key}

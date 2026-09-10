@@ -11,6 +11,8 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
+from django.conf import settings
+
 ALLOWED_HOST = "thgwob.webuntis.com"
 ALLOWED_RPC = {
     "getTimetable",
@@ -79,7 +81,7 @@ class WebUntisClient:
         timeout=10.0,
         user_agent="Klasse-5e-WebUntis-Pilot/9A",
     ):
-        if server != ALLOWED_HOST:
+        if server not in settings.WEBUNTIS_ALLOWED_HOSTS:
             raise ValueError("WebUntis-Server nicht freigegeben")
         self.base = f"https://{server}/WebUntis"
         self.school = school

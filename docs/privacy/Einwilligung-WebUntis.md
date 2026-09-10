@@ -6,7 +6,7 @@ Ich willige freiwillig ein, dass das Klassenportal mit dem von mir hinterlegten 
 
 - Zwecke und Kategorien: Stundenplan, Hausaufgaben, Prüfungen und Abwesenheiten werden getrennt gewählt.
 - Daten: verschlüsselter Zugang, technische Abrufmetadaten und die jeweilige WebUntis-Antwort.
-- Empfänger: Klassenportal und `thgwob.webuntis.com`; keine MCP-/KI-Laufzeit.
+- Empfänger: Klassenportal und ausschließlich der für die Schule freigegebene WebUntis-Host; keine KI-Laufzeit.
 - Auslösung: ausschließlich manuell über „Aktuell prüfen“, solange keine neue Freigabe etwas anderes festlegt.
 - Ohne Zustimmung: keine Kategorie wird abgerufen; Kernfunktionen bleiben erhalten.
 - Widerruf: Kategorie wird sofort gesperrt. Der Zugang kann vollständig gelöscht werden.

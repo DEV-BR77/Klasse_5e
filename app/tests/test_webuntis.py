@@ -3,9 +3,13 @@ from unittest.mock import patch
 
 import pytest
 from cryptography.fernet import Fernet
+from django.utils import timezone
 
+from klasse5e.core.models import ClassMembership, GuardianChildRelationship, Person
+from klasse5e.portal_adapters.models import ChildModuleConnection, PortalAdapter, PortalAdapterModule
 from klasse5e.webuntis.client import ALLOWED_HOST, EndpointUnsupported, WebUntisClient
 from klasse5e.webuntis.crypto import decrypt, encrypt
+from klasse5e.webuntis.services import configured_endpoint
 
 
 def test_https_and_fixed_host():
@@ -14,6 +18,46 @@ def test_https_and_fixed_host():
     assert ALLOWED_HOST == "thgwob.webuntis.com"
     with pytest.raises(ValueError):
         WebUntisClient("u", "p", server="evil.example")
+
+
+def test_second_allowlisted_school_host_is_supported():
+    client = WebUntisClient("user", "password", server="heinrich-nordhoff.webuntis.com")
+    assert client.base.startswith("https://heinrich-nordhoff.webuntis.com/")
+
+
+@pytest.mark.django_db
+def test_school_adapter_endpoint_is_resolved_per_child(guardian, school_class):
+    student = Person.objects.create(first_name="School", last_name="Child")
+    ClassMembership.objects.create(
+        person=student, school_class=school_class, valid_from=timezone.localdate()
+    )
+    GuardianChildRelationship.objects.create(
+        guardian_person=guardian.person,
+        student_person=student,
+        relationship_type="father",
+        is_legal_guardian=True,
+        may_view_student_profile=True,
+        valid_from=timezone.localdate(),
+        status="verified",
+        verified_by=guardian,
+        verified_at=timezone.now(),
+    )
+    adapter = PortalAdapter.objects.create(
+        provider=PortalAdapter.Provider.WEBUNTIS,
+        name="Nordhoff WebUntis",
+        base_url="https://heinrich-nordhoff.webuntis.com/WebUntis/#/basic/login",
+        is_enabled=True,
+    )
+    adapter.schools.add(school_class.school)
+    module = PortalAdapterModule.objects.create(
+        adapter=adapter,
+        key="timetable",
+        label="Stundenplan",
+        is_enabled=True,
+        requires_child_credentials=True,
+    )
+    ChildModuleConnection.objects.create(student=student, module=module, is_enabled=True)
+    assert configured_endpoint(student) == ("heinrich-nordhoff.webuntis.com", "heinrich-nordhoff")
 
 
 def test_arbitrary_endpoint_is_rejected():

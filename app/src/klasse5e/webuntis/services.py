@@ -1,9 +1,16 @@
+from urllib.parse import urlsplit
+
+from django.conf import settings
 from django.db import transaction
 
 from klasse5e.core.models import AuditEvent, Person, RelationshipStatus
 from klasse5e.core.policies import visible_student_people
 from klasse5e.portal_adapters.models import ChildModuleConnection, PortalAdapter
-from klasse5e.portal_adapters.policies import provider_available_for_student, set_connection_state
+from klasse5e.portal_adapters.policies import (
+    provider_available_for_student,
+    school_modules,
+    set_connection_state,
+)
 
 from .crypto import encrypt
 from .models import FeatureKey, WebUntisConnection, WebUntisFeaturePreference
@@ -30,10 +37,39 @@ def can_manage_connection(user, student):
     )
 
 
+def configured_endpoint(student):
+    """Resolve the one reviewed WebUntis endpoint available to this child.
+
+    A family never enters a host or technical school identifier. Both values
+    come from the school-owned adapter and are checked against the deployment
+    allowlist before credentials can be encrypted.
+    """
+    endpoints = list(
+        school_modules(student, PortalAdapter.Provider.WEBUNTIS)
+        .filter(requires_child_credentials=True)
+        .values_list("adapter__base_url", "adapter__institution_identifier")
+        .distinct()
+    )
+    if len(endpoints) != 1:
+        raise PermissionError("Für dieses Kind ist kein eindeutiger WebUntis-Zugang eingerichtet.")
+    base_url, configured_school = endpoints[0]
+    parsed = urlsplit(base_url)
+    server = (parsed.hostname or "").lower()
+    if (
+        parsed.scheme != "https"
+        or not server
+        or parsed.port is not None
+        or server not in settings.WEBUNTIS_ALLOWED_HOSTS
+    ):
+        raise PermissionError("Der WebUntis-Server der Schule ist nicht freigegeben.")
+    return server, configured_school.strip() or server.split(".", maxsplit=1)[0]
+
+
 @transaction.atomic
 def save_connection(*, user, student, username, password):
     if not can_manage_connection(user, student):
         raise PermissionError("WebUntis ist für dieses Kind nicht freigegeben.")
+    server, school = configured_endpoint(student)
     connection, _ = WebUntisConnection.objects.update_or_create(
         user=user,
         student=student,
@@ -42,8 +78,8 @@ def save_connection(*, user, student, username, password):
             "password_encrypted": encrypt(password),
             "status": "not_tested",
             "status_detail": "",
-            "server": "thgwob.webuntis.com",
-            "school": "thgwob",
+            "server": server,
+            "school": school,
         },
     )
     for key, _label in FeatureKey.choices:

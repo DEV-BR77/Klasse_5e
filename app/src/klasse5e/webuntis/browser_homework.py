@@ -1,6 +1,8 @@
 import json
 from urllib.parse import urlparse
 
+from django.conf import settings
+
 from .client import ALLOWED_HOST, InvalidCredentials, InvalidResponse, TemporaryNetworkError
 
 LOGIN_PATH = "/WebUntis/"
@@ -17,11 +19,11 @@ class BrowserCrashed(TemporaryNetworkError):
     code = "browser_crashed"
 
 
-def _allowed_url(url, path):
+def _allowed_url(url, path, server=ALLOWED_HOST):
     parsed = urlparse(url)
     return (
         parsed.scheme == "https"
-        and parsed.hostname == ALLOWED_HOST
+        and parsed.hostname == server
         and parsed.port is None
         and parsed.path == path
     )
@@ -29,7 +31,7 @@ def _allowed_url(url, path):
 
 class PlaywrightHomeworkClient:
     def __init__(self, username, password, *, server=ALLOWED_HOST, school="thgwob", timeout_ms=30_000):
-        if server != ALLOWED_HOST:
+        if server not in settings.WEBUNTIS_ALLOWED_HOSTS:
             raise ValueError("WebUntis-Server nicht freigegeben")
         self.username = username
         self.password = password
@@ -65,7 +67,7 @@ class PlaywrightHomeworkClient:
                             else route.continue_(),
                         )
                         login_url = f"https://{self.server}{LOGIN_PATH}?school={self.school}#/basic/login"
-                        if not _allowed_url(login_url, LOGIN_PATH):
+                        if not _allowed_url(login_url, LOGIN_PATH, self.server):
                             raise ValueError("Nicht freigegebener Loginpfad")
                         page.goto(login_url, wait_until="domcontentloaded")
                         page.locator('input[type="text"]').first.fill(self.username)
@@ -76,10 +78,10 @@ class PlaywrightHomeworkClient:
                         if password.is_visible():
                             raise InvalidCredentials()
                         homework_url = f"https://{self.server}{HOMEWORK_PAGE_PATH}"
-                        if not _allowed_url(homework_url, HOMEWORK_PAGE_PATH):
+                        if not _allowed_url(homework_url, HOMEWORK_PAGE_PATH, self.server):
                             raise ValueError("Nicht freigegebener Hausaufgabenpfad")
                         with page.expect_response(
-                            lambda response: _allowed_url(response.url, HOMEWORK_API_PATH)
+                            lambda response: _allowed_url(response.url, HOMEWORK_API_PATH, self.server)
                             and response.request.method == "GET"
                             and response.status == 200,
                             timeout=self.timeout_ms,

@@ -36,12 +36,19 @@ def connection(request):
     )
     form = WebUntisCredentialForm(request.POST or None)
     if request.method == "POST" and form.is_valid() and selected:
-        save_connection(
-            user=request.user,
-            student=selected,
-            username=form.cleaned_data["username"],
-            password=form.cleaned_data["password"],
-        )
+        try:
+            save_connection(
+                user=request.user,
+                student=selected,
+                username=form.cleaned_data["username"],
+                password=form.cleaned_data["password"],
+            )
+        except PermissionError:
+            messages.error(
+                request,
+                "Der Schuldaten-Zugang ist für dieses Kind noch nicht vollständig eingerichtet.",
+            )
+            return redirect("webuntis-connection")
         messages.success(request, "Schuldaten-Zugang eingerichtet.")
         if request.POST.get("return_to") == "family":
             relationship = GuardianChildRelationship.objects.filter(

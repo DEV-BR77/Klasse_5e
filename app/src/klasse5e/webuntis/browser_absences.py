@@ -8,6 +8,8 @@ import re
 from datetime import datetime
 from urllib.parse import urlparse
 
+from django.conf import settings
+
 from .absence_verification import AbsenceRecord
 from .browser_homework import BrowserCrashed, BrowserTimeout
 from .client import ALLOWED_HOST, InvalidCredentials
@@ -16,14 +18,14 @@ LOGIN_PATH = "/WebUntis/"
 ABSENCES_PATH = "/student-absences"
 
 
-def _allowed_url(url, path):
+def _allowed_url(url, path, server=ALLOWED_HOST):
     parsed = urlparse(url)
-    return parsed.scheme == "https" and parsed.hostname == ALLOWED_HOST and parsed.port is None and parsed.path == path
+    return parsed.scheme == "https" and parsed.hostname == server and parsed.port is None and parsed.path == path
 
 
 class PlaywrightAbsenceClient:
     def __init__(self, username, password, *, server=ALLOWED_HOST, school="thgwob", student_key="", timeout_ms=30_000):
-        if server != ALLOWED_HOST or not student_key:
+        if server not in settings.WEBUNTIS_ALLOWED_HOSTS or not student_key:
             raise ValueError("WebUntis-Ziel oder Kindbindung nicht freigegeben")
         self.username = username
         self.password = password
@@ -72,7 +74,7 @@ class PlaywrightAbsenceClient:
 
     def _login(self):
         url = f"https://{self.server}{LOGIN_PATH}?school={self.school}#/basic/login"
-        if not _allowed_url(url, LOGIN_PATH):
+        if not _allowed_url(url, LOGIN_PATH, self.server):
             raise ValueError("Nicht freigegebener WebUntis-Login")
         self._page.goto(url, wait_until="domcontentloaded")
         self._page.locator('input[type="text"]').first.fill(self.username)
@@ -85,7 +87,7 @@ class PlaywrightAbsenceClient:
 
     def _frame(self):
         url = f"https://{self.server}{ABSENCES_PATH}"
-        if not _allowed_url(url, ABSENCES_PATH):
+        if not _allowed_url(url, ABSENCES_PATH, self.server):
             raise ValueError("Nicht freigegebene WebUntis-Abwesenheitsseite")
         self._page.goto(url, wait_until="domcontentloaded")
         self._page.locator("#embedded-webuntis").wait_for(state="attached")

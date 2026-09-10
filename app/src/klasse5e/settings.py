@@ -197,6 +197,13 @@ BIOMETRIC_SECURITY_AUDIT_RETENTION_DAYS = 90
 CHAT_RETENTION_DAYS = int(os.environ.get("CHAT_RETENTION_DAYS", "90"))
 WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY = os.environ.get("WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY", "")
 WEBUNTIS_SERVER = os.environ.get("WEBUNTIS_SERVER", "thgwob.webuntis.com")
+WEBUNTIS_ALLOWED_HOSTS = tuple(
+    host.strip().lower()
+    for host in os.environ.get(
+        "WEBUNTIS_ALLOWED_HOSTS", "thgwob.webuntis.com,heinrich-nordhoff.webuntis.com"
+    ).split(",")
+    if host.strip()
+)
 WEBUNTIS_SCHOOL = os.environ.get("WEBUNTIS_SCHOOL", "thgwob")
 ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY = os.environ.get(
     "ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY", ""
