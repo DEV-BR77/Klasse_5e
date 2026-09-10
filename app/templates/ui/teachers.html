@@ -1,1 +1,20 @@
-{% extends "base.html" %}{% block content %}<section><h1>Lehrkräfte</h1><div class="card-grid">{% for item in teachers %}<article class="content-card"><h2>{{ item.person.first_name }} {{ item.person.last_name }}</h2></article>{% empty %}<p class="empty-state">Keine Profile.</p>{% endfor %}</div></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="teachers-page">
+  <header class="page-heading compact-heading">
+    <div><p class="eyebrow">Klasse</p><h1>Lehrkräfte</h1><p class="lede">Ansprechpersonen und Zuständigkeiten deiner Klasse.</p></div>
+  </header>
+  <div class="card-grid">
+    {% for item in teachers %}
+    <article class="content-card teacher-card">
+      <p class="eyebrow">Lehrkraft</p>
+      <h2>{{ item.person.first_name }} {{ item.person.last_name }}</h2>
+      {% if item.class_function %}<p class="teacher-card__role">{{ item.class_function }}</p>{% endif %}
+      {% if item.subjects %}<p class="muted">{{ item.subjects }}</p>{% endif %}
+      {% if item.office_hours and item.office_hours_visibility == 'members' %}<p class="teacher-card__meta"><strong>Sprechzeit:</strong> {{ item.office_hours }}</p>{% endif %}
+      {% if item.school_email and item.email_visibility == 'members' %}<a class="button button-secondary button-compact" href="mailto:{{ item.school_email }}">E-Mail schreiben</a>{% endif %}
+    </article>
+    {% empty %}<p class="empty-state card">Für diese Klasse sind noch keine Lehrkräfte hinterlegt.</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}
