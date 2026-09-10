@@ -2168,6 +2168,10 @@ html[data-theme-mode="dark"] {
 .profile-image-panel .profile-image-preview-large { width: 7rem; height: 7rem; flex-basis: 7rem; border-radius: 1.4rem; }
 .profile-image-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
 .profile-image-actions .muted { flex: 1 0 100%; margin: 0; }
+.profile-draft-status { margin: 0; color: var(--color-primary); font-weight: 750; }
+.form-error-summary { border: 1px solid var(--color-danger, #c34359); border-radius: 1rem; padding: 1rem 1.15rem; background: color-mix(in srgb, var(--color-danger, #c34359) 11%, var(--color-surface)); color: var(--color-text); }
+.form-error-summary :is(strong, ul) { margin: 0; }
+.form-error-summary ul { padding-left: 1.2rem; }
 
 /* Dialogs never create a second page-width scroll area.  The control list is
    the only scrollable region in the avatar editor. */
@@ -2184,6 +2188,10 @@ html[data-theme-mode="dark"] {
 .avatar-designer__choices { overflow: auto; overscroll-behavior: contain; }
 .avatar-designer > .dialog-head, .avatar-designer > .dialog-actions { flex: 0 0 auto; }
 .avatar-designer__preview-panel { background: color-mix(in srgb, var(--color-primary-light) 58%, var(--color-surface)); }
+.avatar-category-tabs { display: flex; gap: .45rem; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: thin; }
+.avatar-category-tabs [role="tab"] { flex: 0 0 auto; min-height: 2.55rem; border: 1px solid var(--app-border-strong); border-radius: .7rem; padding: .45rem .75rem; background: var(--color-surface); color: var(--color-text-muted); font: inherit; font-weight: 800; }
+.avatar-category-tabs [role="tab"][aria-selected="true"] { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-on-primary); }
+.avatar-option-group[hidden] { display: none; }
 
 /* Every directory and contact detail uses the same calm card vocabulary. */
 .contacts-page { max-width: 72rem; margin-inline: auto; }
@@ -2228,6 +2236,7 @@ html[data-theme-mode="dark"] {
   .avatar-designer__layout { grid-template-columns: 1fr; overflow: auto; }
   .avatar-designer__preview-panel { padding: 1rem; border-right: 0; border-bottom: 1px solid var(--color-border); }
   .avatar-designer__choices { overflow: visible; }
+  .avatar-category-tabs { margin-inline: -.1rem; }
   .avatar-designer > .dialog-head, .avatar-designer > .dialog-actions { padding: 1rem; }
   .contact-dialog { width: calc(100vw - 1rem); }
   .contact-people { grid-template-columns: 1fr; }

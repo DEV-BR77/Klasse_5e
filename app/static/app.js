@@ -741,19 +741,23 @@
   const chat = document.querySelector("[data-chat-poll]");
   if (chat) {
     const status = document.querySelector("[data-chat-status]");
+    const refreshButton = document.querySelector("[data-chat-retry]");
     let latest = chat.dataset.latest || "";
+    let hasUnreadUpdate = false;
     const poll = async () => {
       try {
         const response = await fetch(`${chat.dataset.chatPoll}${latest ? `?since=${encodeURIComponent(latest)}` : ""}`, {headers: {Accept: "application/json", "X-KlassID-Background-Poll": "1"}});
         if (!response.ok) throw new Error();
         const data = await response.json();
         if (data.messages?.length) {
+          hasUnreadUpdate = true;
           status.textContent = "Neue Nachrichten verfügbar – jetzt aktualisieren.";
           latest = data.messages.at(-1)?.created_at || latest;
           chat.dataset.latest = latest;
           announce("Neue Nachrichten verfügbar. Dein Entwurf bleibt erhalten.");
           return;
         }
+        hasUnreadUpdate = false;
         status.textContent = `Aktualisiert ${new Date().toLocaleTimeString("de-DE", {hour: "2-digit", minute: "2-digit"})}`;
       } catch (_) {
         status.textContent = "Verbindung unterbrochen";
@@ -762,7 +766,12 @@
     };
     const timer = window.setInterval(poll, 10000);
     window.addEventListener("beforeunload", () => window.clearInterval(timer));
-    document.querySelector("[data-chat-retry]")?.addEventListener("click", poll);
+    refreshButton?.addEventListener("click", () => {
+      // Reload only after the member explicitly chose it.  Background polling
+      // must never discard text or an attachment in the composer.
+      if (hasUnreadUpdate) window.location.reload();
+      else poll();
+    });
   }
 })();
 
@@ -817,6 +826,25 @@
     const options = key === "background" ? data.backgrounds.map((_, index) => ["", `Farbe ${index + 1}`]) : data.components[key];
     options.forEach((item, index) => holder.append(optionButton(key, index, item[1])));
   });
+  const selectCategory = (key) => {
+    dialog.querySelectorAll("[data-avatar-category]").forEach((tab) => {
+      tab.setAttribute("aria-selected", String(tab.dataset.avatarCategory === key));
+      tab.tabIndex = tab.dataset.avatarCategory === key ? 0 : -1;
+    });
+    dialog.querySelectorAll("[data-avatar-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.avatarPanel !== key;
+    });
+  };
+  dialog.querySelectorAll("[data-avatar-category]").forEach((tab) => {
+    tab.addEventListener("click", () => selectCategory(tab.dataset.avatarCategory));
+    tab.addEventListener("keydown", (event) => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault();
+      const tabs = [...dialog.querySelectorAll("[data-avatar-category]")];
+      const next = tabs[(tabs.indexOf(tab) + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus(); selectCategory(next.dataset.avatarCategory);
+    });
+  });
   dialog.querySelector("[data-avatar-random]").addEventListener("click", () => {
     selected.background = Math.floor(Math.random() * data.backgrounds.length);
     keys.slice(1).forEach((key) => { selected[key] = Math.floor(Math.random() * data.components[key].length); }); draw();
@@ -831,6 +859,8 @@
     if (hiddenMode) hiddenMode.value = "avatar";
     const currentPreview = form.querySelector("[data-profile-current-preview]");
     if (currentPreview) currentPreview.replaceChildren(makeSvg());
+    const saveHint = form.querySelector("[data-avatar-save-hint]");
+    if (saveHint) saveHint.textContent = "Avatar übernommen. Profilbild jetzt speichern.";
     target.dispatchEvent(new Event("change", { bubbles: true }));
   });
   document.querySelectorAll("[data-avatar-open]").forEach((button) => button.addEventListener("click", () => {
@@ -842,7 +872,7 @@
       const limit = key === "background" ? data.backgrounds.length : data.components[key].length;
       selected[key] = value >= 0 && value < limit ? value : 0;
     });
-    draw(); dialog.showModal();
+    selectCategory("background"); draw(); dialog.showModal();
   }));
 })();
 (() => {

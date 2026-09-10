@@ -419,12 +419,27 @@ def personal_profile(request):
         try:
             return _save_personal_profile(request, person)
         except ValidationError as error:
-            messages.error(request, " ".join(error.messages))
-            return redirect("personal-profile")
+            # Keep the person record untouched and return to exactly the form
+            # the member submitted.  A redirect here used to hide field errors
+            # and made it look as if a successful save had emptied the form.
+            active_tab = request.POST.get("tab", active_tab)
+            return render(
+                request,
+                "ui/personal_profile_data.html" if active_tab == "data" else "ui/personal_profile.html",
+                _personal_profile_context(
+                    request, person, active_tab, profile_errors=error.messages
+                ),
+                status=400,
+            )
     return render(
         request,
         "ui/personal_profile_data.html" if active_tab == "data" else "ui/personal_profile.html",
-        {
+        _personal_profile_context(request, person, active_tab),
+    )
+
+
+def _personal_profile_context(request, person, active_tab, *, profile_errors=()):
+    return {
             "page_title": "Persönliches Profil",
             "person": person,
             "phone_display": format_phone_number(person.phone),
@@ -442,8 +457,8 @@ def personal_profile(request):
             ).exists(),
             "vapid_configured": bool(settings.VAPID_PUBLIC_KEY),
             "mfa_enabled": _mfa_enabled(request.user),
-        },
-    )
+            "profile_errors": profile_errors,
+        }
 
 
 @transaction.atomic
@@ -476,6 +491,43 @@ def _save_personal_profile(request, person):
         )
         messages.success(request, "Benachrichtigungseinstellungen gespeichert.")
         return redirect(f"{reverse('personal-profile')}?tab=notifications")
+    if save_scope == "appearance":
+        # Appearance is intentionally isolated.  Saving a photo or an avatar
+        # must never reset contact fields, visibility toggles or the optional
+        # carpool area because none of those controls belong to this form.
+        photo = request.FILES.get("profile_photo")
+        if photo:
+            encoded = sanitized_profile_photo(photo)
+            person.profile_photo.save(
+                f"{secrets.token_urlsafe(18)}.webp", ContentFile(encoded), save=False
+            )
+            person.profile_image_mode = Person.ProfileImageMode.PHOTO
+        elif request.POST.get("remove_profile_photo") == "yes" and person.profile_photo:
+            person.profile_photo.delete(save=False)
+            person.profile_photo = ""
+            person.profile_image_mode = Person.ProfileImageMode.AVATAR
+        else:
+            requested_image_mode = request.POST.get("profile_image_mode")
+            if requested_image_mode in Person.ProfileImageMode.values:
+                person.profile_image_mode = requested_image_mode
+
+        avatar_key = request.POST.get("avatar_key")
+        if avatar_key in dict(PROFILE_AVATAR_PRESETS):
+            person.avatar_key = avatar_key
+        if "avatar_seed" in request.POST:
+            avatar_seed = request.POST.get("avatar_seed", "")
+            validate_avatar_seed(avatar_seed)
+            person.avatar_seed = avatar_seed
+        if not person.profile_photo:
+            person.profile_image_mode = Person.ProfileImageMode.AVATAR
+        person.full_clean()
+        person.save()
+        messages.success(request, "Dein Profilbild wurde gespeichert.")
+        return redirect(f"{reverse('personal-profile')}?tab=appearance")
+
+    if save_scope != "data":
+        raise ValidationError("Dieser Speicherbereich ist nicht verfügbar.")
+
     address_fields = ("street", "postal_code", "city")
     previous = (
         person.email_visibility,
@@ -534,41 +586,17 @@ def _save_personal_profile(request, person):
             raise ValidationError("Diese E-Mail-Adresse wird bereits verwendet.")
         request.user.email = email
         request.user.save(update_fields=["email"])
-    if save_scope == "data":
-        person.email_visibility = (
-            "members" if request.POST.get("share_email") == "yes" else "hidden"
-        )
-        person.phone_visibility = (
-            "members" if request.POST.get("share_phone") == "yes" else "hidden"
-        )
-        field_visibility = dict(person.field_visibility)
-        address_shared = request.POST.get("share_address") == "yes"
-        for field in address_fields:
-            field_visibility[field] = address_shared
-        person.field_visibility = field_visibility
-    photo = request.FILES.get("profile_photo")
-    if photo:
-        encoded = sanitized_profile_photo(photo)
-        person.profile_photo.save(
-            f"{secrets.token_urlsafe(18)}.webp", ContentFile(encoded), save=False
-        )
-        person.profile_image_mode = Person.ProfileImageMode.PHOTO
-    elif request.POST.get("remove_profile_photo") == "yes" and person.profile_photo:
-        person.profile_photo.delete(save=False)
-        person.profile_photo = ""
-        person.profile_image_mode = Person.ProfileImageMode.AVATAR
-    else:
-        requested_image_mode = request.POST.get("profile_image_mode")
-        if requested_image_mode in Person.ProfileImageMode.values:
-            person.profile_image_mode = requested_image_mode
-    avatar_key = request.POST.get("avatar_key")
-    if avatar_key in dict(PROFILE_AVATAR_PRESETS):
-        person.avatar_key = avatar_key
-    avatar_seed = request.POST.get("avatar_seed", "")
-    validate_avatar_seed(avatar_seed)
-    person.avatar_seed = avatar_seed
-    if not person.profile_photo:
-        person.profile_image_mode = Person.ProfileImageMode.AVATAR
+    person.email_visibility = (
+        "members" if request.POST.get("share_email") == "yes" else "hidden"
+    )
+    person.phone_visibility = (
+        "members" if request.POST.get("share_phone") == "yes" else "hidden"
+    )
+    field_visibility = dict(person.field_visibility)
+    address_shared = request.POST.get("share_address") == "yes"
+    for field in address_fields:
+        field_visibility[field] = address_shared
+    person.field_visibility = field_visibility
     person.full_clean()
     person.save()
     current_sharing = (

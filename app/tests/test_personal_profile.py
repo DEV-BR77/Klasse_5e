@@ -22,6 +22,8 @@ def test_owner_can_preview_a_saved_profile_photo_and_switch_to_an_avatar(client,
     response = client.post(
         profile_url,
         {
+            "tab": "appearance",
+            "save_scope": "appearance",
             "first_name": "Alex",
             "last_name": "Beispiel",
             "contribution_name_mode": "family",
@@ -54,6 +56,8 @@ def test_owner_can_preview_a_saved_profile_photo_and_switch_to_an_avatar(client,
     response = client.post(
         profile_url,
         {
+            "tab": "appearance",
+            "save_scope": "appearance",
             "first_name": "Alex",
             "last_name": "Beispiel",
             "contribution_name_mode": "family",
@@ -170,10 +174,47 @@ def test_profile_rejects_invalid_contact_data_atomically(client, guardian):
         secure=True,
     )
 
-    assert response.status_code == 302
+    assert response.status_code == 400
+    assert b"Deine Angaben wurden noch nicht gespeichert." in response.content
     guardian.refresh_from_db()
+    guardian.person.refresh_from_db()
     assert guardian.email == "guardian@example.test"
     assert guardian.person.phone == ""
+
+
+@pytest.mark.django_db
+def test_profile_save_scopes_do_not_overwrite_each_other(client, guardian):
+    client.force_login(guardian)
+    guardian.person.avatar_seed = "v2:2:1:3:4:1:2"
+    guardian.person.email_visibility = "members"
+    guardian.person.phone_visibility = "members"
+    guardian.person.save()
+
+    data_response = client.post(
+        reverse("personal-profile"),
+        {
+            "tab": "data", "save_scope": "data", "first_name": "Alex", "last_name": "Beispiel",
+            "email": "guardian@example.test", "phone": "05361 123456", "share_email": "yes",
+            "share_phone": "yes",
+        },
+        secure=True,
+    )
+    assert data_response.status_code == 302
+    guardian.person.refresh_from_db()
+    assert guardian.person.avatar_seed == "v2:2:1:3:4:1:2"
+
+    appearance_response = client.post(
+        reverse("personal-profile"),
+        {
+            "tab": "appearance", "save_scope": "appearance", "profile_image_mode": "avatar",
+            "avatar_key": "peep-1", "avatar_seed": "v2:3:1:3:4:1:2",
+        },
+        secure=True,
+    )
+    assert appearance_response.status_code == 302
+    guardian.person.refresh_from_db()
+    assert guardian.person.email_visibility == "members"
+    assert guardian.person.phone_visibility == "members"
 
 
 @pytest.mark.django_db
@@ -183,6 +224,8 @@ def test_profile_persists_a_designed_svg_avatar(client, guardian):
     response = client.post(
         reverse("personal-profile"),
         {
+            "tab": "appearance",
+            "save_scope": "appearance",
             "first_name": "Alex", "last_name": "Beispiel", "contribution_name_mode": "family",
             "profile_image_mode": "avatar", "avatar_key": "peep-1",
             "avatar_seed": "v2:2:1:3:4:1:2",
@@ -203,12 +246,14 @@ def test_profile_rejects_invalid_avatar_without_a_server_error(client, guardian)
     response = client.post(
         reverse("personal-profile"),
         {
+            "tab": "appearance",
+            "save_scope": "appearance",
             "first_name": "Alex", "last_name": "Beispiel", "contribution_name_mode": "family",
             "profile_image_mode": "avatar", "avatar_seed": "v2:99:99:99:99:99:99",
         },
         secure=True,
     )
-    assert response.status_code == 302
+    assert response.status_code == 400
 
 
 @pytest.mark.django_db
