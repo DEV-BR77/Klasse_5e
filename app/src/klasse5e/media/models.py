@@ -13,6 +13,13 @@ def photo_path(instance, filename):
 
 
 class Gallery(models.Model):
+    class EventCategory(models.TextChoices):
+        CLASS_TRIP = "class_trip", "Klassenfahrt"
+        EXCURSION = "excursion", "Schulausflug"
+        CELEBRATION = "celebration", "Feier"
+        SCHOOL_EVENT = "school_event", "Schulveranstaltung"
+        LESSON = "lesson", "Unterrichtsprojekt"
+        OTHER = "other", "Sonstiges Ereignis"
     class Status(models.TextChoices):
         DRAFT = "draft", "Entwurf"
         PUBLISHED = "published", "Veröffentlicht"
@@ -21,6 +28,9 @@ class Gallery(models.Model):
     school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE)
     school_year = models.ForeignKey(SchoolYear, on_delete=models.PROTECT)
     event = models.OneToOneField(Event, null=True, blank=True, on_delete=models.SET_NULL)
+    event_category = models.CharField(
+        max_length=24, choices=EventCategory, default=EventCategory.OTHER
+    )
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     status = models.CharField(max_length=16, choices=Status, default=Status.DRAFT)
@@ -74,6 +84,10 @@ class Photo(models.Model):
     height = models.PositiveIntegerField()
     sha256 = models.CharField(max_length=64)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    review_due_at = models.DateTimeField(null=True, blank=True)
+    correction_deadline = models.DateTimeField(null=True, blank=True)
+    resubmission_count = models.PositiveSmallIntegerField(default=0)
+    finalized_at = models.DateTimeField(null=True, blank=True)
     moderated_at = models.DateTimeField(null=True, blank=True)
     moderator = models.ForeignKey(
         UserAccount,

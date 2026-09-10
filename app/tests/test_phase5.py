@@ -27,10 +27,12 @@ from klasse5e.media.policies import (
     photo_consent_result,
 )
 from klasse5e.media.services import (
+    correction_deadline,
     create_photo,
     decide_photo,
     delete_photo_files,
     process_upload,
+    resubmit_photo,
     safe_original_name,
 )
 
@@ -296,6 +298,39 @@ def test_upload_batch_and_moderator_permissions(client, gallery, guardian, moder
         },
     )
     assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_first_rejection_allows_one_replacement_then_second_is_deleted(
+    gallery, guardian, moderator
+):
+    photo = create_photo(gallery=gallery, uploader=guardian, upload=image_file())
+    PhotoSubjectDeclaration.objects.create(
+        photo=photo, kind="none", declared_by=guardian, confirmed_by=moderator, status="confirmed"
+    )
+    decide_photo(photo, moderator, "reject", "quality")
+    photo.refresh_from_db()
+    assert photo.status == Photo.Status.CLARIFICATION
+    assert photo.correction_deadline and photo.correction_deadline <= timezone.now() + timedelta(days=2)
+    resubmit_photo(photo, guardian, upload=image_file(name="replacement.jpg"))
+    photo.refresh_from_db()
+    assert photo.status == Photo.Status.PENDING and photo.resubmission_count == 1
+    decide_photo(photo, moderator, "reject", "quality")
+    photo.refresh_from_db()
+    assert photo.status == Photo.Status.DELETED and not photo.display_file
+
+
+@pytest.mark.django_db
+def test_class_representative_may_manage_gallery(gallery, school_class):
+    user = UserAccount.objects.create_user("representative@example.test", "Pass-123456789!")
+    person = Person.objects.create(user=user, first_name="Parent", last_name="Representative")
+    ClassMembership.objects.create(
+        school_class=school_class, person=person, valid_from=date(2026, 8, 1)
+    )
+    RoleAssignment.objects.create(
+        user=user, school_class=school_class, role="parent_representative"
+    )
+    assert may_manage_gallery(user, gallery)
 
 
 @pytest.mark.django_db

@@ -2863,12 +2863,26 @@ def galleries(request):
     roles = active_roles(request.user, school_class)
     can_create = bool(
         request.user.is_superuser
-        or roles & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.CLASS_ADMIN, Role.EDITOR}
+        or roles
+        & {
+            Role.PRIMARY_ADMIN,
+            Role.DEPUTY_ADMIN,
+            Role.CLASS_ADMIN,
+            Role.TEACHER,
+            Role.SCHOOL_LEADERSHIP,
+            Role.CONTENT_MANAGER,
+            Role.EDITOR,
+            Role.PARENT_REPRESENTATIVE,
+            Role.DEPUTY_PARENT_REPRESENTATIVE,
+        }
     )
     if request.method == "POST":
         if not can_create:
             raise Http404
         title = request.POST.get("title", "").strip()[:200]
+        event_category = request.POST.get("event_category", Gallery.EventCategory.OTHER)
+        if event_category not in Gallery.EventCategory.values:
+            event_category = Gallery.EventCategory.OTHER
         if not title:
             messages.error(request, "Bitte gib der Galerie einen Namen.")
         else:
@@ -2877,6 +2891,7 @@ def galleries(request):
                 school_year=school_class.school_year,
                 title=title,
                 description=request.POST.get("description", "").strip(),
+                event_category=event_category,
                 status=Gallery.Status.PUBLISHED,
                 upload_allowed=True,
                 moderation_required=True,
@@ -2891,7 +2906,13 @@ def galleries(request):
         if may_access_gallery(request.user, gallery) or may_manage_gallery(request.user, gallery)
     ]
     context = _shared(request, "Fotos", "more")
-    context.update({"galleries": visible, "can_create": can_create})
+    context.update(
+        {
+            "galleries": visible,
+            "can_create": can_create,
+            "gallery_event_categories": Gallery.EventCategory.choices,
+        }
+    )
     return render(request, "ui/galleries.html", context)
 
 

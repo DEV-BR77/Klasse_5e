@@ -23,7 +23,18 @@ def may_access_gallery(user, gallery):
 
 def may_manage_gallery(user, gallery):
     roles = active_roles(user, gallery.school_class)
-    if roles & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.EDITOR}:
+    if roles & {
+        Role.PRIMARY_ADMIN,
+        Role.DEPUTY_ADMIN,
+        Role.CLASS_ADMIN,
+        Role.TEACHER,
+        Role.SCHOOL_LEADERSHIP,
+        Role.CONTENT_MANAGER,
+        Role.EDITOR,
+        Role.MODERATOR,
+        Role.PARENT_REPRESENTATIVE,
+        Role.DEPUTY_PARENT_REPRESENTATIVE,
+    }:
         return True
     return bool(
         gallery.event_id

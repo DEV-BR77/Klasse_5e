@@ -366,6 +366,7 @@ urlpatterns = [
         name="photo-remove-child",
     ),
     path("photos/<uuid:photo_id>/moderate/", media_views.moderate_photo, name="photo-moderate"),
+    path("photos/<uuid:photo_id>/resubmit/", media_views.resubmit_photo_view, name="photo-resubmit"),
     path("photos/<uuid:photo_id>/report/", media_views.report_photo, name="photo-report"),
     path("photos/<uuid:photo_id>/withdraw/", media_views.withdraw_photo, name="photo-withdraw"),
     path("photos/<uuid:photo_id>/<str:variant>/", media_views.photo_file, name="photo-file"),

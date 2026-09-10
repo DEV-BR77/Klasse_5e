@@ -19,7 +19,7 @@ from .policies import (
     may_upload,
     may_view_photo,
 )
-from .services import create_photo, decide_photo, delete_photo_files
+from .services import create_photo, decide_photo, delete_photo_files, resubmit_photo
 
 
 def _private(response):
@@ -68,6 +68,13 @@ def gallery_detail(request, gallery_id):
                 "available_children": [child for child in children if child.id not in assigned_ids],
                 "own_assignment_ids": assigned_ids & {child.id for child in children},
                 "can_preview": may_preview_photo(request.user, photo),
+                "can_resubmit": (
+                    photo.uploader_id == request.user.id
+                    and photo.status == Photo.Status.CLARIFICATION
+                    and photo.correction_deadline
+                    and photo.correction_deadline > timezone.now()
+                    and photo.resubmission_count == 0
+                ),
             }
         )
     return _private(
@@ -78,7 +85,7 @@ def gallery_detail(request, gallery_id):
                 "gallery": gallery,
                 "photos": photos,
                 "children": children,
-                "can_upload": gallery.upload_allowed,
+                "can_upload": gallery.upload_allowed and may_access_gallery(request.user, gallery),
                 "can_manage": may_manage_gallery(request.user, gallery),
                 "label_filter": label_filter,
                 "available_labels": sorted(
@@ -245,9 +252,7 @@ def photo_file(request, photo_id, variant):
 @require_POST
 def moderate_photo(request, photo_id):
     photo = get_object_or_404(Photo.objects.select_related("gallery"), id=photo_id)
-    if Role.MODERATOR not in active_roles(
-        request.user, photo.gallery.school_class
-    ) and Role.PRIMARY_ADMIN not in active_roles(request.user):
+    if not may_manage_gallery(request.user, photo.gallery):
         raise Http404
     try:
         decide_photo(
@@ -256,6 +261,22 @@ def moderate_photo(request, photo_id):
     except ValidationError as exc:
         return JsonResponse({"error": exc.message}, status=409)
     return HttpResponse(status=204)
+
+
+@login_required
+@require_POST
+def resubmit_photo_view(request, photo_id):
+    photo = get_object_or_404(Photo.objects.select_related("gallery"), id=photo_id)
+    try:
+        resubmit_photo(
+            photo,
+            request.user,
+            upload=request.FILES.get("replacement"),
+            description=request.POST.get("description"),
+        )
+    except ValidationError as exc:
+        return JsonResponse({"error": exc.message}, status=409)
+    return redirect("gallery-detail", gallery_id=photo.gallery_id)
 
 
 @login_required
