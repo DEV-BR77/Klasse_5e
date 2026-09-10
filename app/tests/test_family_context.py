@@ -80,6 +80,7 @@ def two_school_family(guardian, school_class, year):
 
 @pytest.mark.django_db
 def test_dashboard_combines_important_items_for_all_children(client, guardian, two_school_family):
+    mila, jonas, _ = two_school_family
     client.force_login(guardian)
 
     response = client.get("/")
