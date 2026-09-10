@@ -90,11 +90,11 @@ def adapter():
 
 def enable_browser_submission(connection, school_class):
     adapter = PortalAdapter.objects.create(
+        school=school_class.school,
         provider=PortalAdapter.Provider.WEBUNTIS,
         name="Synthetic WebUntis",
         is_enabled=True,
     )
-    adapter.schools.add(school_class.school)
     module = PortalAdapterModule.objects.create(
         adapter=adapter,
         key="absences",

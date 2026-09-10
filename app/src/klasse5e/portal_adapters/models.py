@@ -17,10 +17,12 @@ class PortalAdapter(models.Model):
         WOBILA_MAIL = "wobila-mail", "Mail Wobila"
         CUSTOM = "custom", "Eigenes Portal"
 
+    # An adapter is one concrete, reviewed integration for exactly one school.
+    # Provider is the reusable adapter code; endpoint and identifiers below are
+    # integration data and must never be shared implicitly between schools.
     school = models.ForeignKey(
-        School, null=True, blank=True, on_delete=models.SET_NULL, related_name="legacy_portal_adapters"
+        School, on_delete=models.CASCADE, related_name="portal_adapters"
     )
-    schools = models.ManyToManyField(School, blank=True, related_name="available_portal_adapters")
     provider = models.CharField(max_length=32, choices=Provider.choices)
     name = models.CharField(max_length=120)
     base_url = models.URLField(blank=True)
@@ -38,6 +40,12 @@ class PortalAdapter(models.Model):
 
     class Meta:
         ordering = ("name", "provider")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school", "provider", "name"],
+                name="unique_portal_adapter_integration",
+            )
+        ]
 
     def __str__(self):
         return self.name

@@ -45,10 +45,7 @@ def school_modules(student, provider):
             adapter__is_enabled=True,
             is_enabled=True,
         )
-        .filter(
-            Q(adapter__schools=membership.school_class.school)
-            | Q(adapter__school=membership.school_class.school)
-        )
+        .filter(adapter__school=membership.school_class.school)
         .filter(Q(available_to_classes=membership.school_class) | ~Exists(class_links))
         .select_related("adapter")
         .distinct()

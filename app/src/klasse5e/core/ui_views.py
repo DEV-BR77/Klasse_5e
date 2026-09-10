@@ -365,9 +365,7 @@ def _manageable_portal_adapters(user):
     ):
         return adapters
     schools = _manageable_schools(user)
-    # ``school`` is a legacy FK while ``schools`` is the current relation;
-    # both are scoped until the data-model migration has removed the former.
-    return adapters.filter(Q(school__in=schools) | Q(schools__in=schools)).distinct()
+    return adapters.filter(school__in=schools)
 
 
 def _may_manage_school_catalog(user):
@@ -1432,10 +1430,9 @@ def school_detail(request, school_id):
                     },
                 )
         elif action == "set_adapters":
-            school.available_portal_adapters.set(
-                PortalAdapter.objects.filter(
-                    pk__in=request.POST.getlist("adapter_ids"), is_enabled=True
-                )
+            messages.info(
+                request,
+                "Adapter werden direkt als Schulintegration angelegt und dort konfiguriert.",
             )
         messages.success(request, "Schule gespeichert.")
         return redirect(f"{reverse('school-detail', args=[school.pk])}?tab={tab}")
@@ -1447,8 +1444,7 @@ def school_detail(request, school_id):
             "classes": SchoolClass.objects.filter(school=school)
             .select_related("school_year")
             .order_by("school_year__starts_on", "display_name", "name"),
-            "adapters": PortalAdapter.objects.filter(is_enabled=True),
-            "school_adapters": school.available_portal_adapters.all(),
+            "adapters": PortalAdapter.objects.filter(school=school).order_by("name", "provider"),
             "map_bounds": {"south": 52.329, "west": 10.623, "north": 52.509, "east": 10.913},
         }
     )
@@ -1575,23 +1571,24 @@ def portal_adapter_management(request):
             return redirect("portal-adapter-management")
         definition = provider_definition(provider)
         name = request.POST.get("name", "").strip()[:120] or definition["label"]
-        legacy_school = (
+        school = (
             _manageable_schools(request.user).filter(pk=request.POST.get("school_id")).first()
         )
+        if school is None:
+            messages.error(request, "Bitte wähle die Schule für diese Integration aus.")
+            return redirect("portal-adapter-management")
         adapter, created = PortalAdapter.objects.get_or_create(
             provider=provider,
             name=name,
+            school=school,
             defaults={
                 "base_url": definition["default_url"],
-                "school": legacy_school,
                 "requires_child_credentials": request.POST.get("requires_child_credentials")
                 == "on",
                 "is_enabled": request.POST.get("is_enabled") == "on",
             },
         )
         if created:
-            if legacy_school:
-                adapter.schools.add(legacy_school)
             seed_default_modules(adapter)
             adapter.modules.update(requires_child_credentials=adapter.requires_child_credentials)
             AuditEvent.objects.create(
@@ -1621,7 +1618,7 @@ def portal_adapter_management(request):
 def portal_adapter_detail(request, adapter_id):
     _require_portal_admin(request.user)
     adapter = get_object_or_404(
-        _manageable_portal_adapters(request.user).prefetch_related("modules", "schools"),
+        _manageable_portal_adapters(request.user).prefetch_related("modules"),
         pk=adapter_id,
     )
     if request.method == "POST":
@@ -1683,7 +1680,7 @@ def portal_adapter_detail(request, adapter_id):
                 module.available_to_classes.set(
                     SchoolClass.objects.filter(
                         pk__in=request.POST.getlist("available_to_classes"),
-                        school__in=adapter.schools.all(),
+                        school=adapter.school,
                     )
                 )
             AuditEvent.objects.create(
@@ -1723,7 +1720,7 @@ def portal_adapter_detail(request, adapter_id):
             "adapter": adapter,
             "provider_definition": provider_definition(adapter.provider),
             "school_classes": SchoolClass.objects.filter(
-                school__in=adapter.schools.all(), status="active"
+                school=adapter.school, status="active"
             ).order_by("display_name", "name"),
         }
     )
@@ -2057,10 +2054,7 @@ def learning_portals(request):
             is_enabled=True,
             modules__is_enabled=True,
         )
-        .filter(
-            Q(schools=school_class.school)
-            | Q(school=school_class.school)
-        )
+        .filter(school=school_class.school)
         .prefetch_related("modules__available_to_classes")
         .distinct()
         .order_by("name")

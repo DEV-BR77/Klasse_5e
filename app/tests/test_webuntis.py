@@ -43,12 +43,12 @@ def test_school_adapter_endpoint_is_resolved_per_child(guardian, school_class):
         verified_at=timezone.now(),
     )
     adapter = PortalAdapter.objects.create(
+        school=school_class.school,
         provider=PortalAdapter.Provider.WEBUNTIS,
         name="Nordhoff WebUntis",
         base_url="https://heinrich-nordhoff.webuntis.com/WebUntis/#/basic/login",
         is_enabled=True,
     )
-    adapter.schools.add(school_class.school)
     module = PortalAdapterModule.objects.create(
         adapter=adapter,
         key="timetable",

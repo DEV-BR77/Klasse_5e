@@ -7,12 +7,12 @@ from klasse5e.portal_adapters.models import PortalAdapter, PortalAdapterModule
 @pytest.mark.django_db
 def test_learning_portals_lists_enabled_school_portals(client, guardian, school_class):
     adapter = PortalAdapter.objects.create(
+        school=school_class.school,
         provider=PortalAdapter.Provider.MUNDO,
         name="MUNDO",
         base_url="https://mundo.schule/",
         is_enabled=True,
     )
-    adapter.schools.add(school_class.school)
     PortalAdapterModule.objects.create(
         adapter=adapter,
         key="material-search",
@@ -37,12 +37,12 @@ def test_learning_portals_lists_enabled_school_portals(client, guardian, school_
 @pytest.mark.django_db
 def test_learning_portals_hides_disabled_modules(client, guardian, school_class):
     adapter = PortalAdapter.objects.create(
+        school=school_class.school,
         provider=PortalAdapter.Provider.MUNDO,
         name="MUNDO",
         base_url="https://mundo.schule/",
         is_enabled=True,
     )
-    adapter.schools.add(school_class.school)
     PortalAdapterModule.objects.create(
         adapter=adapter,
         key="material-search",

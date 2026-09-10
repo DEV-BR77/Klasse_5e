@@ -84,11 +84,9 @@ def test_school_admin_cannot_read_or_change_another_schools_adapter(
 ):
     other_school = School.objects.create(name="Andere Schule", slug="andere-schule")
     own_adapter = PortalAdapter.objects.create(provider="mensamax", name="Eigene", school=school)
-    own_adapter.schools.add(school)
     foreign_adapter = PortalAdapter.objects.create(
         provider="mensamax", name="Fremde", school=other_school
     )
-    foreign_adapter.schools.add(other_school)
     RoleAssignment.objects.create(user=guardian, role=Role.SCHOOL_ADMIN, school=school)
     client.force_login(guardian)
 
@@ -296,12 +294,12 @@ def test_module_quick_toggle_preserves_advanced_settings(
     client, admin_user, school, school_class
 ):
     adapter = PortalAdapter.objects.create(
+        school=school,
         provider=PortalAdapter.Provider.WEBUNTIS,
         name="WebUntis",
         is_enabled=True,
         requires_child_credentials=True,
     )
-    adapter.schools.add(school)
     module = PortalAdapterModule.objects.create(
         adapter=adapter,
         key="homework",
