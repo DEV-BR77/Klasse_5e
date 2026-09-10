@@ -95,12 +95,19 @@
                         <div><dt>Telefon</dt><dd>{% if item.phone %}<a href="tel:{{ item.phone }}">{{ item.phone_display }}</a>{% else %}<span class="muted">Nicht freigegeben</span>{% endif %}</dd></div>
                         {% if item.address %}<div class="contact-person__address"><dt>Adresse</dt><dd>{{ item.address }}</dd></div>{% endif %}
                       </dl>
-                      {% if item.may_message %}
-                        <form method="post" action="{% url 'direct-conversation-start' item.person.pk %}">
-                          {% csrf_token %}
-                          <button class="button button-primary button-compact" type="submit">{{ item.person.first_name }} schreiben</button>
-                        </form>
-                      {% elif item.is_self %}
+                      {% if item.email or item.phone or item.may_message %}
+                        <div class="contact-person__actions" aria-label="Kontaktaktionen für {{ item.person.first_name }}">
+                          {% if item.phone %}<a class="button button-secondary button-compact" href="tel:{{ item.phone }}">Anrufen</a>{% endif %}
+                          {% if item.email %}<a class="button button-secondary button-compact" href="mailto:{{ item.email }}">E-Mail</a>{% endif %}
+                          {% if item.may_message %}
+                            <form method="post" action="{% url 'direct-conversation-start' item.person.pk %}">
+                              {% csrf_token %}
+                              <button class="button button-primary button-compact" type="submit">Nachricht</button>
+                            </form>
+                          {% endif %}
+                        </div>
+                      {% endif %}
+                      {% if item.is_self %}
                         <small class="contact-person__self">Das bist du.</small>
                       {% endif %}
                     </div>
