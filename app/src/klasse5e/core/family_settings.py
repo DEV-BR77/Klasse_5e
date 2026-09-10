@@ -71,7 +71,7 @@ def person_card(person, user, editable):
         "person": person,
         "fields": fields,
         "address_shared": all(
-            person.field_visibility.get(key, False)
+            person.field_visibility.get(key, True)
             for key in ("street", "postal_code", "city")
         ),
         "editable": editable,

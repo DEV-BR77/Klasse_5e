@@ -162,10 +162,10 @@ class Person(models.Model):
     contact_email = models.EmailField(blank=True)
     field_visibility = models.JSONField(default=dict, blank=True)
     email_visibility = models.CharField(
-        max_length=16, choices=Visibility, default=Visibility.HIDDEN
+        max_length=16, choices=Visibility, default=Visibility.MEMBERS
     )
     phone_visibility = models.CharField(
-        max_length=16, choices=Visibility, default=Visibility.HIDDEN
+        max_length=16, choices=Visibility, default=Visibility.MEMBERS
     )
     relationship_visibility = models.CharField(
         max_length=16, choices=Visibility, default=Visibility.HIDDEN

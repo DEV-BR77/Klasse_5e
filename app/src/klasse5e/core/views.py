@@ -479,7 +479,7 @@ def _save_personal_profile(request, person):
     previous = (
         person.email_visibility,
         person.phone_visibility,
-        all(person.field_visibility.get(field, False) for field in address_fields),
+        all(person.field_visibility.get(field, True) for field in address_fields),
     )
     text_fields = {
         "first_name": 100,
@@ -551,7 +551,7 @@ def _save_personal_profile(request, person):
     current_sharing = (
         person.email_visibility,
         person.phone_visibility,
-        all(person.field_visibility.get(field, False) for field in address_fields),
+        all(person.field_visibility.get(field, True) for field in address_fields),
     )
     if previous != current_sharing:
         AuditEvent.objects.create(

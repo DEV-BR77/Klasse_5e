@@ -152,11 +152,13 @@ def test_contacts_show_one_clean_family_name_and_only_shared_address(
     guardian.person.street = "Musterstraße 1"
     guardian.person.postal_code = "38440"
     guardian.person.city = "Wolfsburg"
-    guardian.person.field_visibility = {"street": True, "postal_code": True, "city": True}
+    guardian.person.field_visibility = {}
     guardian.person.phone = "+495361123456"
     guardian.person.phone_visibility = "members"
     guardian.person.email_visibility = "members"
     guardian.person.save()
+    assert guardian.person.email_visibility == "members"
+    assert guardian.person.phone_visibility == "members"
     managed_child.contact_email = "mila@example.test"
     managed_child.email_visibility = "members"
     managed_child.phone = "+4915123456789"

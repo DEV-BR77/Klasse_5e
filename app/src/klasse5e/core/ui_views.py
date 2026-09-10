@@ -3288,7 +3288,7 @@ def contacts(request):
 
     def shared_address(person):
         fields = ("street", "postal_code", "city")
-        if not all(person.field_visibility.get(field, False) for field in fields):
+        if not all(person.field_visibility.get(field, True) for field in fields):
             return ""
         return " · ".join(
             part for part in (person.street, " ".join((person.postal_code, person.city)).strip()) if part
