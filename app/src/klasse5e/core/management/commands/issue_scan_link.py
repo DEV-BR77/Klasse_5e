@@ -15,5 +15,5 @@ class Command(BaseCommand):
         if user is None:
             raise CommandError("Aktiver Benutzer nicht gefunden.")
         token = TimestampSigner(salt="klassid-scan-access").sign(str(user.pk))
-        base = getattr(settings, "PUBLIC_BASE_URL", "https://5e.klassid.de").rstrip("/")
+        base = getattr(settings, "PUBLIC_BASE_URL", "https://klassid.de").rstrip("/")
         self.stdout.write(f"{base}/scan/{token}/")
