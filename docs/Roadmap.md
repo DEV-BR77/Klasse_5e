@@ -105,6 +105,14 @@ Modell darf Treffer automatisch endgültig bestätigen.
 
 ## Bewusst zurückgestellt
 
+Für den ersten Eltern-Pilot gilt eine eigene Priorisierung: Zuerst werden
+funktionale Kernwege, Rollen- und Klassenscope, Navigation, responsive
+Darstellung und Barrierefreiheit konsolidiert. PRTG-Monitoring, technische
+Metriken, Logfile-Exporte, Diagnoseablage sowie weitergehende Backup- und
+Löschjobs folgen erst nach einem vorzeigbaren und getesteten Pilotstand. Sie
+sind wichtige Betriebsaufgaben, dürfen aber die Präsentationsfähigkeit des
+Portals nicht verzögern.
+
 Die Theme-Bibliothek wird erst nach der funktionalen Stabilisierung erweitert.
 Bis dahin bleiben die sechs vorbereiteten Entwürfe der prüfbare Katalog;
 weitere Designs werden gezielt nach ausdrücklicher Freigabe umgesetzt, statt
