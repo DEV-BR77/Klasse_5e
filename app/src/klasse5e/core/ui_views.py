@@ -1639,11 +1639,12 @@ def portal_adapter_detail(request, adapter_id):
             return redirect("portal-adapter-management")
         if action == "save_adapter":
             adapter.base_url = request.POST.get("base_url", "").strip()[:200]
-            adapter.project_identifier = request.POST.get("project_identifier", "").strip()[:120]
-            adapter.institution_identifier = request.POST.get("institution_identifier", "").strip()[
-                :120
-            ]
-            adapter.school_number = request.POST.get("school_number", "").strip()[:40]
+            if adapter.provider != PortalAdapter.Provider.WEBUNTIS:
+                adapter.project_identifier = request.POST.get("project_identifier", "").strip()[:120]
+                adapter.institution_identifier = request.POST.get("institution_identifier", "").strip()[
+                    :120
+                ]
+                adapter.school_number = request.POST.get("school_number", "").strip()[:40]
             adapter.configuration_note = request.POST.get("configuration_note", "").strip()[:1200]
             adapter.is_enabled = request.POST.get("is_enabled") == "on"
             adapter.requires_child_credentials = (

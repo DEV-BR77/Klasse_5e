@@ -101,6 +101,42 @@ def test_school_admin_can_limit_a_module_to_selected_classes(client, admin_user,
 
 
 @pytest.mark.django_db
+def test_webuntis_adapter_only_requests_its_school_url(client, admin_user, school):
+    adapter = PortalAdapter.objects.create(
+        school=school,
+        provider="webuntis",
+        name="WebUntis",
+        base_url="https://thgwob.webuntis.com/",
+        project_identifier="legacy-project",
+        institution_identifier="legacy-school",
+        school_number="legacy-number",
+    )
+    client.force_login(admin_user)
+
+    page = client.get(f"/verwaltung/adapter/{adapter.pk}/", secure=True)
+
+    assert page.status_code == 200
+    body = page.content.decode()
+    assert "Für WebUntis genügt die Adresse der jeweiligen Schule" in body
+    assert 'name="project_identifier"' not in body
+    assert 'name="institution_identifier"' not in body
+    assert 'name="school_number"' not in body
+
+    response = client.post(
+        f"/verwaltung/adapter/{adapter.pk}/",
+        {"action": "save_adapter", "base_url": "https://heinrich-nordhoff.webuntis.com/"},
+        secure=True,
+    )
+
+    assert response.status_code == 302
+    adapter.refresh_from_db()
+    assert adapter.base_url == "https://heinrich-nordhoff.webuntis.com/"
+    assert adapter.project_identifier == "legacy-project"
+    assert adapter.institution_identifier == "legacy-school"
+    assert adapter.school_number == "legacy-number"
+
+
+@pytest.mark.django_db
 @override_settings(WEBUNTIS_CREDENTIAL_ENCRYPTION_KEY=Fernet.generate_key().decode())
 def test_guardian_can_only_activate_school_approved_modules_for_own_child(
     client, guardian, school_class
