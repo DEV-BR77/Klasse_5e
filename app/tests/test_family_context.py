@@ -89,7 +89,7 @@ def test_dashboard_combines_important_items_for_all_children(client, guardian, t
     html = response.content.decode()
     assert "Familie im Blick" in html
     assert "Mila" in html and "Jonas" in html
-    assert "Kindkontext wechseln" in html
+    assert 'aria-label="Familienansicht auswählen"' in html
     assert f'action="/familie/ansicht/{mila.pk}/"' in html
     assert f'action="/familie/ansicht/{jonas.pk}/"' in html
     assert "Sport f" + chr(0xE4) + "llt aus" in html

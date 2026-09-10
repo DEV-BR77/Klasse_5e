@@ -92,7 +92,7 @@ def test_contact_card_starts_one_conversation_for_the_selected_person(client, di
     contacts = client.get("/kontakte/", secure=True)
     assert contacts.status_code == 200
     assert f'/chat/direkt/{second_person.pk}/starten/'.encode() in contacts.content
-    assert "Sam schreiben" in contacts.content.decode()
+    assert "Nachricht" in contacts.content.decode()
     assert f'/chat/direkt/{first_person.pk}/starten/'.encode() not in contacts.content
 
     started = client.post(f"/chat/direkt/{second_person.pk}/starten/", secure=True)

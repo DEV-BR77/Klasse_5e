@@ -34,18 +34,12 @@
       {% endif %}
     </div>
     {% if family_children %}
-    <details class="app-child-context">
-      <summary aria-label="Kindkontext wechseln">
-        <span class="app-child-context__label">{% if active_child %}{{ active_child.student.first_name }}{% else %}Familie{% endif %}</span>
-        <span class="app-child-context__meta">{% if active_child and active_child.class_name %}{{ active_child.class_name }}{% else %}Auswahl{% endif %}</span>
-      </summary>
-      <nav class="app-child-context__panel" aria-label="Kindkontext auswählen">
-        <form method="post" action="{% url 'family-overview-select' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit"{% if not active_child %} aria-current="page"{% endif %}>Familienübersicht</button></form>
-        {% for child in family_children %}
-        <form method="post" action="{% url 'family-child-select' child.student.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit"{% if active_child and active_child.student.pk == child.student.pk %} aria-current="page"{% endif %}><span>{{ child.student.first_name }}</span><small>{{ child.school_name }}{% if child.class_name %} · {{ child.class_name }}{% endif %}</small></button></form>
-        {% endfor %}
-      </nav>
-    </details>
+    <nav class="app-family-tabs" aria-label="Familienansicht auswählen">
+      <form method="post" action="{% url 'family-overview-select' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="app-family-tab app-family-tab--self" type="submit"{% if not active_child %} aria-current="page"{% endif %}>{{ personal_display_name|default:request.user.first_name }}</button></form>
+      {% for child in family_children %}
+      <form method="post" action="{% url 'family-child-select' child.student.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="app-family-tab app-family-tab--child-{{ forloop.counter }}" type="submit"{% if active_child and active_child.student.pk == child.student.pk %} aria-current="page"{% endif %}>{{ child.student.first_name }}</button></form>
+      {% endfor %}
+    </nav>
     {% endif %}
     <div class="app-topbar__actions">
       {% if enabled_modules.chat %}
