@@ -847,7 +847,7 @@
     const form = input.closest('form'); const preview = form?.querySelector('[data-profile-current-preview]');
     if (!preview) return;
     const image = document.createElement('img'); image.src = URL.createObjectURL(file); image.alt = 'Vorschau des Profilfotos';
-    preview.replaceChildren(image); form.querySelector('[data-profile-image-mode]')?.setAttribute('value', 'photo');
+    preview.replaceChildren(image); const imageMode = form.querySelector('[data-profile-image-mode]'); if (imageMode) imageMode.value = 'photo';
   }));
   document.querySelectorAll('[data-toggle-column]').forEach((button) => button.addEventListener('click', () => {
     const inputs = [...button.closest('form').querySelectorAll(`[data-notification-channel="${button.dataset.toggleColumn}"]`)];
