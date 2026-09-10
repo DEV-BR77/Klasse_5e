@@ -142,10 +142,10 @@ def test_registration_email_uses_canonical_public_url_not_request_host(client):
 def test_notifications_are_personal_revision_idempotent_and_read_individually(client, guardian, school_class):
     other = type(guardian).objects.create_user(email="other@example.test", password="Safe-Test-Password-123!")
     Person.objects.create(user=other, first_name="Andere", last_name="Person")
-    mine = UserNotification.objects.create(user=guardian, school_class=school_class, category="calendar", object_type="event", object_id="1", revision="v1", title="Neuer Termin", target_url="/kalender/")
-    UserNotification.objects.create(user=other, school_class=school_class, category="calendar", object_type="event", object_id="1", revision="v1", title="Fremd", target_url="/kalender/")
+    mine = UserNotification.objects.create(user=guardian, school_class=school_class, category="calendar", object_type="calendar_entry", object_id="1", revision="v1", title="Neuer Termin", target_url="/kalender/")
+    UserNotification.objects.create(user=other, school_class=school_class, category="calendar", object_type="calendar_entry", object_id="1", revision="v1", title="Fremd", target_url="/kalender/")
     with pytest.raises(IntegrityError), transaction.atomic():
-        UserNotification.objects.create(user=guardian, school_class=school_class, category="calendar", object_type="event", object_id="1", revision="v1", title="Doppelt", target_url="/kalender/")
+        UserNotification.objects.create(user=guardian, school_class=school_class, category="calendar", object_type="calendar_entry", object_id="1", revision="v1", title="Doppelt", target_url="/kalender/")
     client.force_login(guardian)
     listing = client.get("/benachrichtigungen/", secure=True)
     assert 'class="notification-card is-unread"' in listing.content.decode()
