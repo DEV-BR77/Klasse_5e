@@ -47,6 +47,8 @@ def test_mobile_topbar_groups_legal_links_without_hiding_profile_actions(client,
     assert 'data-dialog-open="logout-confirmation"' in html
     assert 'id="logout-confirmation"' in html
     assert 'action="/accounts/logout/"' in html
+    assert 'id="pilot-report" class="app-dialog" aria-labelledby="pilot-report-title"' in html
+    assert 'data-dialog-discard>Eingaben verwerfen</button>' in html
 
 
 def test_open_source_page_lists_the_main_runtime_components(client):

@@ -152,8 +152,35 @@
       allRows().sort((left, right) => left.dataset[key].localeCompare(right.dataset[key], "de", { sensitivity: "base" }) * (ascending ? 1 : -1)).forEach((row) => rows.append(row));
     }));
   });
+  const dialogHasUnsavedChanges = (dialog) => dialog.dataset.dialogDirty === "true";
+  const closeDialogSafely = (dialog) => {
+    if (!dialog) return;
+    if (dialogHasUnsavedChanges(dialog)) {
+      announce("Deine Eingaben sind noch nicht gespeichert. Speichere oder brich bewusst ab.");
+      dialog.querySelector("[data-dialog-dirty-note]")?.removeAttribute("hidden");
+      return;
+    }
+    dialog.close();
+  };
+  document.querySelectorAll("dialog").forEach((dialog) => {
+    dialog.querySelectorAll("form").forEach((form) => {
+      form.addEventListener("input", () => { dialog.dataset.dialogDirty = "true"; });
+      form.addEventListener("change", () => { dialog.dataset.dialogDirty = "true"; });
+      form.addEventListener("submit", () => { dialog.dataset.dialogDirty = "false"; });
+    });
+    dialog.addEventListener("cancel", (event) => {
+      if (!dialogHasUnsavedChanges(dialog)) return;
+      event.preventDefault(); closeDialogSafely(dialog);
+    });
+    dialog.addEventListener("close", () => {
+      dialog.dataset.dialogDirty = "false";
+      dialog.__opener?.focus?.();
+    });
+    dialog.addEventListener("click", (event) => { if (event.target === dialog) closeDialogSafely(dialog); });
+  });
   document.querySelectorAll("[data-dialog-open]").forEach((button) => button.addEventListener("click", () => {
     const dialog = document.getElementById(button.dataset.dialogOpen);
+    if (dialog) { dialog.__opener = button; dialog.dataset.dialogDirty = "false"; }
     dialog?.showModal();
     window.setTimeout(() => {
       dialog?.querySelectorAll("[data-local-map]").forEach((map) => {
@@ -162,8 +189,21 @@
       });
     }, 80);
   }));
-  document.querySelectorAll("[data-dialog-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog")?.close()));
-  document.querySelectorAll("dialog").forEach((dialog) => dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); }));
+  document.querySelectorAll("[data-dialog-close]").forEach((button) => button.addEventListener("click", () => {
+    const dialog = button.closest("dialog");
+    // A labelled footer cancellation is a deliberate discard action. The
+    // close icon, Escape and backdrop remain safe when the form is dirty.
+    if (dialog && button.closest(".dialog-actions")) {
+      dialog.dataset.dialogDirty = "false";
+      dialog.close();
+    } else closeDialogSafely(dialog);
+  }));
+  document.querySelectorAll("[data-dialog-discard]").forEach((button) => button.addEventListener("click", () => {
+    const dialog = button.closest("dialog");
+    if (!dialog) return;
+    dialog.dataset.dialogDirty = "false";
+    dialog.close();
+  }));
   document.querySelectorAll("[data-contribution-builder]").forEach((builder) => {
     const rows = builder.querySelector("[data-contribution-rows]");
     const addRow = builder.querySelector("[data-add-contribution-row]");
