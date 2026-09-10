@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="state-page state-page--notice" aria-labelledby="state-heading">
+  <span class="state-page__step" aria-hidden="true">!</span>
+  <p class="eyebrow">Einladung nicht verfügbar</p>
+  <h1 id="state-heading">Diese Einladung ist nicht mehr gültig.</h1>
+  <p>Sie wurde bereits verwendet, widerrufen oder ist abgelaufen. Bitte wende dich an die Klassenverwaltung, wenn du einen neuen persönlichen Link benötigst.</p>
+  <a class="button button-primary" href="{% url 'account_login' %}">Zur Anmeldung</a>
+</section>
+{% endblock %}

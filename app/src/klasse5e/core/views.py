@@ -827,7 +827,7 @@ def accept_invitation(request, token):
         .first()
     )
     if invitation is None or invitation.used_at or invitation.expires_at <= timezone.now():
-        return HttpResponse("Einladung ungültig oder abgelaufen", status=410)
+        return render(request, "core/invitation_invalid.html", status=410)
     prepared_hash = ""
     if invitation.family_request_id:
         prepared_hash = next(
@@ -846,13 +846,26 @@ def accept_invitation(request, token):
     if password or not prepared_hash:
         try:
             validate_password(password)
-        except ValidationError:
-            return HttpResponse("Passwort erfüllt die Anforderungen nicht", status=400)
+        except ValidationError as exc:
+            return render(
+                request,
+                "core/accept_invitation.html",
+                {"password_prepared": False, "error": " ".join(exc.messages)},
+                status=400,
+            )
         prepared_hash = make_password(password)
     User = get_user_model()
     user = User.objects.select_for_update().filter(email__iexact=invitation.email).first()
     if user and user.is_active:
-        return HttpResponse("Konto existiert bereits", status=409)
+        return render(
+            request,
+            "core/accept_invitation.html",
+            {
+                "password_prepared": bool(prepared_hash),
+                "error": "Für diese E-Mail-Adresse besteht bereits ein aktiver Zugang. Bitte melde dich damit an.",
+            },
+            status=409,
+        )
     if user is None:
         user = User(email=invitation.email)
     user.password = prepared_hash
