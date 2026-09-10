@@ -18,7 +18,7 @@
                 {% if messages %}
                     <div class="auth-messages" aria-live="polite">
                         {% for message in messages %}
-                            <p class="notice{% if message.tags == 'error' %} notice-error{% endif %}">{{ message }}</p>
+                            <p class="notice{% if message.tags == 'error' %} notice-error{% endif %}" data-auto-dismiss>{{ message }}</p>
                         {% endfor %}
                     </div>
                 {% endif %}
