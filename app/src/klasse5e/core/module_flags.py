@@ -1,4 +1,4 @@
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.http import Http404
 
@@ -70,6 +70,7 @@ def module_context(request):
         school_class = next(iter(child_classes)) if len(child_classes) == 1 else None
     keys = PortalModule.objects.values_list("key", flat=True)
     unread_count = 0
+    chat_unread_count = 0
     if school_class:
         from .presentation import ensure_presentation_notifications
 
@@ -77,6 +78,19 @@ def module_context(request):
         unread_count = UserNotification.objects.filter(
             user=request.user, school_class=school_class, read_at__isnull=True
         ).count()
+        from klasse5e.chat.models import ChatReadState, ChatRoom
+        from klasse5e.chat.services import require_room_access
+
+        for room in ChatRoom.objects.filter(school_class=school_class):
+            try:
+                require_room_access(request.user, room)
+            except PermissionDenied:
+                continue
+            state = ChatReadState.objects.filter(room=room, user=request.user).first()
+            messages = room.messages.exclude(author=request.user)
+            if state:
+                messages = messages.filter(created_at__gt=state.last_read_at)
+            chat_unread_count += messages.count()
     return {
         "enabled_modules": {key: module_enabled(key, school_class) for key in keys},
         "personal_display_name": person.first_name if person else "",
@@ -85,6 +99,7 @@ def module_context(request):
         "profile_avatar_seed": person.avatar_seed if person else "",
         "profile_photo_person_id": person.pk if person and person.profile_photo else None,
         "notification_unread_count": unread_count,
+        "chat_unread_count": chat_unread_count,
         "family_children": family_children,
         "active_child": active_child,
         "current_theme": request.user.selected_theme if request.user.selected_theme_id and request.user.selected_theme.is_active else None,

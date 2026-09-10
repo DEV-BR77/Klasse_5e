@@ -34,11 +34,15 @@
       {% endif %}
     </div>
     <div class="app-topbar__actions">
+      {% if enabled_modules.chat %}
+      <a class="app-icon-button app-icon-button--messages" href="/chat/" aria-label="Nachrichten öffnen, {{ chat_unread_count }} ungelesen">
+        {% include "ui/_icon.html" with name="chat" %}
+        {% if chat_unread_count %}<span class="app-notification-badge" aria-hidden="true">{% if chat_unread_count > 99 %}99+{% else %}{{ chat_unread_count }}{% endif %}</span>{% endif %}
+      </a>
+      {% endif %}
       <a class="app-icon-button" href="/benachrichtigungen/" aria-label="Benachrichtigungen öffnen, {{ notification_unread_count }} ungelesen">
         {% include "ui/_icon.html" with name="bell" %}
-        {% if notification_unread_count %}
-          <span class="app-notification-badge" aria-hidden="true">{{ notification_unread_count }}</span>
-        {% endif %}
+        {% if notification_unread_count %}<span class="app-notification-badge" aria-hidden="true">{% if notification_unread_count > 99 %}99+{% else %}{{ notification_unread_count }}{% endif %}</span>{% endif %}
       </a>
       <details class="app-profile-menu">
         <summary aria-label="Profilmenü öffnen">
