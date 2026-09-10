@@ -604,38 +604,10 @@ def dashboard(request):
     ]
     if school_class:
         dashboard_class_ids = [school_class.pk]
-    # The due scheduler is deliberately request-assisted: after a login the first
-    # dashboard request claims at most one due schedule transactionally. This keeps
-    # homework current without requiring a separate worker or a hidden manual click.
-    try:
-        from klasse5e.webuntis.scheduler import run_due_schedules
-
-        run_due_schedules()
-    except Exception:
-        # A school provider outage must not make the portal or login unavailable.
-        pass
-    try:
-        from django.core.cache import cache
-
-        from klasse5e.chat.retention import cleanup_expired_messages
-
-        if cache.add("chat-retention-cleanup", True, 6 * 60 * 60):
-            cleanup_expired_messages()
-    except Exception:
-        pass
-    try:
-        from django.core.cache import cache
-
-        from klasse5e.meals.source import sync_plans
-
-        if (
-            settings.MEAL_PLAN_SYNC_ENABLED
-            and not settings.DEBUG
-            and cache.add("meal-plan-sync", True, 12 * 60 * 60)
-        ):
-            sync_plans()
-    except Exception:
-        pass
+    # A dashboard request is read-only. Imports, retention cleanup and meal
+    # synchronization run through their scheduled management commands, never
+    # through a member opening this page. That keeps a provider outage from
+    # changing data, adding latency or masking an operational failure here.
     day = _day_from_request(request)
     hour = timezone.localtime().hour
     greeting = "Guten Morgen" if hour < 12 else "Guten Tag" if hour < 18 else "Guten Abend"
@@ -731,9 +703,6 @@ def dashboard(request):
         )
     homework.sort(key=lambda item: (item.is_completed, item.due_on, item.subject.casefold()))
     homework = homework[:5]
-    chat_messages = list(
-        room.messages.select_related("author__person", "reply_to").order_by("created_at")[:200]
-    )
     context.update(
         {
             "app_version": settings.APP_VERSION,

@@ -74,3 +74,23 @@ def test_dashboard_does_not_repeat_portal_presentations(rf, guardian, school_cla
     request.session = {}
     html = dashboard(request).content.decode()
     assert html.count("KlassID Portal Vorstellung") == 1
+
+
+@pytest.mark.django_db
+def test_dashboard_request_never_starts_background_maintenance(rf, guardian, monkeypatch):
+    from klasse5e.chat import retention
+    from klasse5e.meals import source
+    from klasse5e.webuntis import scheduler
+
+    calls = []
+    monkeypatch.setattr(scheduler, "run_due_schedules", lambda: calls.append("schedule"))
+    monkeypatch.setattr(retention, "cleanup_expired_messages", lambda: calls.append("retention"))
+    monkeypatch.setattr(source, "sync_plans", lambda: calls.append("meals"))
+    request = rf.get("/")
+    request.user = guardian
+    request.session = {}
+
+    response = dashboard(request)
+
+    assert response.status_code == 200
+    assert calls == []
