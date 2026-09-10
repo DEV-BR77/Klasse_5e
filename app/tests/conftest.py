@@ -1,10 +1,12 @@
 import os
 from datetime import date
+from importlib import import_module
 
 os.environ.setdefault("DJANGO_DEBUG", "1")
 
 import pytest
 from allauth.mfa.models import Authenticator
+from django.apps import apps as django_apps
 
 from klasse5e.core.models import (
     ClassMembership,
@@ -15,6 +17,25 @@ from klasse5e.core.models import (
     SchoolYear,
     UserAccount,
 )
+
+
+@pytest.fixture(autouse=True)
+def migration_reference_data(db):
+    """Restore migration-seeded reference rows after Django clears a test case.
+
+    The local reusable database contains schema only.  Django deliberately
+    clears data between cases, including data that historic migrations seeded.
+    Replaying only the reference-data migration functions keeps every case
+    equivalent to a newly provisioned portal without rebuilding SQLite.
+    """
+
+    for module_name, function_name in (
+        ("klasse5e.core.migrations.0003_onboarding_consent_catalog", "seed_consent_catalog"),
+        ("klasse5e.core.migrations.0006_portalmodule_portalmoduleoverride", "seed_modules"),
+        ("klasse5e.core.migrations.0011_portaltheme_useraccount_selected_theme", "seed_themes"),
+        ("klasse5e.chat.migrations.0002_retention_and_attachments", "seed_categories"),
+    ):
+        getattr(import_module(module_name), function_name)(django_apps, None)
 
 
 @pytest.fixture

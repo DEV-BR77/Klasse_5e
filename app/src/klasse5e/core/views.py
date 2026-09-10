@@ -3,7 +3,7 @@ import json
 import logging
 import re
 import secrets
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.conf import settings
 from django.contrib import messages
@@ -19,7 +19,7 @@ from django.core.mail import send_mail
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import transaction
 from django.db.models import Q
-from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -731,7 +731,8 @@ def profile_photo(request, person_id):
     )
     if not person or not (own_photo or shared_class_photo or family_photo):
         raise Http404
-    response = FileResponse(person.profile_photo.open("rb"), content_type="image/webp")
+    with person.profile_photo.open("rb") as image_file:
+        response = HttpResponse(image_file.read(), content_type="image/webp")
     response["Cache-Control"] = "private, max-age=300"
     response["X-Content-Type-Options"] = "nosniff"
     return response
@@ -746,7 +747,8 @@ def family_photo(request, photo_id):
     )
     if active_class_for_user(request.user) != photo.school_class or not family_photo_is_visible(photo):
         raise Http404
-    response = FileResponse(photo.image.open("rb"), content_type="image/webp")
+    with photo.image.open("rb") as image_file:
+        response = HttpResponse(image_file.read(), content_type="image/webp")
     response["Cache-Control"] = "private, max-age=300"
     response["X-Content-Type-Options"] = "nosniff"
     return response

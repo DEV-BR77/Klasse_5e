@@ -34,7 +34,7 @@ packages = ["src/klasse5e"]
 DJANGO_SETTINGS_MODULE = "klasse5e.settings"
 pythonpath = ["src"]
 testpaths = ["tests"]
-addopts = "-p no:cacheprovider --reuse-db"
+addopts = "-p no:cacheprovider"
 
 [tool.ruff]
 line-length = 100

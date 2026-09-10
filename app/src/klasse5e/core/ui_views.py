@@ -993,6 +993,10 @@ def chat_room(request, room_id):
     ChatReadState.objects.update_or_create(
         room=room, user=request.user, defaults={"last_read_at": timezone.now()}
     )
+    chat_messages = list(
+        room.messages.select_related("author__person", "reply_to__author__person")
+        .order_by("created_at")
+    )
     direct = getattr(room, "direct_conversation", None)
     mention_names = []
     if not direct:
@@ -2939,10 +2943,7 @@ def _school_modules_for_student(student):
     modules = (
         PortalAdapterModule.objects.filter(
             adapter__is_enabled=True,
-        )
-        .filter(
-            Q(adapter__schools=membership.school_class.school)
-            | Q(adapter__school=membership.school_class.school),
+            adapter__school=membership.school_class.school,
             is_enabled=True,
         )
         .filter(Q(available_to_classes=membership.school_class) | ~Exists(class_links))
@@ -3103,7 +3104,7 @@ def family(request):
             child = request.POST.get("child", "")
             suffix = f"?tab={tab}" + (f"&child={child}" if child else "")
             return redirect(f"{reverse('ui-family')}{suffix}")
-    if request.method == "POST":
+    if request.method == "POST" and request.POST.get("relationship_id") and request.POST.get("module_id"):
         relationship = get_object_or_404(
             GuardianChildRelationship,
             pk=request.POST.get("relationship_id"),

@@ -92,7 +92,6 @@ def test_family_photo_requires_each_subject_consent_and_falls_back_on_withdrawal
     assert b"family-initials" not in contacts.content
     image = client.get(reverse("family-photo", args=[photo.pk]), secure=True)
     assert image.status_code == 200
-    image.close()
 
     withdraw_decision(user=guardian, subject=managed_child, key="photo_gallery")
     contacts = client.get(reverse("ui-contacts"), secure=True)
