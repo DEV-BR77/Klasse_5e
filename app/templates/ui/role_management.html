@@ -4,7 +4,7 @@
   <header class="page-heading"><h1>Rollenverwaltung</h1><a href="{% url 'portal-management' %}">Zur Portalverwaltung</a></header>
   <section class="content-card"><h2>Alle Benutzerkonten</h2><ul>{% for account in users %}<li>{{ account }} – {% if account.is_active and not account.locked_at %}Aktiv{% else %}Gesperrt/inaktiv{% endif %}</li>{% empty %}<li>Keine Konten.</li>{% endfor %}</ul></section>
   <section class="content-card"><h2>Persönliche Rollen</h2>
-    <p>Portal-Admins verwalten das gesamte Portal und benötigen starke Anmeldung. Elternvertretungen gelten für die ausgewählte Klasse.</p>
+    <p>Administratorrollen gelten portalweit und benötigen starke Anmeldung. Elternvertretungen und ihre Stellvertretungen gelten jeweils für die ausgewählte Klasse.</p>
     <form method="post">{% csrf_token %}<input type="hidden" name="form" value="role">{{ role_form.as_p }}<button class="button" type="submit">Rolle speichern</button></form>
   </section>
   <section class="content-card"><h2>Aktive Zuweisungen</h2><ul>

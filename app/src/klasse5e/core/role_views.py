@@ -16,8 +16,9 @@ from .ui_views import _shared
 class UserRoleForm(forms.Form):
     user = forms.ModelChoiceField(label="Benutzerkonto", queryset=UserAccount.objects.all())
     role = forms.ChoiceField(label="Rolle", choices=[
-        (Role.PRIMARY_ADMIN, "Portal-Admin"),
+        (Role.DEPUTY_ADMIN, "Stellvertretender Administrator"),
         (Role.PARENT_REPRESENTATIVE, "Elternvertretung"),
+        (Role.DEPUTY_PARENT_REPRESENTATIVE, "Stellvertretende Elternvertretung"),
     ])
     school_class = forms.ModelChoiceField(
         label="Klasse (nur für Elternvertretung)", queryset=SchoolClass.objects.all(), required=False,
@@ -48,6 +49,7 @@ def role_management(request):
                     Role.PRIMARY_ADMIN,
                     Role.DEPUTY_ADMIN,
                     Role.PARENT_REPRESENTATIVE,
+                    Role.DEPUTY_PARENT_REPRESENTATIVE,
                 ],
             ).first()
             if assignment is None:
@@ -104,7 +106,10 @@ def role_management(request):
     context.update(role_form=role_form, room_form=room_form,
                    users=UserAccount.objects.order_by("email"),
                    assignments=RoleAssignment.objects.filter(active=True, role__in=[
-                       Role.PRIMARY_ADMIN, Role.PARENT_REPRESENTATIVE,
+                       Role.PRIMARY_ADMIN,
+                       Role.DEPUTY_ADMIN,
+                       Role.PARENT_REPRESENTATIVE,
+                       Role.DEPUTY_PARENT_REPRESENTATIVE,
                    ]).select_related("user", "school_class"),
                    representative_rooms=ChatRoom.objects.filter(parent_representative_chat=True).select_related("school_class"))
     return render(request, "ui/role_management.html", context)

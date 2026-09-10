@@ -94,6 +94,32 @@ def test_management_ui_and_mfa(client, guardian, admin_user, school_class):
     assert "totp" in response.url
 
 
+def test_role_management_can_assign_deputy_parent_representative(
+    client, guardian, admin_user, school_class
+):
+    client.force_login(admin_user)
+
+    response = client.post(
+        "/verwaltung/rollen/",
+        {
+            "form": "role",
+            "user": guardian.pk,
+            "role": Role.DEPUTY_PARENT_REPRESENTATIVE,
+            "school_class": school_class.pk,
+            "action": "grant",
+        },
+        secure=True,
+    )
+
+    assert response.status_code == 302
+    assert RoleAssignment.objects.filter(
+        user=guardian,
+        school_class=school_class,
+        role=Role.DEPUTY_PARENT_REPRESENTATIVE,
+        active=True,
+    ).exists()
+
+
 def test_room_selection_and_invalid_input(client, admin_user, school_class, year):
     rooms = [ChatRoom.objects.create(school_class=school_class, school_year=year, title=str(i)) for i in range(2)]
     client.force_login(admin_user)
