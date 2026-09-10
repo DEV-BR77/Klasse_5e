@@ -155,6 +155,29 @@ def test_notifications_are_personal_revision_idempotent_and_read_individually(cl
 
 
 @pytest.mark.django_db
+def test_notification_list_repairs_a_legacy_notice_for_a_deleted_event(
+    client, guardian, school_class
+):
+    stale = UserNotification.objects.create(
+        user=guardian,
+        school_class=school_class,
+        category="calendar",
+        object_type="event",
+        object_id="999999",
+        revision="legacy-deleted-event",
+        title="Nicht mehr vorhandener Termin",
+        target_url="/mehr/veranstaltungen/999999/",
+    )
+    client.force_login(guardian)
+
+    response = client.get("/benachrichtigungen/", secure=True)
+
+    assert response.status_code == 200
+    assert not UserNotification.objects.filter(pk=stale.pk).exists()
+    assert client.post(f"/benachrichtigungen/{stale.pk}/lesen/", secure=True).status_code == 404
+
+
+@pytest.mark.django_db
 def test_contact_page_never_contains_unshared_fields_or_other_class(client, guardian, school_class):
     PortalModuleOverride.objects.create(
         module=PortalModule.objects.get(key="contacts"),

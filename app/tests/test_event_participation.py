@@ -97,6 +97,36 @@ def test_event_organizer_can_edit_and_delete_only_their_own_event(
 
 
 @pytest.mark.django_db
+def test_deleting_an_event_removes_its_notifications_for_every_member(
+    client, guardian, published_event, school_class
+):
+    other = UserAccount.objects.create_user("event-notice@example.test", "Safe-Test-Password-123!")
+    other_person = Person.objects.create(user=other, first_name="Andere", last_name="Familie")
+    ClassMembership.objects.create(
+        person=other_person, school_class=school_class, valid_from=timezone.localdate()
+    )
+    for user in (guardian, other):
+        UserNotification.objects.create(
+            user=user,
+            school_class=school_class,
+            category="calendar",
+            object_type="event",
+            object_id=str(published_event.pk),
+            revision=f"event-deletion-{user.pk}",
+            title="Entfällt",
+            target_url=f"/mehr/veranstaltungen/{published_event.pk}/",
+        )
+
+    client.force_login(guardian)
+    response = client.post(reverse("ui-delete-event", args=[published_event.pk]), secure=True)
+
+    assert response.status_code == 302
+    assert not UserNotification.objects.filter(
+        school_class=school_class, object_type="event", object_id=str(published_event.pk)
+    ).exists()
+
+
+@pytest.mark.django_db
 def test_event_participation_shows_a_family_and_can_be_withdrawn(
     client, guardian, published_event
 ):

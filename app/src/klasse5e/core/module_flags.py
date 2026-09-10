@@ -72,8 +72,11 @@ def module_context(request):
     unread_count = 0
     chat_unread_count = 0
     if school_class:
-        from .presentation import ensure_presentation_notifications
+        from .presentation import ensure_presentation_notifications, purge_stale_event_notifications
 
+        # Notification targets are revalidated after authentication so deleted
+        # events disappear from the badge and list without waiting for a job.
+        purge_stale_event_notifications(user=request.user)
         ensure_presentation_notifications(request.user, school_class)
         unread_count = UserNotification.objects.filter(
             user=request.user, school_class=school_class, read_at__isnull=True

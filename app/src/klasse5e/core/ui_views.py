@@ -16,6 +16,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
 from django.core.validators import URLValidator
+from django.db import transaction
 from django.db.models import Count, Exists, OuterRef, Q
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -2477,13 +2478,19 @@ def edit_event(request, event_id):
 def delete_event(request, event_id):
     item = _owned_event_or_404(request, event_id)
     item_id = item.pk
-    item.delete()
-    AuditEvent.objects.create(
-        actor=request.user,
-        action="event.deleted",
-        target_type="event",
-        target_id=str(item_id),
-    )
+    from .presentation import remove_event_notifications
+
+    with transaction.atomic():
+        # A notification must never survive the event it opens, regardless of
+        # whether it has already been read by a family member.
+        remove_event_notifications(item)
+        item.delete()
+        AuditEvent.objects.create(
+            actor=request.user,
+            action="event.deleted",
+            target_type="event",
+            target_id=str(item_id),
+        )
     messages.success(request, "Die Veranstaltung wurde gelöscht.")
     return redirect("ui-events")
 

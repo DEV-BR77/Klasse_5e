@@ -707,6 +707,9 @@ def notification_list(request):
     school_class = _notification_class(request)
     if not school_class:
         raise Http404
+    from .presentation import purge_stale_event_notifications
+
+    purge_stale_event_notifications(user=request.user, school_class=school_class)
     items = UserNotification.objects.filter(user=request.user, school_class=school_class)
     return render(
         request,
@@ -723,6 +726,11 @@ def notification_list(request):
 @require_POST
 def notification_read(request, notification_id):
     school_class = _notification_class(request)
+    if not school_class:
+        raise Http404
+    from .presentation import purge_stale_event_notifications
+
+    purge_stale_event_notifications(user=request.user, school_class=school_class)
     with transaction.atomic():
         item = (
             UserNotification.objects.select_for_update()
@@ -743,6 +751,9 @@ def notifications_read_all(request):
     school_class = _notification_class(request)
     if not school_class:
         raise Http404
+    from .presentation import purge_stale_event_notifications
+
+    purge_stale_event_notifications(user=request.user, school_class=school_class)
     UserNotification.objects.filter(
         user=request.user, school_class=school_class, read_at__isnull=True
     ).update(read_at=timezone.now())
