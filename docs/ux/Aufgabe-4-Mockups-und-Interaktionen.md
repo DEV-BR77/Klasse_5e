@@ -59,7 +59,7 @@ Die optionalen Kinderfarben markieren nur die Familienansicht von Sorgeberechtig
 | Sichtbarkeitsschalter | Text „Im Portal anzeigen“, keine Symbol-only-Schalter | Speicherung mit Profilformular |
 | `Angaben speichern` | primär; Ladezustand, dann feldnahe Erfolgsmeldung | POST `/familie/` |
 
-Der Avatar-Designer verwendet eine große, schrittweise Auswahl. Die künftige Pose (`stehend`/`sitzend`) ist ein eigener erster Schritt, weil die vorhandenen SVG-Posebilder eine andere Geometrie als die atomaren Körper-/Kopf-Layer besitzen. Erst nach einem kompatiblen v3-Assetkatalog darf sie mit den Layern kombiniert und gespeichert werden. Das verhindert kaputte oder abgeschnittene Avatare.
+Der Avatar-Designer verwendet eine große, schrittweise Auswahl. **Pose** ist die erste Kategorie und beginnt mit `stehend` oder `sitzend`. Sie bestimmt die geometrisch passende vollständige SVG-Vorlage. Erst danach folgen kompatible Kategorien wie Haare, Gesicht, Kleidung, Accessoires und Hintergrund. Der v3-Assetkatalog kombiniert ausschließlich nachweislich passende Vorlagen und Bausteine; das verhindert kaputte oder abgeschnittene Avatare.
 
 **Sichtbarkeit persönlicher Kontaktdaten:** Erwachsene verwalten Adresse, E-Mail-Adresse und Telefonnummer direkt in ihrem jeweiligen Stammdatenformular. Jedes Feld besitzt dort einen beschrifteten Schalter `Im Portal sichtbar` beziehungsweise `Ausblenden`; der Standard ist sichtbar. Es gibt keine getrennte Datenschutzseite für diese drei Felder. Der Kind-Tab heißt `Freigaben` und enthält ausschließlich kindbezogene Einwilligungen und Freigaben.
 
@@ -102,6 +102,20 @@ Der Avatar-Designer verwendet eine große, schrittweise Auswahl. Die künftige P
 | Verbindung entfernen | Dialog mit Name des Kindes, Folgen und `Abbrechen` als Standardfokus | nur bestätigter POST |
 
 **Bestätigter Formularstandard:** Felder zeigen Label, Hilfetext und Fehler direkt am Feld. Eingaben bleiben während Speichern und bei Netzwerkfehlern erhalten. Pro Formular gibt es genau eine gefüllte Hauptaktion; Passwortfelder erhalten ein lokales Augen-Icon. Nur irreversible oder folgenreiche Aktionen öffnen einen Bestätigungsdialog. Reversible Ein-/Aus-Schalter werden unmittelbar, mit klarer Statusrückmeldung gespeichert.
+
+## 6. Erster Login und Orientierung
+
+**Bestätigter Ablauf:** Nach dem ersten Login erscheint eine kurze, nicht blockierende Willkommensseite. Sie zeigt nur die für Rolle und Konto noch offenen Schritte: Profil prüfen, Familie oder Kind auswählen, Freigaben ansehen sowie optional Benachrichtigungen aktivieren. `Zum Dashboard` bleibt jederzeit verfügbar. Erledigte Schritte werden bestätigt; offene Punkte erscheinen danach nur noch als zurückhaltende Dashboard-Karte.
+
+Ist eine veröffentlichte Portalvorstellung vorhanden, ergänzt die Seite diese Karte:
+
+> **Fragen zum Portal?** In mehreren Vorstellungsterminen zeigen wir KlassID und sammeln eure Fragen und Anregungen. Den passenden Termin findest du in den Veranstaltungen.
+
+`Termine ansehen` führt zur jeweiligen veröffentlichten Portalvorstellung. Ohne veröffentlichten Termin wird die Karte nicht gerendert.
+
+## 7. Abwesenheiten
+
+**Bestätigter Ablauf:** Abwesenheiten sind pro Kind sichtbar. Die vollständige Liste und `Abwesenheit melden` liegen unter `Mehr`; aktuelle Einträge erscheinen zusätzlich als kompakte Karte im Dashboard und im Kalenderkontext des gewählten Kindes. Importierte Einträge zeigen Zeitraum, Uhrzeit, Status und Abrufzeit, jedoch keine Lehrkraft oder Ursache, wenn WebUntis diese Metadaten nicht liefert. Eine neue importierte Abwesenheit kann als eigene In-App-Benachrichtigung erscheinen. Eltern erfassen Meldungen ausschließlich für ihre eigenen berechtigten Kinder; die endgültige WebUntis-Meldung beginnt nur nach ausdrücklichem Absenden und anschließender Rückprüfung.
 
 ## Abnahmekriterien für den Mockup-Block
 
