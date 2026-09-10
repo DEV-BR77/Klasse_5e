@@ -747,7 +747,13 @@
         const response = await fetch(`${chat.dataset.chatPoll}${latest ? `?since=${encodeURIComponent(latest)}` : ""}`, {headers: {Accept: "application/json", "X-KlassID-Background-Poll": "1"}});
         if (!response.ok) throw new Error();
         const data = await response.json();
-        if (data.messages?.length) window.location.reload();
+        if (data.messages?.length) {
+          status.textContent = "Neue Nachrichten verfügbar – jetzt aktualisieren.";
+          latest = data.messages.at(-1)?.created_at || latest;
+          chat.dataset.latest = latest;
+          announce("Neue Nachrichten verfügbar. Dein Entwurf bleibt erhalten.");
+          return;
+        }
         status.textContent = `Aktualisiert ${new Date().toLocaleTimeString("de-DE", {hour: "2-digit", minute: "2-digit"})}`;
       } catch (_) {
         status.textContent = "Verbindung unterbrochen";

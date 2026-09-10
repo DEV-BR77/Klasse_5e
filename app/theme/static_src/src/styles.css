@@ -1249,6 +1249,22 @@ html[data-theme-mode="dark"] {
 .calendar-page .agenda-item h3 { margin: .15rem 0; font-size: 1rem; }
 .calendar-page .calendar-timeline-shell { overflow-x: auto; overscroll-behavior-inline: contain; }
 
+/* Chat never reloads while a person writes.  The status strip gives the
+ * polling state a stable, reachable home above the message thread. */
+.chat-room-page { display: grid; gap: .9rem; max-width: 52rem; margin-inline: auto; }
+.chat-live-status { display: flex; min-height: 2.75rem; align-items: center; justify-content: space-between; gap: .75rem; border: 1px solid var(--color-border); border-radius: .85rem; background: color-mix(in srgb, var(--color-primary-light) 34%, var(--color-surface)); padding: .35rem .55rem .35rem .8rem; color: var(--color-text-muted); font-size: .84rem; }
+.chat-live-status .button { flex: 0 0 auto; box-shadow: none; }
+.chat-room-page .message-thread { margin: 0; }
+.chat-room-page .chat-composer-modern { bottom: calc(var(--app-navigation-height) + env(safe-area-inset-bottom) + .75rem); z-index: 20; }
+.chat-room-page .composer-tool { width: 2.75rem; height: 2.75rem; }
+.chat-room-page .composer-tool:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+
+@media (max-width: 40rem) {
+  .chat-live-status { align-items: flex-start; flex-direction: column; }
+  .chat-live-status .button { width: 100%; }
+  .chat-room-page .message-thread { padding-bottom: 6.5rem; }
+}
+
 @media (max-width: 40rem) {
   .calendar-page .calendar-heading { align-items: start; }
   .calendar-page .calendar-sync { justify-content: flex-start; }

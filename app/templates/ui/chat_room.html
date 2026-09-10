@@ -10,6 +10,10 @@
       <small>{% if is_direct %}Private Unterhaltung · {% endif %}{% if room.is_open %}{% if room.retention_category and room.retention_category.automatic_deletion_enabled %}Automatische Löschung nach {{ room.retention_category.retention_days }} Tagen{% else %}Keine automatische Löschung{% endif %}{% else %}Nur noch lesbar{% endif %}</small>
     </div>
   </header>
+  <div class="chat-live-status" data-chat-poll data-chat-poll="{{ chat_poll_url }}"{% if chat_latest_at %} data-latest="{{ chat_latest_at|date:'c' }}"{% endif %} aria-live="polite">
+    <span data-chat-status>Aktualisiert</span>
+    <button class="button button-quiet button-compact" type="button" data-chat-retry>Jetzt aktualisieren</button>
+  </div>
 
   <ol class="message-thread">
     {% for message in chat_messages %}
@@ -86,7 +90,7 @@
       {% csrf_token %}
       <div class="composer-tools" aria-label="Nachricht ergänzen">
         <button type="button" class="composer-tool composer-tool-emoji" data-emoji-toggle aria-label="Emoji auswählen" title="Emoji auswählen">😊</button>
-        <label class="composer-tool composer-tool-attachment" aria-label="Datei oder Bild hinzufügen" title="Datei oder Bild hinzufügen">+<input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf,audio/webm,audio/ogg,audio/mp4" hidden data-chat-file></label>
+        <label class="composer-tool composer-tool-attachment" aria-label="Datei oder Bild hinzufügen" title="Datei oder Bild hinzufügen" tabindex="0">+<input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf,audio/webm,audio/ogg,audio/mp4" hidden data-chat-file></label>
         <button type="button" class="composer-tool composer-tool-voice" data-voice-record aria-label="Sprachnachricht aufnehmen" title="Sprachnachricht aufnehmen">🎤</button>
       </div>
       <div class="emoji-picker" data-emoji-picker hidden>{% for emoji in emojis %}<button type="button" data-emoji="{{ emoji }}">{{ emoji }}</button>{% endfor %}</div>

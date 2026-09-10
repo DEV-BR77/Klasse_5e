@@ -143,6 +143,9 @@ def test_own_chat_message_exposes_compact_edit_and_delete_actions(client, room):
 
     assert response.status_code == 200
     assert 'data-chat-message-swipe' in html
+    assert 'data-chat-poll="/chat/rooms/' in html
+    assert 'data-chat-status' in html
+    assert 'data-chat-retry' in html
     assert f'data-url="/chat/messages/{message.public_id}/"' in html
     assert f'id="edit-message-{message.public_id}"' in html
     assert f'id="delete-message-{message.public_id}"' in html

@@ -715,6 +715,9 @@ def dashboard(request):
         )
     homework.sort(key=lambda item: (item.is_completed, item.due_on, item.subject.casefold()))
     homework = homework[:5]
+    chat_messages = list(
+        room.messages.select_related("author__person", "reply_to").order_by("created_at")[:200]
+    )
     context.update(
         {
             "app_version": settings.APP_VERSION,
@@ -1027,9 +1030,9 @@ def chat_room(request, room_id):
             "room": room,
             "room_title": room_title_for_user(room, request.user),
             "is_direct": bool(direct),
-            "chat_messages": room.messages.select_related("author__person", "reply_to").order_by(
-                "created_at"
-            )[:200],
+            "chat_messages": chat_messages,
+            "chat_poll_url": reverse("chat-messages", kwargs={"room_id": room.public_id}),
+            "chat_latest_at": chat_messages[-1].created_at if chat_messages else None,
             "emojis": "😀 😄 😂 😊 😍 🥳 😎 🤔 👍 👏 🙌 💪 ❤️ 🎉 🚲 ⚽ 📚 ✏️".split(),
             "mention_names": mention_names,
         }
