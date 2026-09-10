@@ -1,1 +1,20 @@
-{% extends "base.html" %}{% block content %}<section class="flow-page"><a class="back-link" href="/">← Home</a><div class="page-title-row"><h1>Benachrichtigungen</h1>{% if unread_count %}<form method="post" action="{% url 'notifications-read-all' %}">{% csrf_token %}<button class="button button-secondary">Alle als gelesen markieren</button></form>{% endif %}</div><p aria-live="polite">{{ unread_count }} ungelesen</p><div class="card-list">{% for item in notifications %}<article class="card {% if not item.read_at %}is-new{% endif %}"><h2>{{ item.title }}</h2><p>{{ item.summary }}</p>{% if item.read_at %}<a class="button" href="{{ item.target_url }}">Öffnen</a>{% else %}<form method="post" action="{% url 'notification-read' item.id %}">{% csrf_token %}<button class="button button-primary">Öffnen und als gelesen markieren</button></form>{% endif %}</article>{% empty %}<div class="empty-state"><h2>Alles erledigt</h2><p>Hier erscheinen persönliche Neuigkeiten aus deiner Klasse.</p></div>{% endfor %}</div></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="notification-page">
+  <header class="page-heading compact-heading">
+    <div><p class="eyebrow">Hinweise</p><h1>Benachrichtigungen</h1><p class="lede">Termine, Änderungen und neue Informationen für deine Klasse.</p></div>
+    {% if unread_count %}<form method="post" action="{% url 'notifications-read-all' %}">{% csrf_token %}<button class="button button-secondary" type="submit">Alle als gelesen markieren</button></form>{% endif %}
+  </header>
+  <p class="notification-page__count" aria-live="polite">{% if unread_count %}{{ unread_count }} ungelesen{% else %}Alle Hinweise gelesen{% endif %}</p>
+  <ol class="notification-list">
+    {% for item in notifications %}
+    <li>
+      <article class="notification-card {% if not item.read_at %}is-unread{% endif %}">
+        <div><p class="eyebrow">{% if item.read_at %}Gelesen{% else %}Neu{% endif %}</p><h2>{{ item.title }}</h2><p>{{ item.summary }}</p></div>
+        {% if item.read_at %}<a class="button button-secondary" href="{{ item.target_url }}">Öffnen</a>{% else %}<form method="post" action="{% url 'notification-read' item.id %}">{% csrf_token %}<button class="button button-primary" type="submit">Öffnen</button></form>{% endif %}
+      </article>
+    </li>
+    {% empty %}<li class="empty-state card"><h2>Alles erledigt</h2><p>Hier erscheinen persönliche Neuigkeiten aus deiner Klasse.</p></li>{% endfor %}
+  </ol>
+</section>
+{% endblock %}

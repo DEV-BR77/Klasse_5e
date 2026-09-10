@@ -147,6 +147,8 @@ def test_notifications_are_personal_revision_idempotent_and_read_individually(cl
     with pytest.raises(IntegrityError), transaction.atomic():
         UserNotification.objects.create(user=guardian, school_class=school_class, category="calendar", object_type="event", object_id="1", revision="v1", title="Doppelt", target_url="/kalender/")
     client.force_login(guardian)
+    listing = client.get("/benachrichtigungen/", secure=True)
+    assert 'class="notification-card is-unread"' in listing.content.decode()
     response = client.post(f"/benachrichtigungen/{mine.pk}/lesen/")
     assert response.status_code == 302
     mine.refresh_from_db()

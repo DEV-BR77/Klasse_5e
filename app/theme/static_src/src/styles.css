@@ -2226,6 +2226,15 @@ html[data-theme-mode="dark"] {
 .teachers-page { display: grid; gap: 1.25rem; max-width: 72rem; margin-inline: auto; }
 .teacher-card__role { margin: 0; color: var(--color-primary); font-weight: 800; }
 .teacher-card__meta { margin: 0; color: var(--color-text-muted); }
+.notification-page { display: grid; gap: 1rem; max-width: 52rem; margin-inline: auto; }
+.notification-page__count { margin: 0; color: var(--color-text-muted); font-weight: 750; }
+.notification-list { display: grid; gap: .8rem; margin: 0; padding: 0; list-style: none; }
+.notification-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.15rem; border: 1px solid var(--app-border-strong); border-radius: 1rem; background: var(--app-raised); box-shadow: var(--app-shadow); }
+.notification-card.is-unread { border-color: var(--color-primary); box-shadow: inset .25rem 0 var(--color-primary), var(--app-shadow); }
+.notification-card :is(h2, p) { margin: 0; }
+.notification-card h2 { margin-top: .25rem; font-size: 1.05rem; }
+.notification-card > .button, .notification-card form { flex: 0 0 auto; }
+@media (max-width: 42rem) { .notification-card { align-items: stretch; flex-direction: column; } .notification-card > .button, .notification-card form, .notification-card form .button { width: 100%; } }
 .event-card-grid, .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
 .event-list-card { min-height: 10rem; border-radius: 1.2rem; text-decoration: none; }
 .post-detail-page { max-width: 48rem; margin-inline: auto; }
