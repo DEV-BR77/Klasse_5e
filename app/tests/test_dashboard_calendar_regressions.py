@@ -1,12 +1,14 @@
-from datetime import date, time
+from datetime import date, datetime, time, timedelta
 
 import pytest
 from django.template.loader import render_to_string
 from django.utils import translation
+from django.utils import timezone
 
 from klasse5e.core.ui_views import dashboard
 from klasse5e.meals.models import MealDay, MealOption, MealPlan
 from klasse5e.schedule.models import TimetableEntry
+from klasse5e.events.models import Event
 
 
 @pytest.mark.django_db
@@ -57,3 +59,18 @@ def test_dashboard_selected_day_and_weekly_meals(rf, guardian):
     all_weeks = render_to_string("meals/plans.html", {"plans": [plan]})
     assert "Allergen: Getreide" in all_weeks
     assert "Zusatzstoff: Farbstoff" in all_weeks
+
+
+@pytest.mark.django_db
+def test_dashboard_does_not_repeat_portal_presentations(rf, guardian, school_class, year):
+    now = timezone.now()
+    Event.objects.create(
+        school_class=school_class, school_year=year, title="KlassID Portal Vorstellung",
+        description="", starts_at=now + timedelta(days=1), ends_at=now + timedelta(days=1, hours=1),
+        location="Online", change_deadline=now, status=Event.Status.PUBLISHED,
+    )
+    request = rf.get("/")
+    request.user = guardian
+    request.session = {}
+    html = dashboard(request).content.decode()
+    assert html.count("KlassID Portal Vorstellung") == 1

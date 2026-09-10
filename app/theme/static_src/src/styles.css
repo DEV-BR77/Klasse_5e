@@ -1768,6 +1768,69 @@ html[data-theme-mode="dark"] {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
+/* Dashboard v2: calm, spacious working surface across light and dark themes. */
+.dashboard-page {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 76rem;
+  margin-inline: auto;
+}
+
+.dashboard-page .welcome-panel {
+  position: relative;
+  overflow: hidden;
+  min-height: 10rem;
+  margin: 0;
+  border: 0;
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary-light) 72%, #c8c3ff), color-mix(in srgb, var(--color-primary) 50%, #8d86ff));
+  box-shadow: 0 1.25rem 2.5rem color-mix(in srgb, var(--color-primary) 20%, transparent);
+  padding: clamp(1.25rem, 3vw, 2.1rem);
+}
+
+.dashboard-page .welcome-panel::after {
+  position: absolute;
+  right: -3rem;
+  bottom: -5rem;
+  width: 14rem;
+  height: 14rem;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 15%);
+  content: "";
+}
+
+.dashboard-page .welcome-panel > div { position: relative; z-index: 1; }
+.dashboard-page .welcome-panel .eyebrow { color: var(--color-text); opacity: .72; }
+.dashboard-page .welcome-panel h1 { max-width: 36rem; color: var(--color-text); font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.035em; }
+.dashboard-page .welcome-panel p { max-width: 43rem; color: var(--color-text); font-size: 1.05rem; }
+.dashboard-page .today-strip { margin: 0; padding: 1.2rem; border: 1px solid var(--color-border); border-radius: 1.25rem; background: var(--color-surface); box-shadow: var(--shadow-card); }
+.dashboard-page .dashboard-overview-heading { gap: .85rem; }
+.dashboard-page .dashboard-overview-heading h2 { margin: .15rem 0 0; font-size: 1.45rem; color: var(--color-text); }
+.dashboard-page .dashboard-overview-heading > a { font-weight: 800; text-decoration: none; }
+.dashboard-page .mini-week { margin-top: 1rem; gap: .5rem; }
+.dashboard-page .mini-week a { min-height: 4.25rem; border-radius: .95rem; font-size: .85rem; }
+.dashboard-page .mini-week a[aria-current=date] { box-shadow: 0 .6rem 1.25rem color-mix(in srgb, var(--color-primary) 24%, transparent); }
+.dashboard-page .dashboard-panel { border-radius: 1.25rem; padding: clamp(1rem, 2.5vw, 1.5rem); }
+.dashboard-page .dashboard-tab { min-height: 4rem; border-radius: 1rem; }
+.dashboard-page .dashboard-subsection + .dashboard-subsection { padding-left: 1.5rem; }
+.dashboard-page .dashboard-subsection .card-header { margin-bottom: 1rem; }
+.dashboard-page .dashboard-subsection .card-header h2 { font-size: 1.35rem; }
+.dashboard-page .news-list { gap: .75rem; }
+.dashboard-page .news-list a { min-height: 4.4rem; border-radius: .9rem; padding: .85rem 1rem; }
+.dashboard-page .event-preview-list { gap: .85rem; }
+.dashboard-page .event-preview-list li { min-height: 4.5rem; align-items: center; padding: .35rem; border-radius: .9rem; background: color-mix(in srgb, var(--color-surface) 88%, var(--color-primary) 12%); }
+
+@media (max-width: 760px) {
+  .dashboard-page { gap: 1rem; }
+  .dashboard-page .welcome-panel { min-height: 0; border-radius: 1.25rem; }
+  .dashboard-page .welcome-panel h1 { font-size: clamp(1.8rem, 9vw, 2.35rem); }
+  .dashboard-page .welcome-panel p { font-size: 1rem; }
+  .dashboard-page .today-strip { padding: 1rem; }
+  .dashboard-page .mini-week a { min-height: 3.75rem; }
+  .dashboard-page .dashboard-tab { border-radius: .85rem; }
+  .dashboard-page .dashboard-subsection + .dashboard-subsection { padding-left: 0; }
+}
+
 @media(max-width: 760px) {
   .contacts-table__row {
     grid-template-columns: 1fr;

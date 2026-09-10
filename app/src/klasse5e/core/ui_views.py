@@ -105,7 +105,7 @@ from .models import (
     UserNotification,
 )
 from .policies import active_roles, consent_state, family_label, visible_student_people
-from .presentation import presentation_events_for_class
+from .presentation import is_portal_presentation_event
 from .registration import sanitized_profile_photo
 from .school_import import EXPECTED_FIELDS, detect_encoding, import_schools
 from .session_security import (
@@ -677,6 +677,23 @@ def dashboard(request):
         if dashboard_class_ids
         else CalendarEntry.objects.none()
     )
+    upcoming_events = list(
+        Event.objects.filter(
+            school_class_id__in=dashboard_class_ids,
+            status=Event.Status.PUBLISHED,
+            ends_at__gte=timezone.now(),
+        ).order_by("starts_at")
+        if dashboard_class_ids
+        else []
+    )
+    # A portal presentation belongs to the prominent "Aktuelles" stream.
+    # Do not render the same event a second time as an upcoming event below it.
+    presentation_events = [
+        event for event in upcoming_events if is_portal_presentation_event(event)
+    ]
+    upcoming_events = [
+        event for event in upcoming_events if not is_portal_presentation_event(event)
+    ]
     homework = list(
         WebUntisHomework.objects.filter(
             connection__in=webuntis_connections,
@@ -733,15 +750,7 @@ def dashboard(request):
                 else []
             ),
             "calendar_entries": calendar_entries,
-            "events": (
-                Event.objects.filter(
-                    school_class_id__in=dashboard_class_ids,
-                    status=Event.Status.PUBLISHED,
-                    ends_at__gte=timezone.now(),
-                ).order_by("starts_at")[:2]
-                if dashboard_class_ids
-                else Event.objects.none()
-            ),
+            "events": upcoming_events[:2],
             "daily_meal": daily_meal,
             "meal_week": meal_week,
             "posts": (
@@ -751,11 +760,7 @@ def dashboard(request):
                 if dashboard_class_ids
                 else Post.objects.none()
             ),
-            "presentation_events": (
-                presentation_events_for_class(school_class)
-                if school_class
-                else []
-            ),
+            "presentation_events": presentation_events,
             "documents": (
                 ProtectedDocument.objects.filter(
                     school_class_id__in=dashboard_class_ids,
