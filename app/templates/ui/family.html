@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% load static avatar_tags %}
 {% block content %}
-<section class="settings-page family-page">
-  <header class="page-heading"><div><p class="eyebrow">Mein Konto</p><h1>Familien-Zentrale</h1><p class="lede">Profile, Freigaben und Schulzugänge deiner Familie.</p></div></header>
+<section class="settings-page family-page" aria-labelledby="family-page-title">
+  {% include "ui/_settings_navigation.html" %}
+  <header class="page-heading"><div><p class="eyebrow">Mein Konto</p><h1 id="family-page-title">Familien-Zentrale</h1><p class="lede">Profile, Freigaben und Schulzugänge deiner Familie.</p></div></header>
   <nav class="settings-tabs" aria-label="Familien-Zentrale"><a href="?tab=overview" {% if active_tab == 'overview' %}aria-current="page"{% endif %}>Übersicht</a>{% for row in relationship_rows %}<a href="?tab=data&amp;child={{ row.relationship.pk }}" {% if active_relationship and active_relationship.pk == row.relationship.pk and active_tab != 'overview' and active_tab != 'add-child' %}aria-current="page"{% endif %}>{{ row.relationship.student_person.first_name }}</a>{% endfor %}<a href="?tab=add-child" {% if active_tab == 'add-child' %}aria-current="page"{% endif %}>Kind hinzufügen</a></nav>
 
   {% if active_tab == 'overview' %}
@@ -17,15 +18,15 @@
   <form method="post" enctype="multipart/form-data" class="form-stack">{% csrf_token %}<input type="hidden" name="action" value="profile"><input type="hidden" name="person_id" value="{{ active_row.card.person.pk }}"><input type="hidden" name="tab" value="data"><input type="hidden" name="child" value="{{ active_row.relationship.pk }}"><input type="hidden" name="avatar_seed" value="{{ active_row.card.person.avatar_seed }}" data-avatar-seed><input type="hidden" name="profile_image_mode" value="{{ active_row.card.person.profile_image_mode }}" data-profile-image-mode><article class="settings-panel"><header><div><h2>Stammdaten und Kontaktfreigaben</h2><p>Jedes Feld lässt sich getrennt im Portal sichtbar machen.</p></div></header><div class="settings-details-body family-fields">{% for item in active_row.card.fields %}<div class="family-field"><label for="{{ item.field.id_for_label }}">{{ item.field.label }}{{ item.field }}</label>{% if item.field.name == 'contact_email' or item.field.name == 'phone' %}<label class="switch family-share"><span class="sr-only">{{ item.field.label }} im Portal anzeigen</span><input type="checkbox" name="share_{{ item.field.name }}" {% if item.shared %}checked{% endif %}><span></span><small>Im Portal anzeigen</small></label>{% endif %}</div>{% endfor %}<div class="family-field"><label for="child-school-class">Schule und Klasse<select id="child-school-class" name="school_class" required><option value="">Bitte auswählen</option>{% for school_class in active_row.school_classes %}<option value="{{ school_class.pk }}" {% if active_row.membership and active_row.membership.school_class_id == school_class.pk %}selected{% endif %}>{{ school_class.school.name }} · {{ school_class.display_name|default:school_class.name }}</option>{% endfor %}</select></label></div><label class="switch family-share family-share--address"><span class="sr-only">Adresse im Portal anzeigen</span><input type="checkbox" name="share_address" {% if active_row.card.address_shared %}checked{% endif %}><span></span><small>Adresse im Portal anzeigen</small></label></div></article><article class="settings-panel profile-avatar-designer-callout"><div class="profile-image-preview-large" data-profile-current-preview>{% if active_row.card.person.profile_image_mode == 'photo' and active_row.card.person.profile_photo %}<img src="{% url 'profile-photo' active_row.card.person.pk %}" alt="Profilbild von {{ active_row.card.person.first_name }}">{% elif active_row.card.person.avatar_seed %}{% avatar_composite active_row.card.person.avatar_seed %}{% else %}<img src="{% static active_row.card.person.avatar_static_path %}" alt="Avatar von {{ active_row.card.person.first_name }}">{% endif %}</div><div><h2>Avatar oder Profilbild</h2><p>Wähle einen vollständigen Avatar oder ein Profilfoto. In kleinen Kreisen erscheinen bei Bedarf die Initialen statt eines verkleinerten Gesichts.</p></div><div class="flow-actions"><button class="button button-secondary" type="button" data-dialog-open="avatar-designer" data-avatar-open>Avatar gestalten</button><label class="button button-secondary">Profilfoto<input type="file" name="profile_photo" accept="image/png,image/jpeg,image/webp" data-profile-photo-input></label></div></article><footer class="form-actions"><button class="button button-primary">Angaben speichern</button></footer></form>
   {% elif active_tab == 'privacy' %}
   <form method="post" class="form-stack child-privacy-form">{% csrf_token %}<input type="hidden" name="action" value="consents"><input type="hidden" name="person_id" value="{{ active_row.card.person.pk }}"><input type="hidden" name="tab" value="privacy"><input type="hidden" name="child" value="{{ active_row.relationship.pk }}">
-    <article class="settings-panel"><header><div><h2>Datenschutz und Einwilligungen</h2><p>Diese Freigaben gelten für {{ active_row.card.person.first_name }}. Weitere erforderliche Sorgeberechtigte entscheiden unabhängig.</p></div></header>
+    <article class="settings-panel"><header><div><p class="eyebrow">Freigaben für {{ active_row.card.person.first_name }}</p><h2>Datenschutz und Einwilligungen</h2><p>Jeder Zweck wird getrennt entschieden. Weitere erforderliche Sorgeberechtigte entscheiden unabhängig.</p></div></header>
       <div class="child-privacy-list">
         {% for consent in active_row.card.consents %}
           <div class="child-privacy-row">
             <div>
               <strong>{{ consent.type.label }}</strong>
               <small>{{ consent.type.purpose }}</small>
-              <details><summary>Details zur Einwilligung</summary><p>{{ consent.text.text }}</p><small>Textversion {{ consent.text.version }}</small></details>
-              {% if consent.disabled %}<span class="status status-info">Funktion derzeit zentral deaktiviert</span>{% endif %}
+              <details><summary>Was bedeutet diese Freigabe?</summary><p>{{ consent.text.text }}</p><small>Textversion {{ consent.text.version }}</small></details>
+              {% if consent.disabled %}<span class="sync-option__state">Funktion derzeit zentral deaktiviert</span>{% endif %}
             </div>
             <label class="switch"><span class="sr-only">{{ consent.type.label }} aktivieren oder deaktivieren</span><input type="checkbox" name="consent_{{ consent.type.key }}" {% if consent.enabled %}checked{% endif %} {% if consent.disabled %}disabled{% endif %}><span></span></label>
           </div>
@@ -34,11 +35,11 @@
         {% endfor %}
       </div>
     </article>
-    <footer class="form-actions"><a class="button button-secondary" href="{% url 'ui-family' %}">Zurück</a><button class="button button-primary">Freigaben speichern</button></footer>
+    <footer class="form-actions"><a class="button button-secondary" href="?tab=overview">Abbrechen</a><button class="button button-primary" type="submit">Freigaben speichern</button></footer>
   </form>
   {% else %}
   <article class="settings-panel">
-    <header><div><h2>Schulzugänge und aktive Module</h2><p>Aktiviere nur die von der Schule bereitgestellten Funktionen. Zugangsdaten werden je Kind gepflegt.</p></div></header>
+    <header><div><p class="eyebrow">{{ active_row.relationship.student_person.first_name }} · Schulzugänge</p><h2>Schulzugänge und aktive Module</h2><p>Aktiviere nur Funktionen, die für die Schule bereitgestellt sind. Zugangsdaten werden je Kind gepflegt.</p></div></header>
     <div class="sync-option-list">
       {% for adapter_row in active_row.adapters %}
         <section class="settings-details-body">
