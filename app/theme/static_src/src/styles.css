@@ -1526,6 +1526,17 @@ html[data-theme-mode="dark"] {
   margin: 0;
 }
 
+.contact-person__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: 1rem;
+}
+
+.contact-person__actions form {
+  margin: 0;
+}
+
 .contact-person__self {
   color: var(--color-text-muted);
 }
