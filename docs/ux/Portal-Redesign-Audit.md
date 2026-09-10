@@ -388,6 +388,33 @@ Bestehende Django-Tests gezielt erweitern, dann betroffene Modul-/Integrationssu
 13. Welche Kriterien entscheiden, wann das erweiterte Modell aus dem Präsentationsmodus in den regulären Betrieb wechselt?
 14. Welche Kategorien, Schwellen, Aufbewahrungsfristen und Eskalationswege gelten für Chat-Hinweise, und welche Rolle darf sie sehen/entscheiden?
 
+## 15. Monitoring und PRTG-Anbindung
+
+Das Administrator-Dashboard erhält eine eigene Betriebsübersicht für Portalverfügbarkeit, Datenbank, Hintergrundaufgaben, CPU, RAM, Speicher und die Aufteilung des Medien-/Arbeitsvolumens nach Modul. Diagnoseaufnahmen bleiben bis zur manuellen Löschung erhalten, unterliegen aber einem konfigurierbaren Speicherlimit (Startwert 5 GB). Die konkrete Reaktion bei vollem Diagnosebereich wird noch festgelegt; ein unbemerkter automatischer Datenverlust ist nicht vorgesehen.
+
+Die Überwachung wird von der Portaloberfläche getrennt und über eine kleine, authentisierte Health-/Metrics-Schnittstelle bereitgestellt. Sie gibt nur technische Kennzahlen zurück, keine Familien-, Chat- oder Bildinhalte. Das hält eine spätere PRTG-Anbindung offen:
+
+- Paessler führt für PRTG Network Monitor aktuell eine Freeware-Edition mit 100 Sensoren auf Lebenszeit; die Grenze gilt über alle Sensoren und wird je nach Gerät/Abfragetiefe unterschiedlich schnell erreicht. [Paessler: 100 kostenlose Sensoren](https://www.paessler.com/monitoring/network/how-to-free-network-monitoring)
+- PRTG unterstützt REST Custom Sensoren, die JSON/XML-Endpunkte als Kanäle abbilden, sowie eigene Advanced-/Script-Sensoren. [Paessler: Custom Sensors](https://www.paessler.com/manuals/prtg/custom_sensors.htm), [Paessler: REST Custom Sensor](https://www.paessler.com/manuals/prtg/rest_custom_sensor)
+- Für KlassID wird deshalb ein stabiler read-only Endpoint mit versioniertem JSON-Vertrag vorgesehen. Sensoren können später beispielsweise `portal_http`, `database`, `vision`, `chat_safety_queue`, `media_storage_used`, `media_storage_free`, `diagnostics_storage_used`, `cpu`, `ram` und `disk` abbilden. Ein PRTG-Token bleibt ausschließlich in der PRTG-Konfiguration; er wird weder im Portal-Frontend noch in Logs ausgegeben.
+- Ein eigener PRTG-Sensor wird erst angelegt, wenn die Zielinstanz, der Probe-Standort und die gewünschte Abfragefrequenz feststehen. Die Anwendung erhält keine PRTG-Abhängigkeit und bleibt ohne PRTG vollständig funktionsfähig.
+
+## 16. Verbindlicher Zwischenstand aus dem Entscheidungsdialog
+
+Die folgenden Entscheidungen gelten als Grundlage für den ersten Umsetzungsblock:
+
+- Das private Konto „Björn“ bleibt vom separaten Konto „Björn KlassID“ getrennt. Das Administratorkonto verwendet dieselben Profilfelder, lässt private Kontaktdaten aber leer und besitzt die Rolle `primary_admin` mit portalweiter Reichweite.
+- Rollen sind kumulativ: Administrator, Klassenadministrator, Content Manager, Eltern, Schüler, Lehrer, Schulleitung, Elternvertretung und stellvertretende Elternvertretung. Klassenadministration und Elternvertretung werden immer an konkrete Schulen/Klassen gebunden; eine Person kann mehrere Zuweisungen besitzen.
+- Schülerchat und Klassenchat sind getrennte Räume. Zum Start sehen nur Schüler derselben Klasse den Schülerchat. Auffällige Schutzsignale werden separat und ausschließlich für Administratoren protokolliert; normale Nachrichten werden nicht überwacht protokolliert.
+- Hausaufgaben kommen je Schule über die konfigurierte Quelle, derzeit am THG über WebUntis. Eltern lesen, Schüler haken lokal ab; manuelle Aufgaben bleiben vorbereitet, aber außerhalb des Starts.
+- Kontaktfelder sind standardmäßig sichtbar und pro Adresse, E-Mail und Telefon einzeln ausblendbar. Familienfarben gelten gemeinsam für beide Eltern und werden in kindbezogenen Elternansichten als dezente Akzente genutzt; Mehrkind-Einträge bleiben neutral.
+- Klassenfotos sind standardmäßig für aktive Klassenmitglieder sichtbar. Uploads gehen zunächst in den rollenbeschränkten Foto-WebDAV-Bereich, werden mit Uploadkonto und Serverzeitpunkt gespeichert und von Fotobearbeitungsrollen veröffentlicht. Nicht geprüfte Vorgänge erinnern nach 48 Stunden; zurückgestellte/abgelehnte Vorgänge haben ein editierbares Ablaufdatum, der Klassenadministrator darf es nur im eigenen Zuständigkeitsbereich verlängern.
+- Diagnoseaufnahmen des Testbetriebs dürfen Administrator und zuständiger Klassenadministrator sehen. Das konfigurierbare Limit startet mit 5 GB; bei voller Belegung werden die ältesten Diagnoseaufnahmen automatisch entfernt. Der Testbetrieb ist temporär, geräteübergreifend und kann Screenshots, Audio, GUI-Kontext und Zeitstempel an den geschützten Diagnosebereich senden.
+- Sicherheits-/Moderationsprotokolle werden täglich strukturiert abgelegt, sind nur für das Administratorkonto zugänglich und können zeitraum-, schul-, klassen-, kategorie- und optional schülerbezogen als ZIP mit PDF sowie CSV oder JSON exportiert werden. Schülerfilter verlangen eine ausdrückliche Datenschutzbestätigung; Exporte bleiben 30 Tage abrufbar und jeder Download wird protokolliert.
+- Der Administratorbereich heißt „Administratorbereich“ und ist vom Familienbereich getrennt. Die Profilvorschau nutzt ein verknüpftes Vorschauprofil, startet standardmäßig als Elternsicht und erlaubt temporäre, zwischen PC und Smartphone synchronisierte Testaktionen ohne dauerhafte Stammdatenänderung.
+
+Dieser Zwischenstand ist ausreichend für den ersten Arbeitsblock. Offene Detailfragen werden als Änderungen an diesem Vertrag geführt und nicht stillschweigend in Einzeltemplates gelöst.
+
 ## Anhang A: Vollständiges Routeninventar
 
 Aus `app/src/klasse5e/urls.py` gelesen. Parameter sind Schemaplatzhalter; keine produktiven IDs/Tokens. Handlerzuordnung ist kein geprüfter HTTP-Methodenvertrag; Includes enthalten weitere Bibliotheksrouten.
