@@ -439,6 +439,21 @@ def personal_profile(request):
 
 
 def _personal_profile_context(request, person, active_tab, *, profile_errors=()):
+    profile_values = {
+        "first_name": person.first_name,
+        "last_name": person.last_name,
+        "street": person.street,
+        "postal_code": person.postal_code,
+        "city": person.city,
+        "chat_display_name": person.chat_display_name,
+        "phone": format_phone_number(person.phone),
+        "email": request.user.email,
+        "contribution_name_mode": person.contribution_name_mode,
+    }
+    if profile_errors:
+        for key in profile_values:
+            if key in request.POST:
+                profile_values[key] = request.POST.get(key, "")
     return {
             "page_title": "Persönliches Profil",
             "person": person,
@@ -458,6 +473,7 @@ def _personal_profile_context(request, person, active_tab, *, profile_errors=())
             "vapid_configured": bool(settings.VAPID_PUBLIC_KEY),
             "mfa_enabled": _mfa_enabled(request.user),
             "profile_errors": profile_errors,
+            "profile_values": profile_values,
         }
 
 

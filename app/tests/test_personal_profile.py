@@ -176,6 +176,8 @@ def test_profile_rejects_invalid_contact_data_atomically(client, guardian):
 
     assert response.status_code == 400
     assert b"Deine Angaben wurden noch nicht gespeichert." in response.content
+    assert b'value="changed@example.test"' in response.content
+    assert b'value="keine Telefonnummer"' in response.content
     guardian.refresh_from_db()
     guardian.person.refresh_from_db()
     assert guardian.email == "guardian@example.test"
