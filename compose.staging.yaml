@@ -1,0 +1,38 @@
+name: klasse-5e-staging
+
+# Nicht automatisch starten. Diese Ergänzung wird ausschließlich zusammen mit
+# compose.yaml und einer lokalen, nicht versionierten .env.staging verwendet.
+# Sie trennt die Abnahmeumgebung technisch vom Portal auf klassid.de.
+services:
+  klasse-5e-app:
+    image: klasse-5e-app:staging
+    environment:
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Provide the staging host only}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:?Provide the staging HTTPS origin only}
+      APP_BASE_URL: ${APP_BASE_URL:?Provide the staging HTTPS base URL only}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:?Provide a verified staging sender}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:?Provide the staging contact mailto URI}
+      TEMPORARY_ADMIN_MFA_BYPASS: "0"
+      BIOMETRIC_SEARCH_ENABLED: "0"
+
+  klasse-5e-db:
+    # A distinct database name makes accidental cross-environment connections
+    # visible even if a connection string is inspected manually.
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-klasse5e_staging}
+
+volumes:
+  postgres_data:
+    name: klasse-5e-staging-postgres-data
+  app_media:
+    name: klasse-5e-staging-app-media
+  vision_data:
+    name: klasse-5e-staging-vision-data
+  vision_models:
+    name: klasse-5e-staging-vision-models
+
+networks:
+  klasse_5e_internal:
+    name: klasse-5e-staging-internal
+  klasse_5e_egress:
+    name: klasse-5e-staging-egress

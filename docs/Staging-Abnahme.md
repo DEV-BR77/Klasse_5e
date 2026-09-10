@@ -16,6 +16,30 @@ niemals den bestehenden Dienst auf `klassid.de`.
 - Keine Kopie realer Familien-, Chat-, Foto- oder Zugangsdaten. Nur
   dokumentierte synthetische Abnahmekonten verwenden.
 
+## Reproduzierbare Konfiguration
+
+`compose.staging.yaml` ist eine nicht aktive Ergänzung zur bestehenden Compose-
+Datei. Sie setzt einen eigenen Projektnamen sowie eigene PostgreSQL-, Medien-
+und Vision-Volumes durch; der gemeinsame Reverse-Proxy bleibt der einzige
+bewusst geteilte Dienst. Die lokale Datei `.env.staging` entsteht aus
+`.env.staging.example`, bleibt von Git ausgeschlossen und enthält ausschließlich
+neu erzeugte Staging-Secrets.
+
+Vor dem ersten Start prüft der folgende reine Konfigurationsbefehl sowohl die
+Compose-Auflösung als auch die Trennung vom Produktivhost. Er startet keine
+Container und ändert weder DNS noch Caddy:
+
+```powershell
+.\tools\Test-StagingConfiguration.ps1
+```
+
+Erst danach wird die freigegebene Caddy-Route für den konkret benannten
+Staging-Host gesetzt und die Umgebung mit beiden Compose-Dateien gestartet:
+
+```powershell
+docker compose --env-file .env.staging -f compose.yaml -f compose.staging.yaml up -d --build
+```
+
 ## Technisches Gate
 
 Vor einer externen Geräteabnahme müssen nachweislich erfolgreich sein:
