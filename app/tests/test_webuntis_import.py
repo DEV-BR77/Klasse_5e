@@ -2,7 +2,8 @@ from datetime import date
 
 import pytest
 
-from klasse5e.core.models import Person, UserAccount
+from klasse5e.core.models import Person, School, UserAccount
+from klasse5e.portal_adapters.models import PortalAdapter
 from klasse5e.webuntis.extra_models import (
     WebUntisCalendarSubscription,
     WebUntisSubjectMapping,
@@ -36,9 +37,15 @@ def connection(db):
         email="webuntis@example.test", password="synthetic-password"
     )
     student = Person.objects.create(first_name="Test", last_name="Student")
+    adapter = PortalAdapter.objects.create(
+        school=School.objects.create(name="Importschule", slug="importschule"),
+        provider=PortalAdapter.Provider.WEBUNTIS,
+        name="Import WebUntis",
+    )
     return WebUntisConnection.objects.create(
         user=user,
         student=student,
+        adapter=adapter,
         external_student_id=1234,
         username_encrypted=b"synthetic",
         password_encrypted=b"synthetic",
@@ -47,8 +54,8 @@ def connection(db):
 
 @pytest.mark.django_db
 def test_timetable_is_mapped_and_idempotent(connection):
-    WebUntisSubjectMapping.objects.create(code="KU", label="Kunst")
-    WebUntisTeacherMapping.objects.create(code="ABC", label="Test Teacher")
+    WebUntisSubjectMapping.objects.create(adapter=connection.adapter, code="KU", label="Kunst")
+    WebUntisTeacherMapping.objects.create(adapter=connection.adapter, code="ABC", label="Test Teacher")
 
     assert sync_timetable(connection, FakeAdapter(), today=date(2099, 1, 1)) == 1
     lesson = connection.lessons.get()
@@ -60,8 +67,8 @@ def test_timetable_is_mapped_and_idempotent(connection):
 
 @pytest.mark.django_db
 def test_calendar_contains_mapped_lesson(connection, monkeypatch):
-    WebUntisSubjectMapping.objects.create(code="KU", label="Kunst")
-    WebUntisTeacherMapping.objects.create(code="ABC", label="Test Teacher")
+    WebUntisSubjectMapping.objects.create(adapter=connection.adapter, code="KU", label="Kunst")
+    WebUntisTeacherMapping.objects.create(adapter=connection.adapter, code="ABC", label="Test Teacher")
     sync_timetable(connection, FakeAdapter(), today=date(2099, 1, 1))
     monkeypatch.setattr("klasse5e.webuntis.ical.timezone.now", lambda: connection.lessons.get().starts_at)
     calendar = build_calendar(connection)
@@ -108,7 +115,7 @@ class FakeHomeworkAdapter:
 def test_parent_homework_payload_joins_lesson_subject(connection):
     from klasse5e.webuntis.importer import sync_homework
 
-    WebUntisSubjectMapping.objects.create(code="KU", label="Kunst")
+    WebUntisSubjectMapping.objects.create(adapter=connection.adapter, code="KU", label="Kunst")
     assert sync_homework(connection, FakeHomeworkAdapter(), today=date(2099, 1, 1)) == 1
     homework = connection.homework.get()
     assert homework.subject == "Kunst"

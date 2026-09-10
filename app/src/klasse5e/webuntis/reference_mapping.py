@@ -135,18 +135,24 @@ def apply_reference_mapping(connection, *, timetable_path, class_mapping_path):
 
     for source_code, mapping in numeric_subjects.items():
         WebUntisSubjectMapping.objects.update_or_create(
+            adapter=connection.adapter,
             code=source_code,
             defaults={"label": mapping["subject_label"]},
         )
     for source_code, teacher_label in numeric_teachers.items():
         WebUntisTeacherMapping.objects.update_or_create(
+            adapter=connection.adapter,
             code=source_code,
             defaults={"label": teacher_label},
         )
 
     changed_lessons = 0
-    subject_aliases = dict(WebUntisSubjectMapping.objects.values_list("code", "label"))
-    teacher_aliases = dict(WebUntisTeacherMapping.objects.values_list("code", "label"))
+    subject_aliases = dict(
+        WebUntisSubjectMapping.objects.filter(adapter=connection.adapter).values_list("code", "label")
+    )
+    teacher_aliases = dict(
+        WebUntisTeacherMapping.objects.filter(adapter=connection.adapter).values_list("code", "label")
+    )
     for lesson in lessons:
         subject = subject_aliases.get(lesson.subject_code, lesson.subject)
         teacher_label = teacher_aliases.get(lesson.teacher_code, lesson.teacher_label)

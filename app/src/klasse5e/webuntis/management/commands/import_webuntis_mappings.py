@@ -4,13 +4,14 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from klasse5e.portal_adapters.models import PortalAdapter
 from klasse5e.webuntis.extra_models import (
     WebUntisSubjectMapping,
     WebUntisTeacherMapping,
 )
 
 
-def _import_csv(path_value, model):
+def _import_csv(path_value, model, *, adapter):
     path = Path(path_value).resolve()
     if not path.is_file():
         raise CommandError(f"Mapping file not found: {path.name}")
@@ -24,7 +25,7 @@ def _import_csv(path_value, model):
             label = (row.get("label") or "").strip().rstrip(",").strip()
             if not code or not label:
                 continue
-            model.objects.update_or_create(code=code, defaults={"label": label})
+            model.objects.update_or_create(adapter=adapter, code=code, defaults={"label": label})
             count += 1
     return count
 
@@ -35,9 +36,16 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--teachers", required=True)
         parser.add_argument("--subjects", required=True)
+        parser.add_argument("--adapter-id", type=int, required=True)
 
     @transaction.atomic
     def handle(self, *args, **options):
-        teachers = _import_csv(options["teachers"], WebUntisTeacherMapping)
-        subjects = _import_csv(options["subjects"], WebUntisSubjectMapping)
+        try:
+            adapter = PortalAdapter.objects.get(
+                pk=options["adapter_id"], provider=PortalAdapter.Provider.WEBUNTIS
+            )
+        except PortalAdapter.DoesNotExist as exc:
+            raise CommandError("Die angegebene WebUntis-Integration existiert nicht.") from exc
+        teachers = _import_csv(options["teachers"], WebUntisTeacherMapping, adapter=adapter)
+        subjects = _import_csv(options["subjects"], WebUntisSubjectMapping, adapter=adapter)
         self.stdout.write(f"Imported {teachers} teacher and {subjects} subject mappings.")

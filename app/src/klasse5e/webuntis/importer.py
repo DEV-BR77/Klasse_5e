@@ -76,8 +76,12 @@ def sync_timetable(connection, adapter, *, today=None):
         startDate=int(start.strftime("%Y%m%d")),
         endDate=int(end.strftime("%Y%m%d")),
     )
-    subject_map = dict(WebUntisSubjectMapping.objects.values_list("code", "label"))
-    teacher_map = dict(WebUntisTeacherMapping.objects.values_list("code", "label"))
+    subject_map = dict(
+        WebUntisSubjectMapping.objects.filter(adapter=connection.adapter).values_list("code", "label")
+    )
+    teacher_map = dict(
+        WebUntisTeacherMapping.objects.filter(adapter=connection.adapter).values_list("code", "label")
+    )
     seen = set()
     changes = 0
     for item in payload or []:
@@ -154,7 +158,9 @@ def sync_homework(connection, adapter, *, today=None):
         startDate=(today - timedelta(days=14)).isoformat(),
         endDate=(today + timedelta(days=90)).isoformat(),
     )
-    subject_map = dict(WebUntisSubjectMapping.objects.values_list("code", "label"))
+    subject_map = dict(
+        WebUntisSubjectMapping.objects.filter(adapter=connection.adapter).values_list("code", "label")
+    )
     seen = set()
     changes = 0
     for item in homework_items(payload):
