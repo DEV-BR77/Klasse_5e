@@ -2235,6 +2235,11 @@ html[data-theme-mode="dark"] {
 .notification-card h2 { margin-top: .25rem; font-size: 1.05rem; }
 .notification-card > .button, .notification-card form { flex: 0 0 auto; }
 @media (max-width: 42rem) { .notification-card { align-items: stretch; flex-direction: column; } .notification-card > .button, .notification-card form, .notification-card form .button { width: 100%; } }
+.management-list { display: grid; gap: .65rem; margin: 0; padding: 1rem clamp(1rem, 3vw, 1.6rem); list-style: none; }
+.management-list > :is(li, div) { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .8rem 0; border-bottom: 1px solid var(--app-border-strong); }
+.management-list > :is(li, div):last-child { border-bottom: 0; }
+.management-list span { color: var(--color-text-muted); text-align: right; }
+@media (max-width: 42rem) { .management-list > :is(li, div) { align-items: flex-start; flex-direction: column; gap: .2rem; } .management-list span { text-align: left; } }
 .event-card-grid, .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
 .event-list-card { min-height: 10rem; border-radius: 1.2rem; text-decoration: none; }
 .post-detail-page { max-width: 48rem; margin-inline: auto; }

@@ -1,19 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="settings-page">
-  <header class="page-heading"><h1>Rollenverwaltung</h1><a href="{% url 'portal-management' %}">Zur Portalverwaltung</a></header>
-  <section class="content-card"><h2>Alle Benutzerkonten</h2><ul>{% for account in users %}<li>{{ account }} – {% if account.is_active and not account.locked_at %}Aktiv{% else %}Gesperrt/inaktiv{% endif %}</li>{% empty %}<li>Keine Konten.</li>{% endfor %}</ul></section>
-  <section class="content-card"><h2>Persönliche Rollen</h2>
-    <p>Administratorrollen gelten portalweit und benötigen starke Anmeldung. Elternvertretungen und ihre Stellvertretungen gelten jeweils für die ausgewählte Klasse.</p>
-    <form method="post">{% csrf_token %}<input type="hidden" name="form" value="role">{{ role_form.as_p }}<button class="button" type="submit">Rolle speichern</button></form>
+  <header class="page-heading"><div><p class="eyebrow">Nur für Administratoren</p><h1>Rollenverwaltung</h1><p class="lede">Zugriffe werden je Portal, Schule oder Klasse vergeben.</p></div><a class="button button-secondary" href="{% url 'portal-management' %}">← Portalverwaltung</a></header>
+  <section class="settings-panel"><header><div><h2>Rolle zuweisen oder ändern</h2><p>Administratorrollen gelten portalweit und benötigen starke Anmeldung. Elternvertretungen gelten für die ausgewählte Klasse.</p></div></header>
+    <form method="post" class="settings-details-body form-stack">{% csrf_token %}<input type="hidden" name="form" value="role">{{ role_form.as_p }}<footer class="form-actions"><button class="button button-primary" type="submit">Rolle speichern</button></footer></form>
   </section>
-  <section class="content-card"><h2>Aktive Zuweisungen</h2><ul>
-    {% for assignment in assignments %}<li>{{ assignment.user }} – {{ assignment.get_role_display }}{% if assignment.school_class %} · {{ assignment.school_class }}{% endif %}</li>{% empty %}<li>Keine Zuweisungen.</li>{% endfor %}
+  <section class="settings-panel"><header><div><h2>Aktive Zuweisungen</h2><p>Diese Rollen sind derzeit wirksam.</p></div></header><ul class="management-list">
+    {% for assignment in assignments %}<li><strong>{{ assignment.user }}</strong><span>{{ assignment.get_role_display }}{% if assignment.school_class %} · {{ assignment.school_class }}{% elif assignment.school %} · {{ assignment.school }}{% else %} · Portalweit{% endif %}</span></li>{% empty %}<li class="muted">Keine Zuweisungen.</li>{% endfor %}
   </ul></section>
-  <section class="content-card"><h2>Elternvertreter-Chat</h2>
-    <p>Pro Klasse kann ein bestehender Chat ausgewählt werden. Neue Beiträge benachrichtigen die aktiven Elternvertretungen über die Glocke. Der Chat bleibt für seine bisherigen Klassenmitglieder zugänglich.</p>
-    <ul>{% for room in representative_rooms %}<li>{{ room.school_class }} · {{ room.title }}</li>{% empty %}<li>Noch kein Chat ausgewählt.</li>{% endfor %}</ul>
-    <form method="post">{% csrf_token %}<input type="hidden" name="form" value="room">{{ room_form.as_p }}<button class="button" type="submit">Chatzuordnung speichern</button></form>
+  <section class="settings-panel"><header><div><h2>Elternvertreter-Chat</h2><p>Neue Beiträge benachrichtigen die aktiven Elternvertretungen über die Glocke. Der Chat bleibt für bisherige Klassenmitglieder zugänglich.</p></div></header>
+    <div class="management-list">{% for room in representative_rooms %}<div><strong>{{ room.school_class }}</strong><span>{{ room.title }}</span></div>{% empty %}<p class="muted">Noch kein Chat ausgewählt.</p>{% endfor %}</div>
+    <form method="post" class="settings-details-body form-stack">{% csrf_token %}<input type="hidden" name="form" value="room">{{ room_form.as_p }}<footer class="form-actions"><button class="button button-primary" type="submit">Chatzuordnung speichern</button></footer></form>
   </section>
+  <section class="settings-panel"><header><div><h2>Konten</h2><p>Kontostatus dient nur zur Einordnung; Rollen werden oben vergeben.</p></div></header><ul class="management-list">{% for account in users %}<li><strong>{{ account }}</strong><span>{% if account.is_active and not account.locked_at %}Aktiv{% else %}Gesperrt oder inaktiv{% endif %}</span></li>{% empty %}<li class="muted">Keine Konten.</li>{% endfor %}</ul></section>
 </section>
 {% endblock %}
