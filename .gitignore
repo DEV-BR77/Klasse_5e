@@ -48,6 +48,7 @@ backups/
 output/
 *.log
 *.sqlite3
+*.sqlite3-journal
 
 # Local school-portal reference data and personal design drafts
 references/webuntis/private/
