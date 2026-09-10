@@ -92,7 +92,11 @@ TEMPLATES = [
 ]
 WSGI_APPLICATION = "klasse5e.wsgi.application"
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+RUNNING_TESTS = "pytest" in sys.modules
+# Tests must be fully local and disposable.  In particular, a DATABASE_URL
+# inherited from Docker, a terminal profile, or a deployment command must never
+# make pytest connect to an existing PostgreSQL database.
+DATABASE_URL = None if RUNNING_TESTS else os.environ.get("DATABASE_URL")
 if DATABASE_URL:
     from urllib.parse import urlparse
 
@@ -111,6 +115,9 @@ else:
     DATABASES = {
         "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "test.sqlite3"}
     }
+
+if RUNNING_TESTS:
+    DATABASES["default"]["TEST"] = {"NAME": BASE_DIR / ".pytest.sqlite3"}
 
 AUTH_USER_MODEL = "core.UserAccount"
 AUTHENTICATION_BACKENDS = [
