@@ -93,10 +93,6 @@
       <span class="app-bottom-nav__label">Chat</span>
     </a>
     {% endif %}
-    <a href="/kontakte/" class="app-bottom-nav__item" {% if active_section == "contacts" %}aria-current="page"{% endif %}>
-      {% include "ui/_icon.html" with name="people" %}
-      <span class="app-bottom-nav__label">Kontaktliste</span>
-    </a>
     <a href="/mehr/" class="app-bottom-nav__item" {% if active_section == "more" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="more" %}
       <span class="app-bottom-nav__label">Mehr</span>

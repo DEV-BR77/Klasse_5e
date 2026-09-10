@@ -32,7 +32,9 @@ def migration_reference_data(db):
     for module_name, function_name in (
         ("klasse5e.core.migrations.0003_onboarding_consent_catalog", "seed_consent_catalog"),
         ("klasse5e.core.migrations.0006_portalmodule_portalmoduleoverride", "seed_modules"),
+        ("klasse5e.core.migrations.0010_enable_mobility_module", "seed_mobility"),
         ("klasse5e.core.migrations.0011_portaltheme_useraccount_selected_theme", "seed_themes"),
+        ("klasse5e.core.migrations.0025_alter_portalconfigurationkey_value_type", "seed_idle_timeout"),
         ("klasse5e.chat.migrations.0002_retention_and_attachments", "seed_categories"),
     ):
         getattr(import_module(module_name), function_name)(django_apps, None)

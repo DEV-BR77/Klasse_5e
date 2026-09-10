@@ -85,7 +85,7 @@ def test_management_ui_and_mfa(client, guardian, admin_user, school_class):
     assert response.status_code == 200
     assert guardian.email.encode() in response.content
     response = client.post("/verwaltung/rollen/", {
-        "form": "role", "user": guardian.pk, "role": Role.PRIMARY_ADMIN, "action": "grant",
+        "form": "role", "user": guardian.pk, "role": Role.DEPUTY_ADMIN, "action": "grant",
     }, secure=True)
     assert response.status_code == 302
     client.force_login(guardian)
