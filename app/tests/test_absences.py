@@ -261,7 +261,10 @@ def test_browser_submission_is_explicit_idempotent_and_neutral(client, absence_c
     response = client.get("/abwesenheiten/")
     form = response.context["submission_form"]
     assert form is not None
-    assert str(absence_connection.student_id) in response.content.decode()
+    page = response.content.decode()
+    assert str(absence_connection.student_id) in page
+    assert 'type="submit">Abwesenheit verbindlich melden</button>' in page
+    assert 'id="absence-checking" role="status"' in page
     submitted = []
 
     def fake_submit(connection, expected, user):

@@ -15,7 +15,7 @@
   </article>{% endif %}
   {% if submission_form %}<article class="settings-panel"><header><h2>Abwesenheit bei WebUntis melden</h2></header>
     <p>Die Meldung wird nach deinem ausdrücklichen Absenden einmalig über den persönlichen Zugang des gewählten Kindes übertragen und danach direkt geprüft.</p>
-    <form method="post" class="form-stack" onsubmit="this.querySelector('button[type=submit]').disabled=true;document.getElementById('absence-checking').hidden=false">{% csrf_token %}<input type="hidden" name="action" value="submit">{{ submission_form.as_p }}<p id="absence-checking" hidden>Bestätigung wird geprüft …</p><button class="button button-primary">Abwesenheit verbindlich melden</button></form>
+    <form method="post" class="form-stack" onsubmit="this.querySelector('button[type=submit]').disabled=true;this.setAttribute('aria-busy','true');document.getElementById('absence-checking').hidden=false">{% csrf_token %}<input type="hidden" name="action" value="submit">{{ submission_form.as_p }}<p id="absence-checking" role="status" aria-live="polite" hidden>Bestätigung wird geprüft …</p><button class="button button-primary" type="submit">Abwesenheit verbindlich melden</button></form>
   </article>{% endif %}
   {% if form %}<article class="settings-panel"><header><h2>Lokalen Entwurf speichern</h2></header>
     <p>Ein lokaler Entwurf wird nicht an die Schule übertragen.</p>
