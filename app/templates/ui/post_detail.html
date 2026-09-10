@@ -1,1 +1,23 @@
-{% extends "base.html" %}{% block content %}<article class="content-card prose"><h1>{{ post.title }}</h1>{{ post.body|linebreaks }}<h2>Kommentare</h2><ul>{% for item in comments %}<li>{{ item.body }}</li>{% empty %}<li>Keine Kommentare.</li>{% endfor %}</ul></article>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<article class="content-card prose post-detail-page">
+  <header><p class="eyebrow">Aktuelles</p><h1>{{ post.title }}</h1></header>
+  {{ post.body|linebreaks }}
+  <section aria-labelledby="post-comments-title">
+    <h2 id="post-comments-title">Kommentare</h2>
+    <ol class="post-comment-list">
+      {% for item in comments %}
+      <li class="post-comment post-comment--{{ item.status }}">
+        {% if item.status == 'visible' %}
+          <p>{{ item.body }}</p>
+        {% elif item.status == 'withdrawn' %}
+          <p class="muted">Dieser Kommentar wurde zurückgezogen.</p>
+        {% else %}
+          <p class="muted">Dieser Kommentar ist nicht sichtbar.</p>
+        {% endif %}
+      </li>
+      {% empty %}<li class="muted">Keine Kommentare.</li>{% endfor %}
+    </ol>
+  </section>
+</article>
+{% endblock %}

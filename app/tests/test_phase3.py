@@ -145,3 +145,29 @@ def test_withdraw_and_moderation(client, guardian, school_class, year):
     client.force_login(moderator)
     assert client.post(f"/comments/{comment.id}/moderate/").status_code == 204
     assert AuditEvent.objects.filter(action="comment.moderated").exists()
+
+
+@pytest.mark.django_db
+def test_post_detail_never_renders_text_of_hidden_or_withdrawn_comments(
+    client, guardian, school_class, year
+):
+    post = Post.objects.create(
+        school_class=school_class, school_year=year, title="Info", body="Text",
+        category="A", author=guardian, status="published",
+    )
+    Comment.objects.create(
+        post=post, author=guardian, body="Geheimer moderierter Text", status=Comment.Status.HIDDEN
+    )
+    Comment.objects.create(
+        post=post, author=guardian, body="Geheimer zurückgezogener Text", status=Comment.Status.WITHDRAWN
+    )
+    client.force_login(guardian)
+
+    page = client.get(f"/mehr/aktuelles/{post.id}/", secure=True)
+
+    assert page.status_code == 200
+    content = page.content.decode()
+    assert "Geheimer moderierter Text" not in content
+    assert "Geheimer zurückgezogener Text" not in content
+    assert "Dieser Kommentar ist nicht sichtbar." in content
+    assert "Dieser Kommentar wurde zurückgezogen." in content
