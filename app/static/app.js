@@ -2,6 +2,12 @@
   const live = document.querySelector("#live-status");
   const announce = (text) => { if (live) live.textContent = text; };
   const csrf = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || "";
+  document.querySelectorAll("[data-auto-dismiss]").forEach((notice) => {
+    window.setTimeout(() => {
+      notice.classList.add("is-dismissing");
+      window.setTimeout(() => notice.remove(), 220);
+    }, 5000);
+  });
   if (document.querySelector("[data-login-form]")) {
     // Safari and Chromium may restore an old login form from bfcache. Its
     // token no longer matches a renewed cookie after idle logout.

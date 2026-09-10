@@ -496,27 +496,33 @@ def _save_personal_profile(request, person):
     if "phone" in request.POST:
         person.phone = normalize_phone_number(request.POST.get("phone", ""))
     if "home_latitude" in request.POST or "home_longitude" in request.POST:
-        latitude = request.POST.get("home_latitude", "").strip()
-        longitude = request.POST.get("home_longitude", "").strip()
+        latitude = request.POST.get("home_latitude", "").strip().replace(",", ".")
+        longitude = request.POST.get("home_longitude", "").strip().replace(",", ".")
         if not latitude and not longitude:
             person.home_latitude = person.home_longitude = None
         elif not latitude or not longitude:
-            raise ValidationError("Bitte markiere einen vollständigen Wohnbereich auf der Karte.")
+            # The map is optional. An incomplete hidden map value must never
+            # prevent unrelated profile data from being saved.
+            pass
         else:
             try:
                 # Map interactions can produce more precision than the privacy-safe
                 # six-decimal storage format. Round before model validation so a
                 # profile save cannot discard unrelated form fields.
-                person.home_latitude = Decimal(latitude).quantize(
+                selected_latitude = Decimal(latitude).quantize(
                     Decimal("0.000001"), rounding=ROUND_HALF_UP
                 )
-                person.home_longitude = Decimal(longitude).quantize(
+                selected_longitude = Decimal(longitude).quantize(
                     Decimal("0.000001"), rounding=ROUND_HALF_UP
                 )
             except (InvalidOperation, ValueError):
-                raise ValidationError("Der markierte Wohnbereich ist ungültig. Bitte wähle ihn erneut aus.")
-            if not (-90 <= person.home_latitude <= 90 and -180 <= person.home_longitude <= 180):
-                raise ValidationError("Der markierte Wohnbereich liegt außerhalb der Karte.")
+                # Preserve the existing optional location when a browser sends
+                # a malformed map value. The remaining profile form is valid.
+                pass
+            else:
+                if -90 <= selected_latitude <= 90 and -180 <= selected_longitude <= 180:
+                    person.home_latitude = selected_latitude
+                    person.home_longitude = selected_longitude
     if "contribution_name_mode" in request.POST:
         mode = request.POST.get("contribution_name_mode", "family")
         person.contribution_name_mode = (

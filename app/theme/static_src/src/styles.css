@@ -1776,7 +1776,10 @@ html[data-theme-mode="dark"] {
   box-shadow: 0 .8rem 1.8rem rgb(22 28 48 / 18%);
   color: var(--color-text);
   font-weight: 700;
+  transition: opacity .2s ease, transform .2s ease;
 }
+
+.tailwind-shell .status-banner.is-dismissing { opacity: 0; transform: translateY(-.35rem); }
 
 .tailwind-shell .status-banner--success { border-color: var(--color-success); background: var(--color-success-soft); color: var(--color-success); }
 .tailwind-shell .status-banner--error { border-color: var(--color-error); background: var(--color-error-soft); color: var(--color-error); }

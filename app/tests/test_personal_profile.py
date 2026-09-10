@@ -94,6 +94,24 @@ def test_profile_home_area_persists_one_current_location(client, guardian):
     assert b"Mein Wohnbereich" in page.content
     assert b"Wohnbereich gespeichert" in page.content
     assert b"Dein Profil wurde gespeichert." in page.content
+    assert b"data-auto-dismiss" in page.content
+
+
+@pytest.mark.django_db
+def test_profile_save_accepts_localized_optional_map_coordinates(client, guardian):
+    client.force_login(guardian)
+    response = client.post(
+        reverse("personal-profile"),
+        {
+            "tab": "data", "save_scope": "data", "first_name": "Alex", "last_name": "Beispiel",
+            "street": "Musterstraße 1", "home_latitude": "52,42399149", "home_longitude": "10,78622151",
+        },
+        secure=True,
+    )
+    assert response.status_code == 302
+    guardian.person.refresh_from_db()
+    assert guardian.person.street == "Musterstraße 1"
+    assert str(guardian.person.home_latitude) == "52.423991"
 
 
 @pytest.mark.django_db
