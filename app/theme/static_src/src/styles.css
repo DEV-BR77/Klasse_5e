@@ -325,6 +325,114 @@ html[data-theme-mode="dark"] {
     gap: .5rem;
   }
 
+  .app-child-context {
+    position: relative;
+    min-width: 0;
+  }
+
+  .app-child-context > summary {
+    display: grid;
+    min-height: 2.75rem;
+    min-width: 7.5rem;
+    cursor: pointer;
+    list-style: none;
+    align-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: .875rem;
+    background: var(--color-surface);
+    padding: .3rem .75rem;
+    color: var(--color-text);
+    line-height: 1.15;
+  }
+
+  .app-child-context > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .app-child-context > summary::after {
+    position: absolute;
+    top: 50%;
+    right: .55rem;
+    content: "⌄";
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+  }
+
+  .app-child-context[open] > summary {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+  }
+
+  .app-child-context__label {
+    max-width: 9rem;
+    overflow: hidden;
+    padding-right: .9rem;
+    font-size: .8rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-child-context__meta {
+    overflow: hidden;
+    padding-right: .9rem;
+    color: var(--color-text-muted);
+    font-size: .67rem;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-child-context__panel {
+    position: absolute;
+    top: calc(100% + .4rem);
+    left: 0;
+    z-index: 55;
+    display: grid;
+    min-width: min(20rem, calc(100vw - 2rem));
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: .9rem;
+    background: var(--color-surface);
+    box-shadow: 0 14px 34px rgb(15 23 42 / 18%);
+    padding: .3rem;
+  }
+
+  .app-child-context__panel form {
+    margin: 0;
+  }
+
+  .app-child-context__panel button {
+    display: grid;
+    width: 100%;
+    min-height: 2.75rem;
+    cursor: pointer;
+    border: 0;
+    border-radius: .65rem;
+    background: transparent;
+    padding: .5rem .65rem;
+    color: var(--color-text);
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 750;
+    text-align: left;
+  }
+
+  .app-child-context__panel button small {
+    overflow: hidden;
+    color: var(--color-text-muted);
+    font-size: .7rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-child-context__panel button:hover,
+  .app-child-context__panel button[aria-current="page"] {
+    background: var(--color-primary-light);
+    color: var(--color-primary-dark);
+  }
+
   .app-topbar__back,
   .app-icon-button {
     display: inline-flex;
@@ -973,6 +1081,13 @@ html[data-theme-mode="dark"] {
     gap: .2rem;
   }
 
+  .app-child-context > summary {
+    min-width: 0;
+    max-width: 7.25rem;
+    min-height: 2.5rem;
+    padding-left: .55rem;
+  }
+
   .app-topbar__back,
   .app-icon-button,
   .app-profile-menu > summary {
@@ -1016,6 +1131,42 @@ html[data-theme-mode="dark"] {
 
   .app-profile-menu__name {
     display: none;
+  }
+}
+
+@media (min-width: 64rem) {
+  .tailwind-shell {
+    padding-bottom: 2rem;
+    padding-left: 13.5rem;
+  }
+
+  .app-bottom-nav {
+    top: 5.25rem;
+    bottom: 1.25rem;
+    left: 1rem;
+    width: 11.5rem;
+    min-height: 0;
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    transform: none;
+    border-radius: 1.1rem;
+    padding: .45rem;
+  }
+
+  .app-bottom-nav__item {
+    min-height: 3rem;
+    flex: 0 0 auto;
+    grid-template-columns: 1.5rem minmax(0, 1fr);
+    justify-content: start;
+    gap: .65rem;
+    padding: 0 .75rem;
+    font-size: .875rem;
+    text-align: left;
+  }
+
+  .app-bottom-nav__label {
+    justify-self: start;
   }
 }
 

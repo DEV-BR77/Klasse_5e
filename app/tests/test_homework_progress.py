@@ -3,7 +3,13 @@ from datetime import datetime, timedelta
 import pytest
 from django.utils import timezone
 
-from klasse5e.core.models import ClassMembership, GuardianChildRelationship, Person
+from klasse5e.core.models import (
+    ClassMembership,
+    GuardianChildRelationship,
+    Person,
+    StudentProfile,
+    UserAccount,
+)
 from klasse5e.webuntis.models import (
     HomeworkProgress,
     WebUntisConnection,
@@ -14,7 +20,13 @@ from klasse5e.webuntis.models import (
 
 @pytest.fixture
 def personal_homework(guardian, school_class):
-    student = Person.objects.create(first_name="Mila", last_name="Beispiel")
+    student_user = UserAccount.objects.create_user(
+        email="mila@example.test", password="Safe-Test-Password-123!"
+    )
+    student = Person.objects.create(
+        user=student_user, first_name="Mila", last_name="Beispiel"
+    )
+    StudentProfile.objects.create(person=student)
     ClassMembership.objects.create(
         school_class=school_class,
         person=student,
@@ -63,7 +75,11 @@ def test_dashboard_keeps_full_homework_text_in_readable_dialog(rf, guardian, per
     assert response.status_code == 200
     assert "homework-detail-" in response.content.decode()
     assert "begründe ausführlich jeden einzelnen Schritt" in response.content.decode()
-    assert "data-homework-toggle" in response.content.decode()
+    assert "data-homework-toggle" not in response.content.decode()
+
+    request.user = personal_homework.connection.student.user
+    student_response = dashboard(request)
+    assert "data-homework-toggle" in student_response.content.decode()
 
 
 @pytest.mark.django_db
@@ -110,10 +126,16 @@ def test_dashboard_names_tomorrow_and_renders_a_double_lesson_time_range(
 
 
 @pytest.mark.django_db
-def test_guardian_can_store_and_reopen_child_homework(client, guardian, personal_homework):
+def test_only_student_can_store_and_reopen_own_homework(client, guardian, personal_homework):
     client.force_login(guardian)
     url = f"/hausaufgaben/{personal_homework.id}/erledigt/"
 
+    response = client.post(url, {"completed": "yes"})
+
+    assert response.status_code == 404
+    assert not HomeworkProgress.objects.exists()
+
+    client.force_login(personal_homework.connection.student.user)
     response = client.post(url, {"completed": "yes"})
 
     assert response.status_code == 200
@@ -122,7 +144,7 @@ def test_guardian_can_store_and_reopen_child_homework(client, guardian, personal
         external_fingerprint=personal_homework.external_fingerprint,
     )
     assert progress.completed is True
-    assert progress.completed_by == guardian
+    assert progress.completed_by == personal_homework.connection.student.user
     assert progress.completed_at is not None
 
     response = client.post(url, {"completed": "no"})

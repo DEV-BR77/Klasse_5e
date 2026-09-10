@@ -544,6 +544,7 @@ def _family_overview_items(children, *, now):
 
 
 @login_required
+@require_POST
 def select_active_child(request, student_id=None):
     """Persist the selected child in the browser session after access validation."""
 
@@ -554,7 +555,7 @@ def select_active_child(request, student_id=None):
         request.session["active_child_person_id"] = student_id
     else:
         raise Http404
-    target = request.GET.get("next", "")
+    target = request.POST.get("next", "")
     if not target.startswith("/") or target.startswith("//"):
         target = "/"
     return redirect(target)
@@ -794,6 +795,7 @@ def homework_progress(request, homework_id):
         WebUntisHomework.objects.select_related("connection__student"),
         id=homework_id,
         connection__in=_webuntis_connections(request.user),
+        connection__student__user=request.user,
     )
     completed = request.POST.get("completed", "").lower() in {"1", "true", "yes", "on"}
     progress, _ = HomeworkProgress.objects.update_or_create(

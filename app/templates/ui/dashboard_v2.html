@@ -59,11 +59,13 @@
               </button>
               <span class="homework-completion">
                 <span data-homework-state-label="{{ item.id }}">{% if item.is_completed %}Erledigt{% else %}Offen{% endif %}</span>
+                {% if item.connection.student.user_id == request.user.pk %}
                 <label class="switch" title="Hausaufgabe als erledigt markieren">
                   <input type="checkbox" data-homework-toggle data-homework-id="{{ item.id }}" data-url="{% url 'homework-progress' item.id %}" {% if item.is_completed %}checked{% endif %}>
                   <span aria-hidden="true"></span>
                   <span class="sr-only">Hausaufgabe erledigt</span>
                 </label>
+                {% endif %}
               </span>
             </li>
           {% empty %}
@@ -87,11 +89,13 @@
                 <div><strong>Status</strong><small>Der Stand wird für {{ item.connection.student.first_name|default:"das Kind" }} auf allen Geräten gespeichert.</small></div>
                 <span class="homework-completion">
                   <span data-homework-state-label="{{ item.id }}">{% if item.is_completed %}Erledigt{% else %}Offen{% endif %}</span>
+                  {% if item.connection.student.user_id == request.user.pk %}
                   <label class="switch" title="Hausaufgabe als erledigt markieren">
                     <input type="checkbox" data-homework-toggle data-homework-id="{{ item.id }}" data-url="{% url 'homework-progress' item.id %}" {% if item.is_completed %}checked{% endif %}>
                     <span aria-hidden="true"></span>
                     <span class="sr-only">Hausaufgabe erledigt</span>
                   </label>
+                  {% endif %}
                 </span>
               </div>
               <footer class="dialog-actions"><button type="button" class="button button-primary" data-dialog-close>Fertig</button></footer>

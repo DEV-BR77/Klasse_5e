@@ -97,7 +97,7 @@ def test_parent_can_switch_the_class_area_to_one_child(client, guardian, two_sch
     mila, jonas, other_class = two_school_family
     client.force_login(guardian)
 
-    response = client.get(f"/familie/ansicht/{jonas.id}/?next=/kalender/")
+    response = client.post(f"/familie/ansicht/{jonas.id}/", {"next": "/kalender/"})
 
     assert response.status_code == 302
     assert response["Location"] == "/kalender/"
@@ -109,7 +109,7 @@ def test_parent_can_switch_the_class_area_to_one_child(client, guardian, two_sch
     assert "Biologie" in calendar.content.decode()
     assert "Deutsch" not in calendar.content.decode()
 
-    response = client.get(f"/familie/ansicht/{mila.id}/?next=/")
+    response = client.post(f"/familie/ansicht/{mila.id}/", {"next": "/"})
     assert response.status_code == 302
     assert client.session["active_child_person_id"] == mila.id
 
@@ -119,9 +119,20 @@ def test_parent_cannot_select_an_unrelated_child(client, guardian, two_school_fa
     outsider = Person.objects.create(first_name="Unbekannt", last_name="Kind")
     client.force_login(guardian)
 
-    response = client.get(f"/familie/ansicht/{outsider.id}/")
+    response = client.post(f"/familie/ansicht/{outsider.id}/", {"next": "/"})
 
     assert response.status_code == 404
+
+
+@pytest.mark.django_db
+def test_child_context_selection_is_a_post_action(client, guardian, two_school_family):
+    _mila, jonas, _other_class = two_school_family
+    client.force_login(guardian)
+
+    response = client.get(f"/familie/ansicht/{jonas.id}/?next=/kalender/")
+
+    assert response.status_code == 405
+    assert "active_child_person_id" not in client.session
 
 
 @pytest.mark.django_db
