@@ -1,26 +1,27 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="settings-page sync-settings-page">
+<section class="settings-page sync-settings-page" aria-labelledby="sync-settings-heading">
+  {% include "ui/_settings_navigation.html" %}
   <header class="page-heading">
     <div>
-      <p class="eyebrow">Synchronisation</p>
-      <h1>Schuldaten auswählen</h1>
-      <p class="lede">Schalte nur die Informationen ein, die du für deine Kinder sehen möchtest. Änderungen werden sofort übernommen.</p>
+      <p class="eyebrow">Datenschutz · Synchronisation</p>
+      <h1 id="sync-settings-heading">Schuldaten je Kind auswählen</h1>
+      <p class="lede">Du entscheidest für jedes Kind getrennt, welche Informationen in deinem persönlichen KlassID-Zugang aktualisiert werden. Nicht aktivierte Daten bleiben aus.</p>
     </div>
     <a class="button button-secondary" href="{% url 'ui-more' %}">← Hauptmenü</a>
   </header>
   {% for row in sync_rows %}
-    <article class="settings-panel sync-child-panel">
-      <header><div><p class="eyebrow">Für dein Kind</p><h2>{{ row.student.first_name }} {{ row.student.last_name }}</h2></div><span class="status status-info">Persönlich</span></header>
+    <article class="settings-panel sync-child-panel" aria-labelledby="sync-child-{{ row.student.pk }}">
+      <header><div><p class="eyebrow">Deine Auswahl für</p><h2 id="sync-child-{{ row.student.pk }}">{{ row.student.first_name }} {{ row.student.last_name }}</h2></div><span class="privacy-pill">Persönlich</span></header>
       <div class="sync-option-list">
         {% for option in row.options %}
-          <div class="sync-option"><div><strong>{{ option.label }}</strong><small>{{ option.description }}</small></div><form method="post" class="sync-toggle-form">{% csrf_token %}<input type="hidden" name="subject" value="{{ row.student.pk }}"><input type="hidden" name="feature" value="{{ option.key }}"><label class="switch" title="{{ option.label }} {{ option.enabled|yesno:'ausschalten,anschalten' }}"><span class="sr-only">{{ option.label }} {{ option.enabled|yesno:'ausschalten,anschalten' }}</span><input type="checkbox" name="enabled" {% if option.enabled %}checked{% endif %} {% if not option.allowed %}disabled{% endif %} onchange="this.form.submit()"><span aria-hidden="true"></span></label></form></div>
+          <div class="sync-option{% if not option.allowed %} is-locked{% endif %}"><div><strong>{{ option.label }}</strong><small id="sync-description-{{ row.student.pk }}-{{ option.key }}">{{ option.description }}</small>{% if not option.allowed %}<span class="sync-option__state">Zurzeit nicht freigegeben</span>{% endif %}</div><form method="post" class="sync-toggle-form">{% csrf_token %}<input type="hidden" name="subject" value="{{ row.student.pk }}"><input type="hidden" name="feature" value="{{ option.key }}"><label class="switch" title="{{ option.label }} {{ option.enabled|yesno:'ausschalten,anschalten' }}"><span class="sr-only">{{ option.label }} {{ option.enabled|yesno:'ausschalten,anschalten' }}</span><input type="checkbox" name="enabled" {% if option.enabled %}checked{% endif %} {% if not option.allowed %}disabled{% endif %} aria-describedby="sync-description-{{ row.student.pk }}-{{ option.key }}" onchange="this.form.submit()"><span aria-hidden="true"></span></label></form></div>
         {% endfor %}
       </div>
     </article>
   {% empty %}
     <article class="empty-state sync-empty"><h2>Noch kein bestätigtes Kind</h2><p>Die Synchronisationsoptionen werden angezeigt, sobald eine Sorgebeziehung bestätigt wurde.</p></article>
   {% endfor %}
-  <article class="settings-panel sync-note-panel"><div class="settings-details-body"><strong>Datenschutz auf einen Blick</strong><p>Jede Auswahl gilt nur für das jeweilige Kind und deinen persönlichen Zugang. Du kannst sie jederzeit wieder ausschalten.</p></div></article>
+  <article class="settings-panel sync-note-panel"><div class="settings-details-body"><strong>Datenschutz auf einen Blick</strong><p>Jede Auswahl gilt nur für das jeweilige Kind und deinen persönlichen Zugang. Du kannst sie jederzeit wieder ausschalten. Eine aktive Auswahl bedeutet nicht, dass Zugangsdaten gespeichert oder eine Verbindung erfolgreich geprüft wurde.</p><a href="{% url 'privacy-information' %}">Datenschutzinformationen lesen</a></div></article>
 </section>
 {% endblock %}
