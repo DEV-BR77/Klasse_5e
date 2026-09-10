@@ -1,1 +1,7 @@
-<nav class="kid-section-nav" aria-label="Kontoeinstellungen"><a href="{% url 'personal-profile' %}">Mein Profil</a><a href="{% url 'ui-family' %}">Familien-Zentrale</a><a href="{% url 'ui-consents' %}">Datenschutz</a><a href="{% url 'ui-notifications' %}">Benachrichtigungen</a><a href="{% url 'mfa_index' %}">Sicherheit</a></nav>
+<nav class="kid-section-nav settings-section-nav" aria-label="Kontoeinstellungen">
+  <a href="{% url 'personal-profile' %}"{% if '/einstellungen/profil/' in request.path %} aria-current="page"{% endif %}>Mein Profil</a>
+  <a href="{% url 'ui-family' %}"{% if '/mehr/familie/' in request.path %} aria-current="page"{% endif %}>Familien-Zentrale</a>
+  <a href="{% url 'ui-consents' %}"{% if '/mehr/einwilligungen/' in request.path %} aria-current="page"{% endif %}>Datenschutz</a>
+  <a href="{% url 'ui-notifications' %}"{% if '/mehr/benachrichtigungen/' in request.path %} aria-current="page"{% endif %}>Benachrichtigungen</a>
+  <a href="{% url 'mfa_index' %}"{% if '/accounts/2fa/' in request.path %} aria-current="page"{% endif %}>Sicherheit</a>
+</nav>
