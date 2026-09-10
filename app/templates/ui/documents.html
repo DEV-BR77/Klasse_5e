@@ -10,7 +10,16 @@
   </form>
   <ul class="card-grid">
     {% for item in documents %}
-      <li class="content-card"><p class="eyebrow">Dokument</p><h2>{{ item.title }}</h2><p class="muted">{{ item.description }}</p></li>
+      <li class="content-card document-card">
+        <p class="eyebrow">{{ item.category }} · Version {{ item.version }}</p>
+        <h2>{{ item.title }}</h2>
+        <p class="muted">{{ item.description }}</p>
+        <p class="document-card__meta">Stand: {{ item.document_date|date:"d.m.Y" }}{% if item.is_updated %} · Aktualisiert{% endif %}</p>
+        <div class="flow-actions">
+          <a class="button button-primary" href="{% url 'document-download' item.id 'original' %}">PDF öffnen</a>
+          {% if item.fillable %}<a class="button button-secondary" href="{% url 'document-download' item.id 'fillable' %}">Ausfüllbare Version</a>{% endif %}
+        </div>
+      </li>
     {% empty %}
       <li class="empty-state card">Noch keine Dokumente in diesem Bereich.</li>
     {% endfor %}
