@@ -3000,6 +3000,9 @@ def family(request):
         (item for item in relationships if str(item.pk) == requested_child and item.is_current()),
         relationships[0] if relationships else None,
     )
+    form_error = ""
+    bound_person_id = ""
+    bound_form_data = None
     if request.method == "POST" and request.POST.get("action") in {
         "profile",
         "consent",
@@ -3088,11 +3091,14 @@ def family(request):
                     save_consent(request, person)
                 messages.success(request, "Die Änderungen wurden gespeichert.")
         except ValidationError as error:
-            messages.error(request, " ".join(error.messages))
-        tab = request.POST.get("tab", "overview")
-        child = request.POST.get("child", "")
-        suffix = f"?tab={tab}" + (f"&child={child}" if child else "")
-        return redirect(f"{reverse('ui-family')}{suffix}")
+            form_error = " ".join(error.messages)
+            bound_person_id = request.POST.get("person_id", "")
+            bound_form_data = request.POST
+        else:
+            tab = request.POST.get("tab", "overview")
+            child = request.POST.get("child", "")
+            suffix = f"?tab={tab}" + (f"&child={child}" if child else "")
+            return redirect(f"{reverse('ui-family')}{suffix}")
     if request.method == "POST":
         relationship = get_object_or_404(
             GuardianChildRelationship,
@@ -3194,6 +3200,11 @@ def family(request):
                     relationship.student_person,
                     request.user,
                     relationship.is_current() and relationship.may_manage_profile,
+                    data=(
+                        bound_form_data
+                        if str(relationship.student_person_id) == bound_person_id
+                        else None
+                    ),
                 ),
             }
         )
@@ -3220,13 +3231,20 @@ def family(request):
         if relation.is_current():
             parent_map[relation.guardian_person_id] = relation.guardian_person
     context["parent_cards"] = [
-        person_card(p, request.user, p.pk == request.user.person.pk) for p in parent_map.values()
+        person_card(
+            p,
+            request.user,
+            p.pk == request.user.person.pk,
+            data=bound_form_data if str(p.pk) == bound_person_id else None,
+        )
+        for p in parent_map.values()
     ]
     context["join_requests"] = ChildJoinRequest.objects.filter(
         guardian=request.user.person
     ).select_related("school_class__school")
     context["available_classes"] = available_classes()
     context["avatar_designer"] = avatar_designer_context()
+    context["family_form_error"] = form_error
     from .family_photos import family_photo_is_visible, family_photo_people, may_manage_family_photo
 
     photo_consent = ConsentType.objects.filter(key="photo_gallery").first()

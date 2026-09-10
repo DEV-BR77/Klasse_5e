@@ -44,8 +44,8 @@ class FamilyPersonForm(forms.ModelForm):
         return normalize_phone_number(self.cleaned_data.get("phone"))
 
 
-def person_card(person, user, editable):
-    form = FamilyPersonForm(instance=person, prefix=f"person-{person.pk}")
+def person_card(person, user, editable, *, data=None):
+    form = FamilyPersonForm(data=data, instance=person, prefix=f"person-{person.pk}")
     if not person.contact_email and person.user_id:
         form.fields["contact_email"].initial = person.user.email
     fields = []

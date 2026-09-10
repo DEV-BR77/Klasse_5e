@@ -143,6 +143,37 @@ def test_child_contact_sharing_uses_the_same_address_switch_as_an_adult(
 
 
 @pytest.mark.django_db
+def test_child_profile_keeps_invalid_form_values_visible(client, guardian, managed_child, school_class):
+    relationship = GuardianChildRelationship.objects.get(student_person=managed_child)
+    ClassMembership.objects.create(
+        person=managed_child, school_class=school_class, valid_from=timezone.localdate()
+    )
+    client.force_login(guardian)
+
+    response = client.post(
+        reverse("ui-family"),
+        {
+            "action": "profile",
+            "person_id": managed_child.pk,
+            "tab": "data",
+            "child": relationship.pk,
+            f"person-{managed_child.pk}-first_name": "Mila",
+            f"person-{managed_child.pk}-last_name": "Beispiel",
+            f"person-{managed_child.pk}-phone": "keine Telefonnummer",
+            "school_class": school_class.pk,
+            "avatar_seed": "v2:1:2:3:4:1:2",
+            "profile_image_mode": "avatar",
+        },
+    )
+
+    assert response.status_code == 200
+    assert b"Die Angaben wurden noch nicht gespeichert." in response.content
+    assert b"keine Telefonnummer" in response.content
+    managed_child.refresh_from_db()
+    assert managed_child.phone == ""
+
+
+@pytest.mark.django_db
 def test_contacts_show_one_clean_family_name_and_only_shared_address(
     client, guardian, managed_child, school_class
 ):
