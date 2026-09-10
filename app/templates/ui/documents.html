@@ -1,1 +1,19 @@
-{% extends "base.html" %}{% block content %}<section><h1>Dokumente</h1><form method="get" role="search"><label for="document-search">Dokumente durchsuchen</label><input id="document-search" name="q" value="{{ search }}"><button>Suchen</button></form><ul class="card-grid">{% for item in documents %}<li class="content-card"><h2>{{ item.title }}</h2><p>{{ item.description }}</p></li>{% empty %}<li class="empty-state">Keine Dokumente.</li>{% endfor %}</ul></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="documents-page">
+  <header class="page-heading compact-heading">
+    <div><p class="eyebrow">Klasse</p><h1>Dokumente</h1><p class="lede">Wichtige Unterlagen der Klasse an einem geschützten Ort.</p></div>
+  </header>
+  <form class="inline-search-form card" method="get" role="search">
+    <label for="document-search">Dokumente durchsuchen</label>
+    <div><input id="document-search" name="q" value="{{ search }}" placeholder="Titel oder Beschreibung"><button class="button button-primary" type="submit">Suchen</button></div>
+  </form>
+  <ul class="card-grid">
+    {% for item in documents %}
+      <li class="content-card"><p class="eyebrow">Dokument</p><h2>{{ item.title }}</h2><p class="muted">{{ item.description }}</p></li>
+    {% empty %}
+      <li class="empty-state card">Noch keine Dokumente in diesem Bereich.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

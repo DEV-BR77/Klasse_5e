@@ -1,1 +1,15 @@
-{% extends "base.html" %}{% block content %}<section><h1>Aktuelles</h1><div class="card-grid">{% for item in posts %}<article class="content-card"><h2><a href="/mehr/aktuelles/{{ item.id }}/">{{ item.title }}</a></h2></article>{% empty %}<p class="empty-state">Keine Beiträge.</p>{% endfor %}</div></section>{% endblock %}
+{% extends "base.html" %}
+{% block content %}
+<section class="posts-page">
+  <header class="page-heading compact-heading">
+    <div><p class="eyebrow">Klasse</p><h1>Aktuelles</h1><p class="lede">Neuigkeiten und wichtige Informationen aus der Klasse.</p></div>
+  </header>
+  <div class="card-grid">
+    {% for item in posts %}
+      <article class="content-card"><p class="eyebrow">Information</p><h2><a href="/mehr/aktuelles/{{ item.id }}/">{{ item.title }}</a></h2><a class="button button-secondary button-compact" href="/mehr/aktuelles/{{ item.id }}/">Beitrag öffnen</a></article>
+    {% empty %}
+      <p class="empty-state card">Zurzeit gibt es keine neuen Beiträge.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
