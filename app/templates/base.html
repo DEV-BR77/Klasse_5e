@@ -63,6 +63,16 @@
         </nav>
       </details>
     </div>
+    {% else %}
+    <div class="app-public-header">
+      <a class="app-public-header__brand" href="{% url 'project' %}" aria-label="KlassID – Projektseite">
+        <span aria-hidden="true">K</span><strong>KlassID</strong>
+      </a>
+      <nav aria-label="Öffentliche Navigation">
+        <a href="{% url 'project' %}">Über KlassID</a>
+        <a class="app-public-header__login" href="{% url 'account_login' %}">Anmelden</a>
+      </nav>
+    </div>
     {% endif %}
   </header>
   {% if request.user.is_authenticated %}
