@@ -348,6 +348,13 @@ Empfehlung für anschließende Freigabe, keine begonnene Umsetzung. Jede Etappe 
 
 Ein Bereich beginnt erst, wenn sein Gate und die offenen Entscheidungen dafür geklärt sind; er endet erst nach seinen Funktions-, Rechte-, Mobil- und Accessibility-Tests. Das verhindert paralleles Stückwerk. Modellstrategie laut Nutzer: Astra für Audit/Architektur/Analyse, Terra für klar begrenzte Umsetzung, kleines Modell für knappe Zusammenfassung. Keinen technisch nicht erfolgten Modellwechsel behaupten. Keine langen Fortschrittsberichte allein zur Kommentierung.
 
+### Pilot-Zwischenstand: Navigation und Kernwege
+
+- Der Kindkontext ist in der globalen Kopfzeile sichtbar und wird ausschließlich per CSRF-geschütztem POST gewechselt. GET-Aufrufe ändern keine Browser-Sitzung mehr.
+- Die Hauptnavigation bleibt auf Touchgeräten als untere Daumennavigation sichtbar und wird ab Desktopbreite zur linken, dauerhaft sichtbaren Bereichsnavigation. Beide Ansichten verwenden dieselben Ziele und Statusmarkierungen.
+- Eltern können Hausaufgaben lesen, aber ihren Erledigt-Status nicht ändern. Dies ist ausschließlich über das persönliche Schülerkonto des zugehörigen Kindes möglich.
+- Kontakt-, Profil- und WebUntis-Korrekturen aus dem ersten Pilotblock sind in den jeweiligen Fachabschnitten nachgeführt. Geräte- und Browserabnahme bleibt Bestandteil des Abschlussgates.
+
 ## 13. Test- und Abnahmekriterien
 
 | Test | Synthetischer Ablauf / Erwartung |
