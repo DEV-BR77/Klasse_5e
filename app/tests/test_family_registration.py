@@ -38,7 +38,7 @@ def isolated_registration_rate_limits():
 @pytest.mark.django_db
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
-    WAGTAILADMIN_BASE_URL="https://5e.klassid.de",
+    WAGTAILADMIN_BASE_URL="https://klassid.de",
 )
 def test_family_code_refreshes_unverified_application_and_allows_empty_second_adult(
     client, school_class, admin_user

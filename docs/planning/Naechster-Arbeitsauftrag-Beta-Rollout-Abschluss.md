@@ -7,14 +7,14 @@ committen.
 
 ## Zuerst gemeinsam im Browser
 
-1. `https://5e.klassid.de` auf Smartphone, Tablet und Desktop prüfen:
+1. `https://klassid.de` auf Smartphone, Tablet und Desktop prüfen:
    Navigation, neues Logo, Home, Monats-/Wochen-/Tageskalender samt Filtern,
    Kontakte/Schüler, Profil, Chat, Veranstaltungen, Galerie, Dokumente,
    PWA-Anleitung, Push und keine horizontale Überbreite.
 2. Mit einem neutralen Testkonto den kompletten Ablauf durchführen:
    Registrierung, echte E-Mail-Prüfung, Adminfreigabe mit Schul- und
    Klassenzuweisung, einmalige Aktivierung, Login sowie verpflichtendes
-   Datenschutz-/Profil-Onboarding. Alle Links müssen `5e.klassid.de` nutzen.
+   Datenschutz-/Profil-Onboarding. Alle Links müssen `klassid.de` nutzen.
 3. Als Admin Portalverwaltung und QR-Anmeldeblatt prüfen. Als normaler Nutzer
    bestätigen, dass Verwaltung und fremde Daten unsichtbar bleiben.
 4. Pilot-Meldebutton einschließlich Seitenbezug, Beschreibung und optionalem

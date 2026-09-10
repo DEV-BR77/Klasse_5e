@@ -120,7 +120,7 @@ def test_public_registration_is_neutral_and_sends_verification(client):
 @override_settings(
     ALLOWED_HOSTS=["attacker.example.test"],
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
-    WAGTAILADMIN_BASE_URL="https://5e.klassid.de",
+    WAGTAILADMIN_BASE_URL="https://klassid.de",
 )
 def test_registration_email_uses_canonical_public_url_not_request_host(client):
     response = client.post(
@@ -134,7 +134,7 @@ def test_registration_email_uses_canonical_public_url_not_request_host(client):
         HTTP_HOST="attacker.example.test",
     )
     assert response.status_code == 202
-    assert "https://5e.klassid.de/registrieren/email/" in mail.outbox[0].body
+    assert "https://klassid.de/registrieren/email/" in mail.outbox[0].body
     assert "attacker.example.test" not in mail.outbox[0].body
 
 

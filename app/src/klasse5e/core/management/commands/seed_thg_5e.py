@@ -80,19 +80,19 @@ class Command(BaseCommand):
 
         domain = ClassDomain.objects.filter(school_class=school_class).first()
         if domain is None:
-            domain = ClassDomain.objects.filter(hostname="5e.klassid.de").first()
+            domain = ClassDomain.objects.filter(hostname="klassid.de").first()
         if domain is None:
             domain = ClassDomain.objects.create(
                 school_class=school_class,
-                hostname="5e.klassid.de",
+                hostname="klassid.de",
                 is_reserved_exception=True,
                 is_active=True,
             )
         else:
             domain.school_class = school_class
-            domain.hostname = "5e.klassid.de"
+            domain.hostname = "klassid.de"
             domain.is_reserved_exception = True
             domain.is_active = True
             domain.save(update_fields=["school_class", "hostname", "is_reserved_exception", "is_active"])
 
-        self.stdout.write(self.style.SUCCESS("THG / Klasse 5e / 5e.klassid.de ist bereit."))
+        self.stdout.write(self.style.SUCCESS("THG / Klasse 5e / klassid.de ist bereit."))
