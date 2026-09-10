@@ -90,8 +90,11 @@ def test_dashboard_combines_important_items_for_all_children(client, guardian, t
     assert "Familie im Blick" in html
     assert "Mila" in html and "Jonas" in html
     assert 'aria-label="Familienansicht auswählen"' in html
+    assert 'style="--family-tab-count: 3"' in html
     assert f'action="/familie/ansicht/{mila.pk}/"' in html
     assert f'action="/familie/ansicht/{jonas.pk}/"' in html
+    assert 'href="/kontakte/"' in html
+    assert 'class="app-bottom-nav__item"' in html
     assert "Sport f" + chr(0xE4) + "llt aus" in html
     assert "Elterninformation Jahrgang 7" in html
 

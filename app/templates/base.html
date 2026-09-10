@@ -15,7 +15,7 @@
 <body{% if request.user.is_authenticated %} data-idle-session-timeout="{{ idle_session_timeout_seconds }}"{% endif %}>
 
 <a class="skip-link" href="#main-content">Zum Inhalt springen</a>
-<div class="tailwind-shell{% if not request.user.is_authenticated %} app-shell-public{% endif %}">
+<div class="tailwind-shell{% if request.user.is_authenticated %} app-shell-authenticated{% else %} app-shell-public{% endif %}">
   <header class="app-topbar">
     {% if request.user.is_authenticated %}
     <div class="app-topbar__leading">
@@ -34,7 +34,7 @@
       {% endif %}
     </div>
     {% if family_children %}
-    <nav class="app-family-tabs" aria-label="Familienansicht auswählen">
+    <nav class="app-family-tabs" aria-label="Familienansicht auswählen" style="--family-tab-count: {{ family_children|length|add:'1' }}">
       <form method="post" action="{% url 'family-overview-select' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="app-family-tab app-family-tab--self" type="submit"{% if not active_child %} aria-current="page"{% endif %}>{{ personal_display_name|default:request.user.first_name }}</button></form>
       {% for child in family_children %}
       <form method="post" action="{% url 'family-child-select' child.student.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="app-family-tab app-family-tab--child-{{ forloop.counter }}" type="submit"{% if active_child and active_child.student.pk == child.student.pk %} aria-current="page"{% endif %}>{{ child.student.first_name }}</button></form>
@@ -66,7 +66,7 @@
     {% endif %}
   </header>
   {% if request.user.is_authenticated %}
-  <nav class="app-bottom-nav" aria-label="Hauptnavigation">
+    <nav class="app-bottom-nav" aria-label="Hauptnavigation">
     <a href="/" class="app-bottom-nav__item" {% if active_section == "start" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="home" %}
       <span class="app-bottom-nav__label">Start</span>
@@ -83,17 +83,9 @@
       <span class="app-bottom-nav__label">Chat</span>
     </a>
     {% endif %}
-    <a href="/kontakte/" class="app-bottom-nav__item app-bottom-nav__contacts" {% if active_section == "contacts" %}aria-current="page"{% endif %}>
+    <a href="/kontakte/" class="app-bottom-nav__item" {% if active_section == "contacts" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="people" %}
       <span class="app-bottom-nav__label">Kontaktliste</span>
-    </a>
-    <a href="/mehr/familie/" class="app-bottom-nav__item app-bottom-nav__desktop-only" {% if active_section == "family" %}aria-current="page"{% endif %}>
-      {% include "ui/_icon.html" with name="people" %}
-      <span class="app-bottom-nav__label">Familie</span>
-    </a>
-    <a href="/mehr/fotos/" class="app-bottom-nav__item app-bottom-nav__desktop-only" {% if active_section == "gallery" %}aria-current="page"{% endif %}>
-      {% include "ui/_icon.html" with name="photo" %}
-      <span class="app-bottom-nav__label">Fotos</span>
     </a>
     <a href="/mehr/" class="app-bottom-nav__item" {% if active_section == "more" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="more" %}

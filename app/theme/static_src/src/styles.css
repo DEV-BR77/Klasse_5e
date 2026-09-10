@@ -2163,3 +2163,186 @@ html[data-theme-mode="dark"] {
   .inline-search-form > div { align-items: stretch; flex-direction: column; }
   .inline-search-form .button { width: 100%; }
 }
+
+/*
+ * Application shell contract (UX audit §4–§7).
+ *
+ * This replaces the former adaptive bottom bar patchwork.  Header, context,
+ * navigation and the content safe area are one unit.  Individual pages may
+ * never compensate for these fixed areas with their own offsets.
+ */
+.app-shell-authenticated {
+  --app-header-height: 4.5rem;
+  --app-navigation-height: 5.45rem;
+  min-height: 100dvh;
+  padding-bottom: calc(var(--app-navigation-height) + env(safe-area-inset-bottom) + 1rem);
+  overflow-x: clip;
+}
+
+.app-shell-authenticated .app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  min-height: var(--app-header-height);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+}
+
+.app-shell-authenticated .main-content {
+  width: min(100% - 2rem, 74rem);
+  min-width: 0;
+  padding: clamp(1.25rem, 3vw, 2.5rem) 0 2rem;
+}
+
+.app-shell-authenticated .app-topbar__back {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  border-radius: .75rem;
+  padding-inline: .6rem;
+  color: var(--color-text);
+  font-size: .875rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.app-shell-authenticated .app-topbar__back:hover,
+.app-shell-authenticated .app-topbar__back:focus-visible {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.app-shell-authenticated .app-family-tabs {
+  gap: .3rem;
+  overflow: visible;
+  border: 1px solid var(--color-border);
+  border-radius: .9rem;
+  background: color-mix(in srgb, var(--color-primary-light) 28%, var(--color-surface));
+  padding: .25rem;
+}
+
+.app-shell-authenticated .app-family-tabs form { margin: 0; }
+.app-shell-authenticated .app-family-tab {
+  min-width: 4.8rem;
+  min-height: 2.45rem;
+  border: 0;
+  border-radius: .65rem;
+  padding: .35rem .7rem;
+  color: var(--color-text);
+  font-size: .875rem;
+  font-weight: 750;
+}
+.app-shell-authenticated .app-family-tab--self { background: color-mix(in srgb, var(--color-primary-light) 68%, var(--color-surface)); }
+.app-shell-authenticated .app-family-tab--child-1 { background: color-mix(in srgb, #b7b2ff 42%, var(--color-surface)); }
+.app-shell-authenticated .app-family-tab--child-2 { background: color-mix(in srgb, #9cdee7 42%, var(--color-surface)); }
+.app-shell-authenticated .app-family-tab--child-3 { background: color-mix(in srgb, #ffd19a 44%, var(--color-surface)); }
+.app-shell-authenticated .app-family-tab--self[aria-current="page"] { background: var(--color-primary); color: var(--color-on-primary); }
+.app-shell-authenticated .app-family-tab--child-1[aria-current="page"] { background: #8f86ff; color: #17162c; }
+.app-shell-authenticated .app-family-tab--child-2[aria-current="page"] { background: #5db6c5; color: #102a2e; }
+.app-shell-authenticated .app-family-tab--child-3[aria-current="page"] { background: #e7a75e; color: #2d1c09; }
+
+.app-shell-authenticated .app-bottom-nav {
+  position: fixed;
+  right: .75rem;
+  bottom: max(.65rem, env(safe-area-inset-bottom));
+  left: .75rem;
+  z-index: 45;
+  display: grid;
+  width: auto;
+  min-height: var(--app-navigation-height);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .15rem;
+  transform: none;
+  border: 1px solid var(--color-border);
+  border-radius: 1.15rem;
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  padding: .35rem;
+  box-shadow: 0 .85rem 2rem rgb(20 25 52 / 18%);
+  backdrop-filter: blur(14px);
+}
+
+.app-shell-authenticated .app-bottom-nav__item {
+  display: grid;
+  min-width: 0;
+  min-height: 4.1rem;
+  place-items: center;
+  align-content: center;
+  gap: .2rem;
+  border-radius: .85rem;
+  color: var(--color-text-muted);
+  font-size: clamp(.65rem, 2.8vw, .78rem);
+  font-weight: 750;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.app-shell-authenticated .app-bottom-nav__item[aria-current="page"] {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  box-shadow: inset 0 .2rem var(--color-primary);
+}
+
+.app-shell-authenticated .app-bottom-nav__item svg { width: 1.3rem; height: 1.3rem; }
+.app-shell-authenticated .app-bottom-nav__label { overflow: hidden; max-width: 100%; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 40rem) {
+  .app-shell-authenticated { --app-header-height: auto; }
+  .app-shell-authenticated .app-topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "leading actions"
+      "context context";
+    align-items: center;
+    gap: .45rem .65rem;
+    padding: .5rem .75rem;
+  }
+  .app-shell-authenticated .app-topbar__leading { grid-area: leading; min-width: 0; }
+  .app-shell-authenticated .app-topbar__actions { grid-area: actions; gap: .25rem; }
+  .app-shell-authenticated .app-topbar__back span { display: none; }
+  .app-shell-authenticated .app-icon-button,
+  .app-shell-authenticated .app-profile-menu > summary { width: 2.65rem; min-height: 2.65rem; }
+  .app-shell-authenticated .app-profile-menu__name { display: none; }
+  .app-shell-authenticated .app-family-tabs {
+    grid-area: context;
+    display: grid;
+    grid-template-columns: repeat(var(--family-tab-count, 2), minmax(0, 1fr));
+    width: 100%;
+  }
+  .app-shell-authenticated .app-family-tabs form { min-width: 0; }
+  .app-shell-authenticated .app-family-tab { width: 100%; min-width: 0; }
+  .app-shell-authenticated .main-content { width: min(100% - 1rem, 74rem); padding-top: 1rem; }
+  .app-shell-authenticated .app-bottom-nav { right: .5rem; left: .5rem; }
+  .app-shell-authenticated .app-bottom-nav__item { min-height: 4rem; }
+}
+
+@media (min-width: 64rem) {
+  .app-shell-authenticated {
+    --app-navigation-width: 13rem;
+    padding-bottom: 2rem;
+    padding-left: calc(var(--app-navigation-width) + 2rem);
+  }
+  .app-shell-authenticated .app-bottom-nav {
+    top: calc(var(--app-header-height) + 1rem);
+    right: auto;
+    bottom: 1rem;
+    left: 1rem;
+    width: var(--app-navigation-width);
+    min-height: 0;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(5, min-content);
+    align-content: start;
+    border-radius: 1rem;
+  }
+  .app-shell-authenticated .app-bottom-nav__item {
+    min-height: 3.1rem;
+    grid-template-columns: 1.4rem minmax(0, 1fr);
+    justify-content: start;
+    gap: .65rem;
+    padding-inline: .75rem;
+    font-size: .9rem;
+    text-align: left;
+  }
+  .app-shell-authenticated .app-bottom-nav__item[aria-current="page"] { box-shadow: inset .22rem 0 var(--color-primary); }
+  .app-shell-authenticated .app-bottom-nav__label { justify-self: start; }
+}
