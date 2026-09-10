@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% load l10n %}
 {% block content %}
-<section>
+<section class="calendar-page">
   <header class="page-heading calendar-heading compact-heading">
-    <div><p class="eyebrow">{% if calendar_child %}{{ calendar_child.name }} · {% endif %}Kalenderwoche {{ calendar_week_number }}</p><h1>Kalender</h1></div>
-    <div class="calendar-sync"><span>{% if webuntis_last_sync %}Aktualisiert {{ webuntis_last_sync|date:"H:i" }} Uhr{% else %}Noch nicht synchronisiert{% endif %}</span><a class="button button-secondary" href="{% url 'webuntis-calendar-settings' %}">Kalender verbinden</a><a class="icon-button" href="/mehr/webuntis/" aria-label="Kalender-Synchronisation öffnen">↻</a></div>
+    <div><p class="eyebrow">{% if calendar_child %}{{ calendar_child.name }} · {% endif %}{% if view == "week" %}Kalenderwoche {{ calendar_week_number }}{% else %}Tagesübersicht{% endif %}</p><h1>Kalender</h1></div>
+    <div class="calendar-sync"><span>{% if webuntis_last_sync %}Stand {{ webuntis_last_sync|date:"H:i" }} Uhr{% else %}Noch nicht synchronisiert{% endif %}</span><a class="button button-secondary" href="{% url 'webuntis-calendar-settings' %}">Kalender verbinden</a></div>
   </header>
 
   <div class="calendar-toolbar card">
@@ -45,6 +45,6 @@
     </div>
   {% endif %}
 
-  <section class="card calendar-agenda" aria-labelledby="agenda-heading"><p class="eyebrow">Ausgew&auml;hlter Tag</p><h2 id="agenda-heading">{{ selected_day|date:"l, d. F Y" }}</h2><ul class="list-clean">{% for item in agenda %}<li class="agenda-item agenda-item-{{ item.kind }}"><span class="calendar-dot calendar-dot-{{ item.kind }}"></span><div><p class="agenda-label">{{ item.kind_label }}{% if item.time %} &middot; {{ item.time }}{% if item.end_time %}–{{ item.end_time }}{% endif %} Uhr{% endif %}</p><h3>{% if item.url %}<a href="{{ item.url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}{% if item.is_double %} <span class="double-lesson-badge">Doppelstunde</span>{% endif %}</h3>{% if item.meta %}<p class="muted">{{ item.meta }}</p>{% endif %}</div></li>{% empty %}<li class="calendar-empty">F&uuml;r diesen Tag sind mit den gew&auml;hlten Filtern keine Eintr&auml;ge vorhanden.</li>{% endfor %}</ul></section>
+  <section class="card calendar-agenda" aria-labelledby="agenda-heading"><p class="eyebrow">Ausgew&auml;hlter Tag</p><h2 id="agenda-heading">{{ selected_day|date:"l, d. F Y" }}</h2><ul class="list-clean">{% for item in agenda %}<li class="agenda-item agenda-item-{{ item.kind }}"><span class="calendar-dot calendar-dot-{{ item.kind }}"></span><div><p class="agenda-label">{{ item.kind_label }}{% if item.time %} · {{ item.time }}{% if item.end_time %}–{{ item.end_time }}{% endif %} Uhr{% endif %}</p><h3>{% if item.url %}<a href="{{ item.url }}">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}{% if item.is_double %} <span class="double-lesson-badge">Doppelstunde</span>{% endif %}</h3>{% if item.meta %}<p class="muted">{{ item.meta }}</p>{% endif %}</div></li>{% empty %}<li class="calendar-empty">Für diesen Tag sind mit den gewählten Filtern keine Einträge vorhanden.</li>{% endfor %}</ul></section>
 </section>
 {% endblock %}

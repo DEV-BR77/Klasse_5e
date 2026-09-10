@@ -70,6 +70,17 @@ def test_calendar_filters_and_view_switch_are_rendered(client, guardian, school_
 
 
 @pytest.mark.django_db
+def test_calendar_uses_the_reflow_safe_day_view_by_default(client, guardian):
+    client.force_login(guardian)
+
+    response = client.get("/kalender/", secure=True)
+
+    assert response.status_code == 200
+    assert response.context["view"] == "day"
+    assert 'class="calendar-page"' in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_day_view_builds_hourly_fallback_without_school_time_grid(guardian, school_class):
     student = Person.objects.create(first_name="Mila", last_name="Beispiel")
     connection = WebUntisConnection.objects.create(

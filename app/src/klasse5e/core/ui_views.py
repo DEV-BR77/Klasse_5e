@@ -849,7 +849,11 @@ def calendar(request):
         else _class_or_404(request.user, request)
     )
     day = _day_from_request(request)
-    view = request.GET.get("ansicht", "week")
+    # A day is the safe, readable default for every viewport and also works
+    # without JavaScript.  The explicit week control keeps the full planning
+    # matrix available on larger screens without forcing a 52rem canvas on a
+    # phone.
+    view = request.GET.get("ansicht", "day")
     categories = request.GET.getlist("kategorie") if "filter" in request.GET else None
     context = _shared(request, "Kalender", "calendar")
     context.update(
