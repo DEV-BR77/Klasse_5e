@@ -1,14 +1,13 @@
-from datetime import date, datetime, time, timedelta
+from datetime import date, time, timedelta
 
 import pytest
 from django.template.loader import render_to_string
-from django.utils import translation
-from django.utils import timezone
+from django.utils import timezone, translation
 
 from klasse5e.core.ui_views import dashboard
+from klasse5e.events.models import Event
 from klasse5e.meals.models import MealDay, MealOption, MealPlan
 from klasse5e.schedule.models import TimetableEntry
-from klasse5e.events.models import Event
 
 
 @pytest.mark.django_db

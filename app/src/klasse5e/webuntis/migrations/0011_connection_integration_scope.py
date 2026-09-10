@@ -1,7 +1,7 @@
 from urllib.parse import urlsplit
 
-from django.db import migrations, models
 import django.db.models.deletion
+from django.db import migrations, models
 
 
 def assign_unambiguous_integrations(apps, schema_editor):

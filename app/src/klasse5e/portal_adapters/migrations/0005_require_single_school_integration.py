@@ -1,5 +1,5 @@
-from django.db import migrations, models
 import django.db.models.deletion
+from django.db import migrations, models
 
 
 def assign_single_school(apps, schema_editor):
@@ -13,9 +13,8 @@ def assign_single_school(apps, schema_editor):
             school_ids.add(adapter.school_id)
         if len(school_ids) != 1:
             raise RuntimeError(
-                "PortalAdapter %s benötigt vor der Migration genau eine Schule; "
+                f"PortalAdapter {adapter.pk} benötigt vor der Migration genau eine Schule; "
                 "mehrdeutige oder unzugeordnete Adapter dürfen nicht weiter freigegeben werden."
-                % adapter.pk
             )
         Adapter.objects.filter(pk=adapter.pk).update(school_id=school_ids.pop())
 

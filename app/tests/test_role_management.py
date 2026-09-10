@@ -5,7 +5,14 @@ from django.db import transaction
 from klasse5e.chat.models import ChatRoom
 from klasse5e.chat.notifications import notify_parent_representatives
 from klasse5e.chat.services import create_message
-from klasse5e.core.models import AuditEvent, Role, RoleAssignment, School, SchoolClass, UserNotification
+from klasse5e.core.models import (
+    AuditEvent,
+    Role,
+    RoleAssignment,
+    School,
+    SchoolClass,
+    UserNotification,
+)
 from klasse5e.core.policies import active_roles
 from klasse5e.core.role_management import set_user_role
 

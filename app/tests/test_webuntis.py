@@ -6,7 +6,11 @@ from cryptography.fernet import Fernet
 from django.utils import timezone
 
 from klasse5e.core.models import ClassMembership, GuardianChildRelationship, Person
-from klasse5e.portal_adapters.models import ChildModuleConnection, PortalAdapter, PortalAdapterModule
+from klasse5e.portal_adapters.models import (
+    ChildModuleConnection,
+    PortalAdapter,
+    PortalAdapterModule,
+)
 from klasse5e.webuntis.client import ALLOWED_HOST, EndpointUnsupported, WebUntisClient
 from klasse5e.webuntis.crypto import decrypt, encrypt
 from klasse5e.webuntis.services import configured_endpoint

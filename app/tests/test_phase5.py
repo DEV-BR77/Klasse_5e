@@ -27,7 +27,6 @@ from klasse5e.media.policies import (
     photo_consent_result,
 )
 from klasse5e.media.services import (
-    correction_deadline,
     create_photo,
     decide_photo,
     delete_photo_files,
