@@ -21,10 +21,12 @@ Stand: 10.09.2026. Dieses Dokument ist der prüfbare Entwurf für das responsive
 
 Die optionalen Kinderfarben markieren nur die Familienansicht von Sorgeberechtigten. Schüler sehen weiterhin die einheitliche Portalgestaltung. Jede Kombination braucht mindestens WCAG-AA-Kontrast; Status wird stets zusätzlich über Text und Symbol beschrieben.
 
+**Bestätigte Grundlage (10.09.2026):** Das helle, ruhige Farbsystem ist das verbindliche Startdesign. Komponenten dürfen Farben, Flächen, Linien und Schatten ausschließlich über semantische Design-Tokens beziehen. Ein dunkles Design sowie später freigegebene Tailwind-Vorlagen werden als austauschbare Themes ergänzt; sie verändern weder Fachlogik noch Seitenstruktur.
+
 ## Gemeinsame Interaktionsregeln
 
-- Mobile: untere Navigation mit `Start`, `Kalender`, `Chat`, `Mehr`; die aktuelle Hauptaktion sitzt innerhalb des erreichbaren Inhaltsbereichs oberhalb der Safe Area.
-- Ab 1024 px: linke Navigation, Hauptinhalt maximal 1200 px. Die mobile Leiste verschwindet.
+- Mobile: untere Navigation mit `Start`, `Kalender`, `Chat`, `Mehr`; die aktuelle Hauptaktion sitzt innerhalb des erreichbaren Inhaltsbereichs oberhalb der Safe Area. Die Kontaktliste liegt unter `Mehr`.
+- Ab 1024 px: linke Navigation mit `Start`, `Kalender`, `Chat`, `Kontaktliste`, `Familie`, `Fotos` und `Mehr`; Hauptinhalt maximal 1200 px. Die mobile Leiste verschwindet.
 - Buttons sind mindestens 44 × 44 px. `Primär` ist gefüllt, `Sekundär` umrandet, `Tertiär` eine Textaktion. Destruktive Aktionen brauchen ein Bestätigungsdialogfenster.
 - Hover hebt auf Desktop Karte oder Button 2 px an und verstärkt den Schatten. Fokus nutzt einen 3-px-Ring; `prefers-reduced-motion` deaktiviert Höhenbewegung und Carousel-Autoplay.
 - Dialoge blenden mit 150 ms ein. Escape, Klick auf Schließen und sichtbarer Abbrechen-Button schließen sie. Der Fokus beginnt im Dialogtitel und bleibt darin.
@@ -39,8 +41,10 @@ Die optionalen Kinderfarben markieren nur die Familienansicht von Sorgeberechtig
 | Kind-Kontext `Mila · THG 5e` | Dropdown mit Familienansicht und Kindern, Auswahl per POST | `/familie/ansicht/<student_id>/` |
 | Nachrichten-Zähler | separates Postfach; zählt keine Systemwarnungen | `/chat/` bzw. Raumübersicht |
 | Glocken-Zähler | separate wichtige Änderungen | `/benachrichtigungen/` |
-| Tageskarte | leichte Anhebung bei Hover, ganzer Bereich fokussierbar | Kalender/Stundenplan |
+| Tageskarte | leichte Anhebung bei Hover, ganzer Bereich fokussierbar; jede Stunde zeigt Uhrzeit, Fach, Lehrkraft und Raum | Kalender/Stundenplan |
 | `Alle Aufgaben` | sekundäre Aktion | `/mehr/webuntis/` oder Aufgabenansicht |
+
+**Bestätigter Kopfbereich:** Nachrichten und Benachrichtigungen sind zwei getrennte, gleich große Icon-Buttons mit lesbarem Zähler. Nachrichtenzähler öffnen die Chatübersicht; die Glocke öffnet ausschließlich die Systembenachrichtigungen. Das Profil zeigt ein hochgeladenes Foto, sonst die Initialen, und öffnet das persönliche Menü. Der Kind-Kontext erscheint als beschriftete Auswahl: auf Desktop als Dropdown, auf Mobilgeräten als Bottom Sheet. Er wird nur gezeigt, wenn die aktuelle Seite tatsächlich familien- oder kindbezogene Daten steuert.
 
 ## 2. Familienzentrale und Avatar
 
@@ -48,14 +52,16 @@ Die optionalen Kinderfarben markieren nur die Familienansicht von Sorgeberechtig
 
 | Element | Wirkung | Ziel |
 |---|---|---|
-| Tab `Mila` | Farbmarkierung der Kindfarbe; keine Datenmischung | `?tab=data&child=<relationship_id>` |
-| `Stammdaten` / `Datenschutz` / `Schulzugänge` | ruhige Segment-Tabs; aktiver Tab nur als ein klarer Fokus | jeweilige Query-Route in `/familie/` |
+| Tab `Mila` | Die am Kind gespeicherte Familienfarbe färbt den aktiven Tab vollflächig; inaktive Kind-Tabs zeigen dieselbe Farbe als helle Fläche. Name, aktiver Zustand und Fokus bleiben zusätzlich eindeutig; keine Datenmischung. | `?tab=data&child=<relationship_id>` |
+| `Stammdaten` / `Freigaben` / `Schulzugänge` | ruhige Segment-Tabs; `Freigaben` umfasst kindbezogene Einwilligungen; aktiver Tab nur als ein klarer Fokus | jeweilige Query-Route in `/familie/` |
 | `Avatar gestalten` | Modal mit großer Vorschau; Auswahl bleibt unverbindlich bis `Übernehmen` | Dialog `#avatar-designer` |
 | `Profilfoto` | native Dateiauswahl und lokale Vorschau; Speicherung erst mit Formular | gleiche Formularroute `/familie/` |
 | Sichtbarkeitsschalter | Text „Im Portal anzeigen“, keine Symbol-only-Schalter | Speicherung mit Profilformular |
 | `Angaben speichern` | primär; Ladezustand, dann feldnahe Erfolgsmeldung | POST `/familie/` |
 
 Der Avatar-Designer verwendet eine große, schrittweise Auswahl. Die künftige Pose (`stehend`/`sitzend`) ist ein eigener erster Schritt, weil die vorhandenen SVG-Posebilder eine andere Geometrie als die atomaren Körper-/Kopf-Layer besitzen. Erst nach einem kompatiblen v3-Assetkatalog darf sie mit den Layern kombiniert und gespeichert werden. Das verhindert kaputte oder abgeschnittene Avatare.
+
+**Sichtbarkeit persönlicher Kontaktdaten:** Erwachsene verwalten Adresse, E-Mail-Adresse und Telefonnummer direkt in ihrem jeweiligen Stammdatenformular. Jedes Feld besitzt dort einen beschrifteten Schalter `Im Portal sichtbar` beziehungsweise `Ausblenden`; der Standard ist sichtbar. Es gibt keine getrennte Datenschutzseite für diese drei Felder. Der Kind-Tab heißt `Freigaben` und enthält ausschließlich kindbezogene Einwilligungen und Freigaben.
 
 ## 3. Schulzugänge
 
@@ -64,7 +70,7 @@ Der Avatar-Designer verwendet eine große, schrittweise Auswahl. Die künftige P
 | Element | Wirkung | Ziel |
 |---|---|---|
 | Adapterkarte `WebUntis` | Schule, Portaladresse und Status sind lesbar; technische IDs bleiben im Verwaltungsbereich | Detail im Kind-Tab `Schulzugänge` |
-| Modultoggle | sofortiger erklärter Statuswechsel, serverseitig autorisiert | POST Modulverbindung |
+| Zugang aktiv | beschrifteter Schalter direkt in der Adapterkarte. `Aktiv` zeigt Grün plus Text, `Inaktiv` neutrales Grau plus Text; er aktiviert oder pausiert Abruf und Darstellung, löscht aber keine gespeicherten Zugangsdaten. | POST Modulverbindung |
 | Zugangsdatenformular | Passwort bleibt maskiert, Augen-Icon nur lokal; keine Werte nach Speicherung ausgeben | POST `/mehr/webuntis/` |
 | `Verbindung prüfen` | neutraler Ladezustand „Prüfung läuft“, keine Zugangsdaten/Serverfehler ausgeben | POST WebUntis-Prüfung |
 | `Verbindung entfernen` | roter Bestätigungsdialog mit Folge „lokale Daten werden getrennt“ | POST WebUntis-Löschung |
@@ -83,6 +89,8 @@ Der Avatar-Designer verwendet eine große, schrittweise Auswahl. Die künftige P
 | `Erneut prüfen lassen` | nur für eigene erste Rückfrage bis Frist; Ersatzbild optional | POST `/photos/<id>/resubmit/` |
 | Download | zunächst nicht anzeigen; erst nach eigenständiger Freigabe und Audit-Entscheidung | späterer, protokollierter Downloadpfad |
 
+**Bestätigter Galerieaufbau:** Die Übersicht gliedert zuerst nach Schuljahr und darin nach Ereigniskacheln. Ein Ereignis öffnet seine eigene Galerie mit Raster als Standard und einer bewusst wählbaren Fokusansicht. Kacheln verstärken bei Hover nur Schatten und Rand, ohne das Layout zu verschieben. `Mein Kind` ist ein reiner Ansichtsfilter; Downloads bleiben bis zu einer eigenen Freigabe verborgen.
+
 ## 5. Formulare, Fehler und destruktive Aktionen
 
 | Fall | Darstellung | Aktion |
@@ -92,6 +100,8 @@ Der Avatar-Designer verwendet eine große, schrittweise Auswahl. Die künftige P
 | Foto in Klärung | ockerfarbener Status, Frist mit Datum/Uhrzeit, kein permanenter Alarm | Ersatz/erneute Prüfung |
 | Foto final abgelehnt | neutrale Erklärung, Datei nicht mehr abrufbar | keine Wiederholung |
 | Verbindung entfernen | Dialog mit Name des Kindes, Folgen und `Abbrechen` als Standardfokus | nur bestätigter POST |
+
+**Bestätigter Formularstandard:** Felder zeigen Label, Hilfetext und Fehler direkt am Feld. Eingaben bleiben während Speichern und bei Netzwerkfehlern erhalten. Pro Formular gibt es genau eine gefüllte Hauptaktion; Passwortfelder erhalten ein lokales Augen-Icon. Nur irreversible oder folgenreiche Aktionen öffnen einen Bestätigungsdialog. Reversible Ein-/Aus-Schalter werden unmittelbar, mit klarer Statusrückmeldung gespeichert.
 
 ## Abnahmekriterien für den Mockup-Block
 
