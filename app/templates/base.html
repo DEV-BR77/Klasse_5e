@@ -75,7 +75,7 @@
   <nav class="app-bottom-nav" aria-label="Hauptnavigation">
     <a href="/" class="app-bottom-nav__item" {% if active_section == "start" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="home" %}
-      <span class="app-bottom-nav__label">Home</span>
+      <span class="app-bottom-nav__label">Start</span>
     </a>
     {% if enabled_modules.calendar %}
     <a href="/kalender/" class="app-bottom-nav__item" {% if active_section == "calendar" %}aria-current="page"{% endif %}>
@@ -89,13 +89,21 @@
       <span class="app-bottom-nav__label">Chat</span>
     </a>
     {% endif %}
-    <a href="/kontakte/" class="app-bottom-nav__item" {% if active_section == "contacts" %}aria-current="page"{% endif %}>
+    <a href="/kontakte/" class="app-bottom-nav__item app-bottom-nav__contacts" {% if active_section == "contacts" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="people" %}
-      <span class="app-bottom-nav__label">Adressliste</span>
+      <span class="app-bottom-nav__label">Kontaktliste</span>
+    </a>
+    <a href="/mehr/familie/" class="app-bottom-nav__item app-bottom-nav__desktop-only" {% if active_section == "family" %}aria-current="page"{% endif %}>
+      {% include "ui/_icon.html" with name="people" %}
+      <span class="app-bottom-nav__label">Familie</span>
+    </a>
+    <a href="/mehr/fotos/" class="app-bottom-nav__item app-bottom-nav__desktop-only" {% if active_section == "gallery" %}aria-current="page"{% endif %}>
+      {% include "ui/_icon.html" with name="photo" %}
+      <span class="app-bottom-nav__label">Fotos</span>
     </a>
     <a href="/mehr/" class="app-bottom-nav__item" {% if active_section == "more" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="more" %}
-      <span class="app-bottom-nav__label">Menü</span>
+      <span class="app-bottom-nav__label">Mehr</span>
     </a>
   </nav>
   {% endif %}

@@ -168,16 +168,16 @@
 
 /* Safe defaults before a user selects a portal theme in Django. */
 :root {
-  --color-primary: #5558a6;
+  --color-primary: #3159D7;
   --color-on-primary: #ffffff;
-  --color-primary-dark: #3f427f;
-  --color-primary-light: #eeecff;
-  --color-accent: #8b6be8;
-  --color-background: #f4f5fa;
+  --color-primary-dark: #2445AD;
+  --color-primary-light: #E8EDFF;
+  --color-accent: #7A4DE8;
+  --color-background: #F5F7FB;
   --color-surface: #ffffff;
-  --color-text: #25283a;
-  --color-text-muted: #5e6278;
-  --color-border: #d9dbea;
+  --color-text: #172033;
+  --color-text-muted: #5B667A;
+  --color-border: #DCE3F0;
   --radius: 1.15rem;
   --shadow-card: 0 10px 30px rgb(20 24 50 / 10%);
 }
@@ -1437,6 +1437,16 @@ html[data-theme-mode="dark"] {
   border: 1px solid var(--color-border);
   border-radius: .85rem;
   background: color-mix(in srgb, var(--color-surface) 88%, var(--color-primary) 12%);
+}
+
+/* The confirmed information architecture keeps contacts under More on phones;
+ * the full seven-item rail is available from the desktop breakpoint onward. */
+.app-bottom-nav__desktop-only { display: none; }
+@media (max-width: 63.99rem) {
+  .app-bottom-nav__contacts { display: none; }
+}
+@media (min-width: 64rem) {
+  .app-bottom-nav__desktop-only { display: grid; }
 }
 .dashboard-daily-meal > summary { cursor: pointer; padding: .8rem .9rem; color: var(--color-text); font-weight: 800; }
 .dashboard-daily-meal__content { padding: 0 .9rem .9rem; }
