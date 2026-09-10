@@ -354,6 +354,22 @@ def _manageable_schools(user):
     )
 
 
+def _manageable_portal_adapters(user):
+    """Return only adapters inside the administrator's assigned school scope."""
+    adapters = PortalAdapter.objects.all()
+    if (
+        user.is_superuser
+        or user.roleassignment_set.filter(
+            active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
+        ).exists()
+    ):
+        return adapters
+    schools = _manageable_schools(user)
+    # ``school`` is a legacy FK while ``schools`` is the current relation;
+    # both are scoped until the data-model migration has removed the former.
+    return adapters.filter(Q(school__in=schools) | Q(schools__in=schools)).distinct()
+
+
 def _may_manage_school_catalog(user):
     return (
         user.is_superuser
@@ -1620,7 +1636,7 @@ def portal_adapter_management(request):
         else:
             messages.info(request, "Dieser Adapter ist für die Schule bereits vorhanden.")
         return redirect("portal-adapter-detail", adapter_id=adapter.pk)
-    adapters = PortalAdapter.objects.all().prefetch_related("modules")
+    adapters = _manageable_portal_adapters(request.user).prefetch_related("modules")
     context = _shared(request, "Schulportal-Adapter", "management")
     context.update(
         {
@@ -1636,7 +1652,7 @@ def portal_adapter_management(request):
 def portal_adapter_detail(request, adapter_id):
     _require_portal_admin(request.user)
     adapter = get_object_or_404(
-        PortalAdapter.objects.prefetch_related("modules", "schools"),
+        _manageable_portal_adapters(request.user).prefetch_related("modules", "schools"),
         pk=adapter_id,
     )
     if request.method == "POST":

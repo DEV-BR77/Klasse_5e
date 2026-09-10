@@ -5,7 +5,15 @@ from cryptography.fernet import Fernet
 from django.test import override_settings
 from django.utils import timezone
 
-from klasse5e.core.models import ClassMembership, GuardianChildRelationship, Person, SchoolClass
+from klasse5e.core.models import (
+    ClassMembership,
+    GuardianChildRelationship,
+    Person,
+    Role,
+    RoleAssignment,
+    School,
+    SchoolClass,
+)
 from klasse5e.portal_adapters.models import (
     ChildModuleConnection,
     PortalAdapter,
@@ -68,6 +76,32 @@ def test_admin_can_create_dsb_and_wobila_adapters_with_independent_modules(clien
 def test_adapter_management_is_hidden_from_guardians(client, guardian):
     client.force_login(guardian)
     assert client.get("/verwaltung/adapter/", secure=True).status_code == 404
+
+
+@pytest.mark.django_db
+def test_school_admin_cannot_read_or_change_another_schools_adapter(
+    client, guardian, school, year
+):
+    other_school = School.objects.create(name="Andere Schule", slug="andere-schule")
+    own_adapter = PortalAdapter.objects.create(provider="mensamax", name="Eigene", school=school)
+    own_adapter.schools.add(school)
+    foreign_adapter = PortalAdapter.objects.create(
+        provider="mensamax", name="Fremde", school=other_school
+    )
+    foreign_adapter.schools.add(other_school)
+    RoleAssignment.objects.create(user=guardian, role=Role.SCHOOL_ADMIN, school=school)
+    client.force_login(guardian)
+
+    listing = client.get("/verwaltung/adapter/", secure=True)
+    assert listing.status_code == 200
+    assert "Eigene" in listing.content.decode()
+    assert "Fremde" not in listing.content.decode()
+    assert client.get(f"/verwaltung/adapter/{foreign_adapter.pk}/", secure=True).status_code == 404
+    assert client.post(
+        f"/verwaltung/adapter/{foreign_adapter.pk}/", {"action": "delete_adapter"}, secure=True
+    ).status_code == 404
+    assert PortalAdapter.objects.filter(pk=own_adapter.pk).exists()
+    assert PortalAdapter.objects.filter(pk=foreign_adapter.pk).exists()
 
 
 @pytest.mark.django_db
