@@ -9,6 +9,7 @@
       {% for item in comments %}
       <li class="post-comment post-comment--{{ item.status }}">
         {% if item.status == 'visible' %}
+          <small class="post-comment__meta">{{ item.author.person.chat_display_name|default:item.author.person.first_name|default:"Klassenmitglied" }} · {{ item.created_at|date:"d.m.Y, H:i" }}</small>
           <p>{{ item.body }}</p>
         {% elif item.status == 'withdrawn' %}
           <p class="muted">Dieser Kommentar wurde zurückgezogen.</p>
@@ -18,6 +19,16 @@
       </li>
       {% empty %}<li class="muted">Keine Kommentare.</li>{% endfor %}
     </ol>
+    {% if post.comments_closed %}
+      <p class="status-chip">Kommentare sind für diesen Beitrag geschlossen.</p>
+    {% else %}
+      <form method="post" action="{% url 'create-comment' post.id %}" class="form-stack post-comment-form">
+        {% csrf_token %}<input type="hidden" name="return_to" value="post_detail">
+        <label for="post-comment-body">Kommentar schreiben</label>
+        <textarea id="post-comment-body" name="body" rows="4" maxlength="4000" required placeholder="Dein Kommentar"></textarea>
+        <footer class="form-actions"><button class="button button-primary" type="submit">Kommentar veröffentlichen</button></footer>
+      </form>
+    {% endif %}
   </section>
 </article>
 {% endblock %}

@@ -2229,6 +2229,8 @@ html[data-theme-mode="dark"] {
 .post-comment-list { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; }
 .post-comment { padding: .9rem 1rem; border: 1px solid var(--app-border-strong); border-radius: .9rem; background: color-mix(in srgb, var(--color-surface) 92%, var(--color-primary-light)); }
 .post-comment p { margin: 0; }
+.post-comment__meta { display: block; margin-bottom: .45rem; color: var(--color-text-muted); font-weight: 750; }
+.post-comment-form { margin-top: 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--app-border-strong); }
 .conversation-list { overflow: hidden; border: 1px solid var(--app-border-strong); border-radius: 1.25rem; background: var(--app-raised); box-shadow: var(--app-shadow); }
 .conversation-row { margin: 0; border-width: 0 0 1px; border-radius: 0; box-shadow: none; }
 .conversation-row:last-child { border-bottom: 0; }

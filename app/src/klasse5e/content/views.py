@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseBadRequest
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
 
 from klasse5e.core.models import AuditEvent, Role
@@ -59,6 +59,8 @@ def create_comment(request, post_id):
         target_type="comment",
         target_id=str(comment.id),
     )
+    if request.POST.get("return_to") == "post_detail":
+        return redirect("ui-post-detail", post_id=post.pk)
     return HttpResponse(status=201)
 
 

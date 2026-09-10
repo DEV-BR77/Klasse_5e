@@ -102,6 +102,24 @@ def test_comments_require_membership_and_open_topic(client, guardian, school_cla
 
 
 @pytest.mark.django_db
+def test_post_detail_comment_form_returns_to_the_post(client, guardian, school_class, year):
+    post = Post.objects.create(
+        school_class=school_class, school_year=year, title="Info", body="Text",
+        category="Allgemein", author=guardian, status="published",
+    )
+    client.force_login(guardian)
+    page = client.get(f"/mehr/aktuelles/{post.id}/", secure=True)
+    assert 'action="/posts/' in page.content.decode()
+    response = client.post(
+        f"/posts/{post.id}/comments/",
+        {"body": "Ein Kommentar", "return_to": "post_detail"}, secure=True,
+    )
+    assert response.status_code == 302
+    assert response.url == f"/mehr/aktuelles/{post.id}/"
+    assert Comment.objects.get(post=post).body == "Ein Kommentar"
+
+
+@pytest.mark.django_db
 def test_family_label_only_from_verified_relation(guardian):
     student = Person.objects.create(first_name="Mia", last_name="Synthetic")
     GuardianChildRelationship.objects.create(
