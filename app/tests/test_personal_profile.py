@@ -114,6 +114,9 @@ def test_profile_stores_contact_visibility_and_notification_preferences(client, 
     guardian.person.refresh_from_db()
     assert guardian.email == "new-address@example.test"
     assert guardian.person.phone == "+495361123456"
+    assert guardian.person.street == "Musterstraße 1"
+    assert guardian.person.postal_code == "38440"
+    assert guardian.person.city == "Wolfsburg"
     assert guardian.person.email_visibility == "members"
     assert guardian.person.phone_visibility == "members"
     assert all(
