@@ -12,6 +12,7 @@ services:
       APP_BASE_URL: ${APP_BASE_URL:?Provide the staging HTTPS base URL only}
       DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:?Provide a verified staging sender}
       VAPID_SUBJECT: ${VAPID_SUBJECT:?Provide the staging contact mailto URI}
+      MONITORING_INGEST_TOKEN: ${MONITORING_INGEST_TOKEN:?Provide the staging monitoring ingest token}
       TEMPORARY_ADMIN_MFA_BYPASS: "0"
       BIOMETRIC_SEARCH_ENABLED: "0"
 
