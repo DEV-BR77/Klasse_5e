@@ -59,7 +59,7 @@ $directories = @(
 )
 foreach ($relativePath in $directories) {
     Invoke-Robocopy -Source (Join-Path $repoRoot $relativePath) -Destination (Join-Path $snapshotRoot $relativePath) `
-        -ExcludeDirectories @(".venv", "node_modules", "__pycache__", ".pytest_cache", ".ruff_cache", "tests", "test", "staticfiles", "runtime-media", ".test-media", ".test-runtime") `
+        -ExcludeDirectories @(".venv", "node_modules", "__pycache__", ".pytest_cache", ".ruff_cache", "tests", "test", "staticfiles", "runtime-media", ".test-*") `
         -ExcludeFiles @("~$*", "*.pyc", "*.pyo", "*.sqlite3")
 }
 
