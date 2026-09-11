@@ -5,6 +5,7 @@ import re
 import secrets
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
+from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login, logout
@@ -899,6 +900,16 @@ def accept_invitation(request, token):
     invitation.save(update_fields=["used_at"])
     user.email_verified_at = invitation.used_at
     user.save()
+    # The invitation link is the e-mail possession proof. Keep allauth's
+    # verification state in sync with our application-level timestamp so a
+    # newly activated invited account is not asked to confirm the same address
+    # a second time during its first login.
+    EmailAddress.objects.filter(user=user).exclude(email__iexact=user.email).update(primary=False)
+    EmailAddress.objects.update_or_create(
+        user=user,
+        email=user.email,
+        defaults={"verified": True, "primary": True},
+    )
     if invitation.school_class_id:
         person, _ = Person.objects.get_or_create(
             user=user,

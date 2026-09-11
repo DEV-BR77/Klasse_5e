@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 import pytest
+from allauth.account.models import EmailAddress
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 
@@ -47,6 +48,7 @@ def test_invitation_is_hashed_single_use_and_expires(client, admin_user):
     assert client.get(f"/invitation/{token}/").status_code == 200
     response = client.post(f"/invitation/{token}/", {"password": "Safe-New-Password-123!"})
     assert response.status_code == 302
+    assert EmailAddress.objects.get(email="new@example.test").verified is True
     assert (
         client.post(f"/invitation/{token}/", {"password": "Safe-New-Password-123!"}).status_code
         == 410
