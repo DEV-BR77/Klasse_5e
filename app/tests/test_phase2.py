@@ -44,6 +44,7 @@ def test_no_public_registration(client):
 def test_invitation_is_hashed_single_use_and_expires(client, admin_user):
     invitation, token = Invitation.issue("new@example.test", admin_user)
     assert token not in invitation.token_hash
+    assert client.get(f"/invitation/{token}/").status_code == 200
     response = client.post(f"/invitation/{token}/", {"password": "Safe-New-Password-123!"})
     assert response.status_code == 302
     assert (

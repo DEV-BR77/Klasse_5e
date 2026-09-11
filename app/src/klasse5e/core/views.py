@@ -842,7 +842,11 @@ def dashboard(request):
 @transaction.atomic
 def accept_invitation(request, token):
     invitation = (
-        Invitation.objects.select_for_update()
+        # `family_request` is optional. PostgreSQL cannot lock the nullable
+        # side of the outer join created by `select_related`, so lock only the
+        # invitation row. The family request is locked separately before it is
+        # changed below.
+        Invitation.objects.select_for_update(of=("self",))
         .select_related("family_request")
         .filter(token_hash=hashlib.sha256(token.encode()).hexdigest())
         .first()
