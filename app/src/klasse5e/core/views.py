@@ -232,7 +232,6 @@ def family_register(request, token):
                     request,
                     "core/family_register.html",
                     {"invitation": invitation, "error": raise_error, "submitted": submitted},
-                    status=400,
                 )
             if first and last:
                 try:
@@ -247,7 +246,6 @@ def family_register(request, token):
                             "error": f"Kind {index}: {' '.join(exc.messages)}",
                             "submitted": submitted,
                         },
-                        status=400,
                     )
                 children.append(
                     {
@@ -273,7 +271,6 @@ def family_register(request, token):
                     "error": "Bitte fülle für die zweite erwachsene Person Name, E-Mail-Adresse und Passwort aus oder lasse sie vollständig leer.",
                     "submitted": submitted,
                 },
-                status=400,
             )
         if second_email and second_first and second_last:
             adults.append(
@@ -363,7 +360,6 @@ def family_register(request, token):
                     "error": " ".join(exc.messages),
                     "submitted": submitted,
                 },
-                status=400,
             )
         except Exception as exc:
             logger.error(

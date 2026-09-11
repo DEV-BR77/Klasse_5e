@@ -118,7 +118,7 @@ def test_family_form_keeps_safe_fields_after_validation_error(client, school_cla
         },
     )
     html = response.content.decode()
-    assert response.status_code == 400
+    assert response.status_code == 200
     assert "Bitte gib für Kind 1 Vorname, Nachname, E-Mail-Adresse" in html
     assert 'value="Erika"' in html
     assert 'value="family@example.test"' in html
@@ -406,6 +406,6 @@ def test_second_adult_requires_valid_password(client, school_class, admin_user, 
             "child_1_password": "Child-Secure-Test-456!",
         },
     )
-    assert response.status_code == 400
+    assert response.status_code == 200
     assert not FamilyRegistrationRequest.objects.filter(access_code=code).exists()
     assert 'name="adult_2_password" autocomplete="new-password"' in response.content.decode()
