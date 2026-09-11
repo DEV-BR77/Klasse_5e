@@ -21,23 +21,24 @@ niemals den bestehenden Dienst auf `klassid.de`.
 `compose.staging.yaml` ist eine nicht aktive Ergänzung zur bestehenden Compose-
 Datei. Sie setzt einen eigenen Projektnamen sowie eigene PostgreSQL-, Medien-
 und Vision-Volumes durch; der gemeinsame Reverse-Proxy bleibt der einzige
-bewusst geteilte Dienst. Die lokale Datei `.env.staging` entsteht aus
-`.env.staging.example`, bleibt von Git ausgeschlossen und enthält ausschließlich
-neu erzeugte Staging-Secrets.
+bewusst geteilte Dienst. `staging.public.env` enthält nur den Host und andere
+nicht geheime Werte. Die Schlüssel werden beim Start direkt aus dem lokalen,
+DPAPI-verschlüsselten HomeOps-Speicher in den kurzlebigen Compose-Prozess
+eingelesen und nie in eine `.env`-Datei geschrieben.
 
 Vor dem ersten Start prüft der folgende reine Konfigurationsbefehl sowohl die
 Compose-Auflösung als auch die Trennung vom Produktivhost. Er startet keine
 Container und ändert weder DNS noch Caddy:
 
 ```powershell
-.\tools\Test-StagingConfiguration.ps1
+.\tools\Start-Klasse5eStaging.ps1
 ```
 
 Erst danach wird die freigegebene Caddy-Route für den konkret benannten
 Staging-Host gesetzt und die Umgebung mit beiden Compose-Dateien gestartet:
 
 ```powershell
-docker compose --env-file .env.staging -f compose.yaml -f compose.staging.yaml up -d --build
+.\tools\Start-Klasse5eStaging.ps1 -Start
 ```
 
 ## Technisches Gate

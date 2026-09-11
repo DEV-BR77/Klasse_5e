@@ -6,6 +6,10 @@ name: klasse-5e-staging
 services:
   klasse-5e-app:
     image: klasse-5e-app:staging
+    networks:
+      home_proxy:
+        aliases:
+          - klasse-5e-staging-app
     environment:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Provide the staging host only}
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:?Provide the staging HTTPS origin only}
@@ -37,3 +41,6 @@ networks:
     name: klasse-5e-staging-internal
   klasse_5e_egress:
     name: klasse-5e-staging-egress
+  home_proxy:
+    external: true
+    name: home-proxy

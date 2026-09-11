@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$EnvironmentFile = ".env.staging"
+    [string]$EnvironmentFile = "staging.public.env"
 )
 
 Set-StrictMode -Version Latest
@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $environmentPath = Join-Path $repoRoot $EnvironmentFile
 if (-not (Test-Path -LiteralPath $environmentPath)) {
-    throw "Staging-Konfiguration fehlt: $environmentPath. Kopiere .env.staging.example nach .env.staging und verwende ausschließlich Staging-Werte."
+    throw "Staging-Konfiguration fehlt: $environmentPath. Verwende staging.public.env und die verschlüsselt gespeicherten Staging-Schlüssel."
 }
 
 $composeFiles = @(
