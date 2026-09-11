@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 import pytest
+from django.core import mail
 from django.urls import reverse
 from django.utils import timezone
 
@@ -9,7 +10,12 @@ from klasse5e.core.models import (
     ClassMembership,
     GuardianChildRelationship,
     Household,
+    Invitation,
     Person,
+    Role,
+    RoleAssignment,
+    StudentProfile,
+    UserAccount,
 )
 
 
@@ -92,6 +98,84 @@ def test_family_centre_creates_a_pending_child_request(client, guardian, school_
 
     assert response.status_code == 302
     assert ChildJoinRequest.objects.filter(guardian=guardian.person, first_name="Marie").exists()
+
+
+@pytest.mark.django_db
+def test_guardian_can_invite_a_second_adult_for_a_managed_child(
+    client, guardian, managed_child, school_class, settings
+):
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    settings.WAGTAILADMIN_BASE_URL = "https://klassid.example.test"
+    ClassMembership.objects.create(
+        person=managed_child, school_class=school_class, valid_from=timezone.localdate()
+    )
+    StudentProfile.objects.create(person=managed_child)
+    household = Household.objects.create(label="Familie Beispiel")
+    household.members.add(guardian.person, managed_child)
+    relationship = GuardianChildRelationship.objects.get(student_person=managed_child)
+    client.force_login(guardian)
+
+    response = client.post(
+        reverse("ui-family"),
+        {
+            "action": "invite_adult",
+            "tab": "overview",
+            "relationship_id": relationship.pk,
+            "first_name": "Robin",
+            "last_name": "Beispiel",
+            "email": "robin@example.test",
+        },
+    )
+
+    assert response.status_code == 302
+    invitation = Invitation.objects.get(email="robin@example.test")
+    assert invitation.household == household
+    assert invitation.school_class == school_class
+    assert invitation.invited_by == guardian
+    assert len(mail.outbox) == 1
+    assert "/invitation/" in mail.outbox[0].body
+
+
+@pytest.mark.django_db
+def test_second_adult_invitation_creates_a_separate_guardian_account(
+    client, guardian, managed_child, school_class, settings
+):
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    ClassMembership.objects.create(
+        person=managed_child, school_class=school_class, valid_from=timezone.localdate()
+    )
+    StudentProfile.objects.create(person=managed_child)
+    household = Household.objects.create(label="Familie Beispiel")
+    household.members.add(guardian.person, managed_child)
+    invitation, token = Invitation.issue(
+        "robin@example.test",
+        guardian,
+        first_name="Robin",
+        last_name="Beispiel",
+        school_class=school_class,
+        household=household,
+    )
+
+    response = client.post(
+        reverse("accept-invitation", kwargs={"token": token}),
+        {"password": "Second-Guardian-Password-123!"},
+    )
+
+    assert response.status_code == 302
+    second_adult = UserAccount.objects.get(email="robin@example.test")
+    assert second_adult.check_password("Second-Guardian-Password-123!")
+    assert household.members.filter(user=second_adult).exists()
+    assert ClassMembership.objects.filter(person=second_adult.person, school_class=school_class).exists()
+    assert RoleAssignment.objects.filter(
+        user=second_adult, school_class=school_class, role=Role.GUARDIAN
+    ).exists()
+    assert GuardianChildRelationship.objects.filter(
+        guardian_person=second_adult.person,
+        student_person=managed_child,
+        status="verified",
+    ).exists()
+    invitation.refresh_from_db()
+    assert invitation.used_at is not None
 
 
 @pytest.mark.django_db

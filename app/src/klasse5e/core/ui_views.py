@@ -15,6 +15,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
+from django.core.mail import send_mail
 from django.core.validators import URLValidator
 from django.db import transaction
 from django.db.models import Count, Exists, OuterRef, Q
@@ -75,7 +76,7 @@ from klasse5e.webuntis.models import (
 )
 
 from .calendar_presenter import build_calendar_context
-from .contact_data import format_phone_number
+from .contact_data import format_phone_number, normalize_email_address
 from .family_context import active_child_context
 from .family_handouts import create_family_handout
 from .models import (
@@ -86,6 +87,7 @@ from .models import (
     FamilyPhoto,
     GuardianChildRelationship,
     Household,
+    Invitation,
     Person,
     PilotReport,
     PortalConfigurationKey,
@@ -3083,6 +3085,7 @@ def family(request):
         "consent",
         "consents",
         "add_child",
+        "invite_adult",
         "family_photo",
         "schoolmanager_credentials",
     }:
@@ -3091,6 +3094,78 @@ def family(request):
             if action == "add_child":
                 request_child(request)
                 messages.success(request, "Die Zuordnung wurde zur Prüfung eingereicht.")
+            elif action == "invite_adult":
+                relationship = next(
+                    (
+                        item
+                        for item in relationships
+                        if str(item.pk) == request.POST.get("relationship_id")
+                        and item.is_current()
+                        and item.may_manage_profile
+                    ),
+                    None,
+                )
+                if relationship is None:
+                    raise PermissionDenied
+                first_name = request.POST.get("first_name", "").strip()[:100]
+                last_name = request.POST.get("last_name", "").strip()[:100]
+                email = normalize_email_address(request.POST.get("email", ""))
+                if not first_name or not last_name:
+                    raise ValidationError("Bitte gib Vor- und Nachnamen ein.")
+                if UserAccount.objects.filter(email__iexact=email).exists():
+                    raise ValidationError(
+                        "Für diese E-Mail-Adresse besteht bereits ein KlassID-Zugang."
+                    )
+                households = Household.objects.filter(members=request.user.person).filter(
+                    members=relationship.student_person
+                )
+                household = households.first()
+                if household is None:
+                    raise ValidationError(
+                        "Für dieses Kind besteht noch keine gemeinsame Familienzuordnung."
+                    )
+                if Invitation.objects.filter(
+                    email__iexact=email,
+                    household=household,
+                    school_class=school_class,
+                    used_at__isnull=True,
+                    expires_at__gt=timezone.now(),
+                ).exists():
+                    raise ValidationError(
+                        "Für diese E-Mail-Adresse wurde bereits ein gültiger Bestätigungslink gesendet."
+                    )
+                with transaction.atomic():
+                    invitation, token = Invitation.issue(
+                        email,
+                        request.user,
+                        first_name=first_name,
+                        last_name=last_name,
+                        school_class=school_class,
+                        household=household,
+                    )
+                    link = f"{settings.WAGTAILADMIN_BASE_URL.rstrip('/')}/invitation/{token}/"
+                    sent = send_mail(
+                        "Dein persönlicher KlassID-Familienzugang",
+                        (
+                            "Du wurdest als zweite erwachsene Person zu einer KlassID-Familie "
+                            f"eingeladen. Lege über diesen einmaligen Link innerhalb von 7 Tagen "
+                            f"dein eigenes Passwort fest: {link}"
+                        ),
+                        settings.DEFAULT_FROM_EMAIL,
+                        [invitation.email],
+                        fail_silently=False,
+                    )
+                    if sent != 1:
+                        raise ValidationError(
+                            "Der Bestätigungslink konnte nicht versendet werden. Bitte versuche es später erneut."
+                        )
+                    AuditEvent.objects.create(
+                        actor=request.user,
+                        action="family.adult_invited",
+                        target_type="invitation",
+                        target_id=str(invitation.pk),
+                    )
+                messages.success(request, "Der Bestätigungslink wurde versendet.")
             elif action == "family_photo":
                 household = get_object_or_404(photo_households, pk=request.POST.get("household_id"))
                 from .family_photos import remove_family_photo, save_family_photo
