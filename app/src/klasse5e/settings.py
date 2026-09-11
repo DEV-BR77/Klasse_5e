@@ -218,6 +218,7 @@ ITSLEARNING_CREDENTIAL_ENCRYPTION_KEY = os.environ.get(
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:kontakt@klassid.de")
+MONITORING_INGEST_TOKEN = os.environ.get("MONITORING_INGEST_TOKEN", "")
 WEBDAV_ROOT = Path(os.environ.get("WEBDAV_ROOT", MEDIA_ROOT / "webdav"))
 SPOONACULAR_API_KEY = os.environ.get("SPOONACULAR_API_KEY", "")
 SPOONACULAR_API_BASE_URL = os.environ.get(

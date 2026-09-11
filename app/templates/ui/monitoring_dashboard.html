@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page">
+  <header class="page-heading"><div><p class="eyebrow">Nur für Administratoren</p><h1>Systemstatus</h1><p class="lede">Technische Kennzahlen ohne Familien-, Chat- oder Bilddaten.</p></div><a class="button button-secondary" href="{% url 'portal-management' %}">← Zur Verwaltung</a></header>
+  <div class="card-grid">{% for item in components %}<article class="content-card"><h2>{{ item.component }}</h2><p><strong>{{ item.get_state_display }}</strong><br><small>Zuletzt geprüft: {{ item.last_reported_at|date:'d.m.Y H:i' }}</small></p></article>{% empty %}<article class="content-card"><p>Noch keine Messwerte eingegangen.</p></article>{% endfor %}</div>
+  {% for source, snapshot in snapshots.items %}<article class="settings-panel"><header><h2>{{ source|title }}</h2><p>Erfasst: {{ snapshot.captured_at|date:'d.m.Y H:i' }}</p></header><pre>{{ snapshot.values|pprint }}</pre></article>{% endfor %}
+</section>
+{% endblock %}

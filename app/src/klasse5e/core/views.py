@@ -489,7 +489,9 @@ def _save_personal_profile(request, person):
         messages.success(request, f"Theme „{theme.name}“ ist jetzt aktiv.")
         return redirect(f"{reverse('personal-profile')}?tab=themes")
     if save_scope == "notifications":
-        categories = ("events", "timetable", "homework", "exams", "chat", "carpool", "absences")
+        categories = (
+            "events", "timetable", "homework", "exams", "chat", "carpool", "absences", "system_alerts"
+        )
         for category in categories:
             for channel in ("push", "inapp"):
                 PushPreference.objects.update_or_create(
@@ -651,6 +653,7 @@ def _notification_rows(user):
             "Fahrgemeinschaft",
             "Ausfall oder Problem in deiner Fahrgemeinschaft",
         ),
+        ("system_alerts", "bell", "Systemmeldungen", "Wichtige Betriebsstörungen"),
     )
     stored = {item.key: item.enabled for item in PushPreference.objects.filter(user=user)}
     rows = [

@@ -935,6 +935,32 @@ class AuditEvent(models.Model):
         ordering = ["-occurred_at"]
 
 
+class MonitoringSnapshot(models.Model):
+    """Aggregate-only runtime data sent by the trusted local monitor."""
+
+    source = models.CharField(max_length=32, db_index=True)
+    captured_at = models.DateTimeField(default=timezone.now, db_index=True)
+    values = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ["-captured_at", "-id"]
+
+
+class MonitoringComponent(models.Model):
+    class State(models.TextChoices):
+        OK = "ok", "In Ordnung"
+        WARNING = "warning", "Warnung"
+        CRITICAL = "critical", "Kritisch"
+
+    component = models.CharField(max_length=48, unique=True)
+    state = models.CharField(max_length=16, choices=State, default=State.OK)
+    changed_at = models.DateTimeField(default=timezone.now)
+    last_reported_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["component"]
+
+
 class PushSubscription(models.Model):
     user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
     endpoint_hash = models.CharField(max_length=64, unique=True)
