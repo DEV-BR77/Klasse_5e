@@ -36,7 +36,12 @@ services:
         condition: service_healthy
     volumes:
       - app_media:/data/media
-    networks: [klasse_5e_internal, klasse_5e_egress, home_proxy]
+    networks:
+      klasse_5e_internal: {}
+      klasse_5e_egress: {}
+      home_proxy:
+        aliases:
+          - klasse-5e-production-app
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
