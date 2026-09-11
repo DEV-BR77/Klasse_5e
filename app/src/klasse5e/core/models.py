@@ -226,6 +226,9 @@ class SchoolYear(models.Model):
         if self.ends_on <= self.starts_on:
             raise ValidationError("Das Schuljahr muss nach seinem Beginn enden.")
 
+    def __str__(self):
+        return self.label
+
 
 class School(models.Model):
     source_id = models.CharField(max_length=80, null=True, blank=True, unique=True)
@@ -361,6 +364,9 @@ class SchoolClass(models.Model):
                 fields=["school", "code", "school_year"], name="unique_school_class_year"
             )
         ]
+
+    def __str__(self):
+        return self.display_name or self.name or self.code
 
 
 class ClassDomain(models.Model):
@@ -620,7 +626,6 @@ class RoleAssignment(models.Model):
                 name="unique_user_role_scope",
             )
         ]
-
 
 class RelationshipType(models.TextChoices):
     MOTHER = "mother", "Mutter"

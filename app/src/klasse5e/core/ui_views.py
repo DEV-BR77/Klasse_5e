@@ -108,6 +108,9 @@ from .policies import active_roles, consent_state, family_label, visible_student
 from .presentation import is_portal_presentation_event
 from .registration import sanitized_profile_photo
 from .school_import import EXPECTED_FIELDS, detect_encoding, import_schools
+from .school_setup_transfer import apply_rows as apply_school_setup_rows
+from .school_setup_transfer import export_csv as export_school_setup_csv
+from .school_setup_transfer import parse_csv as parse_school_setup_csv
 from .session_security import (
     DEFAULT_IDLE_TIMEOUT_MINUTES,
     MAX_IDLE_TIMEOUT_MINUTES,
@@ -1335,6 +1338,8 @@ def school_management(request):
                         "display_name": label,
                         "grade_level": grade_level,
                         "status": "active",
+                        "valid_from": school_year.starts_on,
+                        "valid_until": school_year.ends_on,
                     },
                 )
                 if created:
@@ -1410,27 +1415,25 @@ def school_detail(request, school_id):
                 setattr(school, field, request.POST.get(field, "").strip()[:limit])
             school.save()
         elif action == "add_class":
-            today = timezone.localdate()
-            start_year = today.year if today.month >= 8 else today.year - 1
-            year, _ = SchoolYear.objects.get_or_create(
-                label=f"{start_year}/{str(start_year + 1)[-2:]}",
-                defaults={
-                    "starts_on": today.replace(year=start_year, month=8, day=1),
-                    "ends_on": today.replace(year=start_year + 1, month=7, day=31),
-                    "is_active": True,
-                },
-            )
+            year = SchoolYear.objects.filter(pk=request.POST.get("school_year_id")).first()
+            if year is None:
+                messages.error(request, "Bitte wähle ein vorhandenes Schuljahr aus.")
+                return redirect(f"{reverse('school-detail', args=[school.pk])}?tab={tab}")
             label = request.POST.get("class_label", "").strip()[:64]
             if label:
                 SchoolClass.objects.get_or_create(
                     school=school,
                     school_year=year,
-                    code=label.casefold().replace(" ", "-")[:64],
+                    code=(request.POST.get("class_code", "").strip() or label)
+                    .casefold()
+                    .replace(" ", "-")[:64],
                     defaults={
                         "name": label,
                         "display_name": label,
                         "grade_level": request.POST.get("grade_level", "")[:32],
                         "status": "active",
+                        "valid_from": year.starts_on,
+                        "valid_until": year.ends_on,
                     },
                 )
         elif action == "set_adapters":
@@ -1449,6 +1452,7 @@ def school_detail(request, school_id):
             .select_related("school_year")
             .order_by("school_year__starts_on", "display_name", "name"),
             "adapters": PortalAdapter.objects.filter(school=school).order_by("name", "provider"),
+            "school_years": SchoolYear.objects.order_by("-is_active", "-starts_on"),
             "map_bounds": {"south": 52.329, "west": 10.623, "north": 52.509, "east": 10.913},
         }
     )
@@ -1561,6 +1565,82 @@ def school_catalog_import(request):
                 context["errors"] = [str(exc)]
 
     return render(request, "ui/school_catalog_import.html", context)
+
+
+@login_required
+def school_setup_export(request):
+    """Download the current setup as the only supported import template."""
+
+    _require_portal_admin(request.user)
+    if not _may_manage_school_catalog(request.user):
+        raise Http404
+    response = HttpResponse(export_school_setup_csv(), content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = content_disposition_header(
+        True, "klassid-schulen-klassen-adapter.csv"
+    )
+    return response
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def school_setup_import(request):
+    """Preview then atomically apply a bounded school setup CSV."""
+
+    _require_portal_admin(request.user)
+    if not _may_manage_school_catalog(request.user):
+        raise Http404
+    session_key = "school_setup_import_rows"
+    context = _shared(request, "Schulstruktur importieren", "management")
+    context.update({"errors": [], "preview_rows": [], "preview_count": 0})
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "preview":
+            upload = request.FILES.get("csv_file")
+            if upload is None:
+                context["errors"] = ["Bitte wähle eine CSV-Datei aus."]
+            else:
+                try:
+                    rows = parse_school_setup_csv(upload.read())
+                    request.session[session_key] = rows
+                    request.session.modified = True
+                    context.update(
+                        {
+                            "preview_rows": rows[:20],
+                            "preview_count": len(rows),
+                            "uploaded_name": upload.name,
+                        }
+                    )
+                except ValueError as exc:
+                    context["errors"] = [str(exc)]
+        elif action == "apply":
+            rows = request.session.get(session_key)
+            if not rows:
+                context["errors"] = [
+                    "Die Importvorschau ist abgelaufen. Bitte lade die Datei erneut zur Prüfung hoch."
+                ]
+            else:
+                try:
+                    stats = apply_school_setup_rows(rows)
+                    request.session.pop(session_key, None)
+                    AuditEvent.objects.create(
+                        actor=request.user,
+                        action="school.setup_imported",
+                        target_type="school_setup",
+                        target_id="csv",
+                        metadata={field: getattr(stats, field) for field in stats.__dataclass_fields__},
+                    )
+                    messages.success(
+                        request,
+                        "Import abgeschlossen: "
+                        f"{stats.schools_created + stats.schools_updated} Schulen, "
+                        f"{stats.classes_created + stats.classes_updated} Klassen, "
+                        f"{stats.adapters_created + stats.adapters_updated} Adapter und "
+                        f"{stats.modules_created + stats.modules_updated} Module verarbeitet.",
+                    )
+                    return redirect("school-management")
+                except ValueError as exc:
+                    context["errors"] = [str(exc)]
+    return render(request, "ui/school_setup_import.html", context)
 
 
 @login_required

@@ -19,7 +19,7 @@
           <h2>Schule suchen und hinzufügen</h2>
           <p class="muted">Suche zunächst in den bereits importierten Datensätzen. Noch nicht eingerichtete Schulen werden erst durch „Zum Portal hinzufügen“ freigegeben.</p>
         </div>
-        <a class="button button-secondary" href="{% url 'school-catalog-import' %}">CSV durchsuchen &amp; importieren</a>
+        <div class="button-row"><a class="button button-secondary" href="{% url 'school-catalog-import' %}">Schulkatalog importieren</a><a class="button button-secondary" href="{% url 'school-setup-export' %}">Struktur exportieren</a><a class="button button-primary" href="{% url 'school-setup-import' %}">Klassen &amp; Adapter importieren</a></div>
       </div>
       <form method="get" class="inline-search-form">
         <label for="school-query" class="sr-only">Schule, Ort oder Postleitzahl suchen</label>

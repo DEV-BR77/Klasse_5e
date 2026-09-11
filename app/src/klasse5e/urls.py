@@ -136,6 +136,16 @@ urlpatterns = [
         name="school-catalog-import",
     ),
     path(
+        "verwaltung/schulen/stammdaten-export.csv",
+        ui_views.school_setup_export,
+        name="school-setup-export",
+    ),
+    path(
+        "verwaltung/schulen/stammdaten-import/",
+        ui_views.school_setup_import,
+        name="school-setup-import",
+    ),
+    path(
         "verwaltung/adapter/",
         ui_views.portal_adapter_management,
         name="portal-adapter-management",

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="settings-page narrow-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Portalverwaltung</p>
+      <h1>Schulstruktur importieren</h1>
+      <p class="lede">Importiere Schulen, Schuljahre, Klassen sowie bereits geprüfte Adapter- und Modulfreigaben in einem Schritt.</p>
+    </div>
+    <a class="button button-secondary" href="{% url 'school-management' %}">← Schulen &amp; Klassen</a>
+  </header>
+
+  {% if errors %}<div class="status-banner status-error">{% for error in errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}
+
+  {% if preview_rows %}
+    <section class="settings-panel form-stack">
+      <header><div><p class="eyebrow">Vorschau</p><h2>{{ preview_count }} Zeilen geprüft</h2><p>Gezeigt werden die ersten {{ preview_rows|length }} Zeilen. Beim Anwenden werden alle geprüften Zeilen gemeinsam und atomar importiert.</p></div></header>
+      <div class="table-scroll"><table><thead><tr><th>Schule</th><th>Schuljahr</th><th>Klasse</th><th>Adapter</th><th>Modul</th></tr></thead><tbody>{% for row in preview_rows %}<tr><td>{{ row.school_name }}</td><td>{{ row.school_year_label }}</td><td>{{ row.class_display_name|default:row.class_name }}</td><td>{{ row.adapter_name }}</td><td>{{ row.module_label }}</td></tr>{% endfor %}</tbody></table></div>
+      <form method="post" class="form-actions">{% csrf_token %}<input type="hidden" name="action" value="apply"><a class="button button-secondary" href="{% url 'school-setup-import' %}">Andere Datei</a><button class="button button-primary" type="submit">Geprüfte Struktur importieren</button></form>
+    </section>
+  {% else %}
+    <section class="settings-panel form-stack">
+      <header><div><p class="eyebrow">1. Vorlage</p><h2>Mit dem KlassID-Export starten</h2><p>Die Datei ist Excel-kompatibel. Sie enthält keine Familien, Kinder, E-Mail-Adressen oder Zugangsdaten.</p></div></header>
+      <a class="button button-secondary" href="{% url 'school-setup-export' %}">Aktuelle Struktur exportieren</a>
+      <form method="post" enctype="multipart/form-data" class="form-stack">{% csrf_token %}<input type="hidden" name="action" value="preview"><label>Bearbeitete KlassID-CSV<input type="file" name="csv_file" accept=".csv,text/csv" required></label><p class="help-text">Excel: „Speichern unter“ → CSV UTF-8. Leere Adapter- oder Modulspalten bedeuten, dass nur Schule und Klasse angelegt bzw. aktualisiert werden. Leere Modulklassen bedeuten: für alle Klassen dieser Schule freigegeben.</p><footer class="form-actions"><a class="button button-secondary" href="{% url 'school-management' %}">Abbrechen</a><button class="button button-primary" type="submit">Datei prüfen</button></footer></form>
+    </section>
+  {% endif %}
+</section>
+{% endblock %}
