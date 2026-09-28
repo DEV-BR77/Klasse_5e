@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$EnvironmentFile = "staging.public.env"
+    [string]$EnvironmentFile = "staging.public.env",
+    [switch]$AllowMfaBypass
 )
 
 Set-StrictMode -Version Latest
@@ -50,7 +51,7 @@ foreach ($key in @("DJANGO_ALLOWED_HOSTS", "DJANGO_CSRF_TRUSTED_ORIGINS", "APP_B
         throw "Die Staging-Variable $key darf nicht auf das Produktivportal zeigen."
     }
 }
-if ($environment["TEMPORARY_ADMIN_MFA_BYPASS"] -ne "0") {
+if ($environment["TEMPORARY_ADMIN_MFA_BYPASS"] -ne "0" -and -not $AllowMfaBypass) {
     throw "MFA-Bypass ist in Staging verboten."
 }
 if ($environment["BIOMETRIC_SEARCH_ENABLED"] -ne "0") {

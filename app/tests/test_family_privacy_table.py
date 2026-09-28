@@ -17,7 +17,7 @@ pytestmark = pytest.mark.django_db
 def test_child_privacy_toggles_save_together_without_javascript(client, guardian):
     child = Person.objects.create(first_name="Testkind", last_name="Beispiel")
     relation = GuardianChildRelationship.objects.create(
-        guardian_person=guardian.person, student_person=child, relationship_type="mother",
+        guardian_person=guardian.person, student_person=child, relationship_type="guardian",
         is_legal_guardian=True, status="verified", verified_by=guardian, verified_at=timezone.now(),
         valid_from=timezone.localdate() - timedelta(days=1), may_view_student_profile=True,
         may_manage_profile=False, may_manage_general_consents=True,

@@ -36,6 +36,7 @@ def migration_reference_data(db):
         ("klasse5e.core.migrations.0011_portaltheme_useraccount_selected_theme", "seed_themes"),
         ("klasse5e.core.migrations.0025_alter_portalconfigurationkey_value_type", "seed_idle_timeout"),
         ("klasse5e.chat.migrations.0002_retention_and_attachments", "seed_categories"),
+        ("klasse5e.core.migrations.0039_seed_phase1_role_permissions", "seed_phase1_permissions"),
     ):
         getattr(import_module(module_name), function_name)(django_apps, None)
 

@@ -253,6 +253,10 @@ def moderate_photo(request, photo_id):
     photo = get_object_or_404(Photo.objects.select_related("gallery"), id=photo_id)
     if not may_manage_gallery(request.user, photo.gallery):
         raise Http404
+    if request.POST.get("decision") == "publish" and not may_manage_gallery(
+        request.user, photo.gallery, "publish"
+    ):
+        raise Http404
     try:
         decide_photo(
             photo, request.user, request.POST.get("decision", ""), request.POST.get("reason", "")

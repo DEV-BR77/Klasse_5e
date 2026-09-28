@@ -9,6 +9,7 @@ from klasse5e.events.models import Event
 from klasse5e.itslearning.models import ItslearningCalendarItem
 from klasse5e.schedule.models import CalendarEntry, TimeGrid, TimetableEntry
 from klasse5e.webuntis.models import WebUntisHomework, WebUntisLesson
+from klasse5e.webuntis.extra_models import WebUntisSubjectMapping, WebUntisTeacherMapping
 
 CALENDAR_CATEGORIES = (
     ("appointment", "Termine"),
@@ -143,6 +144,20 @@ def build_calendar_context(
         period_title = selected_day.strftime("%d.%m.%Y")
     items = defaultdict(list)
 
+    adapter_ids = {connection.adapter_id for connection in webuntis_connections if connection.adapter_id}
+    subject_aliases = dict(
+        WebUntisSubjectMapping.objects.filter(adapter__isnull=True).values_list("code", "label")
+    )
+    subject_aliases.update(
+        WebUntisSubjectMapping.objects.filter(adapter_id__in=adapter_ids).values_list("code", "label")
+    )
+    teacher_aliases = dict(
+        WebUntisTeacherMapping.objects.filter(adapter__isnull=True).values_list("code", "label")
+    )
+    teacher_aliases.update(
+        WebUntisTeacherMapping.objects.filter(adapter_id__in=adapter_ids).values_list("code", "label")
+    )
+
     lessons = _merge_adjacent_lessons(
         list(
             WebUntisLesson.objects.filter(
@@ -160,7 +175,9 @@ def build_calendar_context(
         meta = " - ".join(
             value
             for value in (
-                f"bei {lesson.teacher_label}" if lesson.teacher_label else "",
+                f"bei {teacher_aliases.get(lesson.teacher_code, lesson.teacher_label)}"
+                if teacher_aliases.get(lesson.teacher_code, lesson.teacher_label)
+                else "",
                 f"Raum {lesson.room}" if lesson.room else "",
             )
             if value
@@ -169,7 +186,7 @@ def build_calendar_context(
             _item(
                 "lesson",
                 "Unterricht",
-                lesson.subject or "Unterricht",
+                subject_aliases.get(lesson.subject_code, lesson.subject) or "Unterricht",
                 starts_at=lesson.starts_at,
                 ends_at=lesson.ends_at,
                 meta=meta,
@@ -221,7 +238,9 @@ def build_calendar_context(
             _item(
                 "homework",
                 "Hausaufgabe",
-                homework.subject or "Hausaufgabe",
+                f"Hausaufgabe {subject_aliases.get(homework.subject, homework.subject)}"
+                if homework.subject
+                else "Hausaufgabe",
                 meta=homework.text,
             )
         )

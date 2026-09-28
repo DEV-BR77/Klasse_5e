@@ -16,6 +16,21 @@ from .policies import PRIVILEGED_ROLES, active_roles
 from .session_security import idle_timeout_minutes
 
 
+class StagingMfaDisabledMiddleware:
+    """Clear an already-started MFA stage when Staging disables MFA completely."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if settings.MFA_LOGIN_DISABLED and request.path.startswith("/accounts/2fa/"):
+            from allauth.account.internal.stagekit import clear_login
+
+            clear_login(request)
+            return redirect("account_login")
+        return self.get_response(request)
+
+
 class ActiveAccessMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -49,22 +64,30 @@ class IdleSessionTimeoutMiddleware:
 
     def __call__(self, request):
         if request.user.is_authenticated and not request.path.startswith(self.EXEMPT_PREFIXES):
-            timeout_seconds = idle_timeout_minutes() * 60
-            now = time()
-            previous = request.session.get("idle_session_last_activity")
-            if (
-                not isinstance(previous, bool)
-                and isinstance(previous, int | float)
-                and now - previous >= timeout_seconds
-            ):
-                logout(request)
-                response = redirect(f"{reverse('account_login')}?timeout=1")
-                response["Cache-Control"] = "private, no-store, max-age=0"
-                return response
-            # Background polls must not prolong a session while the device is unattended.
-            if request.headers.get("X-KlassID-Background-Poll") != "1":
-                request.session["idle_session_last_activity"] = now
-                request.session.set_expiry(timeout_seconds)
+            timeout_minutes = idle_timeout_minutes()
+            if timeout_minutes > 0:
+                timeout_seconds = timeout_minutes * 60
+                now = time()
+                previous = request.session.get("idle_session_last_activity")
+                if (
+                    not isinstance(previous, bool)
+                    and isinstance(previous, int | float)
+                    and now - previous >= timeout_seconds
+                ):
+                    logout(request)
+                    response = redirect(f"{reverse('account_login')}?timeout=1")
+                    response["Cache-Control"] = "private, no-store, max-age=0"
+                    return response
+                # Background polls must not prolong a session while the device is unattended.
+                if request.headers.get("X-KlassID-Background-Poll") != "1":
+                    request.session["idle_session_last_activity"] = now
+                    request.session.set_expiry(timeout_seconds)
+            else:
+                # Zero means that the portal-wide idle policy is switched off.
+                # Restore Django's ordinary session lifetime instead of retaining
+                # a previously configured short idle expiry.
+                request.session.pop("idle_session_last_activity", None)
+                request.session.set_expiry(None)
         response = self.get_response(request)
         if request.path == reverse("account_login"):
             # A login form contains a one-time CSRF value and must not be
@@ -103,6 +126,8 @@ class PrivilegedMfaMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if settings.MFA_LOGIN_DISABLED:
+            return self.get_response(request)
         if request.user.is_authenticated and not request.path.startswith(self.SAFE_PREFIXES):
             roles = active_roles(request.user)
             if roles & PRIVILEGED_ROLES:

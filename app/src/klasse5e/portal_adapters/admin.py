@@ -1,6 +1,33 @@
 from django.contrib import admin
 
-from .models import ChildModuleConnection, PortalAdapter, PortalAdapterModule
+from .models import (
+    ChildModuleConnection,
+    PortalAdapter,
+    PortalAdapterDefinition,
+    PortalAdapterDefinitionModule,
+    PortalAdapterModule,
+)
+
+
+class PortalAdapterDefinitionModuleInline(admin.TabularInline):
+    model = PortalAdapterDefinitionModule
+    extra = 0
+    fields = ("key", "label", "access_model", "is_published")
+
+
+@admin.register(PortalAdapterDefinition)
+class PortalAdapterDefinitionAdmin(admin.ModelAdmin):
+    list_display = ("label", "provider", "integration_type", "is_published", "is_technically_reviewed")
+    list_filter = ("integration_type", "is_published", "is_technically_reviewed")
+    search_fields = ("label", "provider", "hint")
+    inlines = (PortalAdapterDefinitionModuleInline,)
+
+
+@admin.register(PortalAdapterDefinitionModule)
+class PortalAdapterDefinitionModuleAdmin(admin.ModelAdmin):
+    list_display = ("label", "definition", "access_model", "is_published")
+    list_filter = ("access_model", "is_published", "definition")
+    search_fields = ("label", "key", "definition__label")
 
 
 class PortalAdapterModuleInline(admin.TabularInline):

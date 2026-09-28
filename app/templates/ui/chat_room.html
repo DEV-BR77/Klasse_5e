@@ -1,104 +1,77 @@
-{% extends "base.html" %}
-{% block content %}
-<section class="chat-room-page chat-room--{{ room.appearance }}">
-  {{ mention_names|json_script:"chat-mention-names" }}
+{% extends "ui/chat.html" %}
+
+{% block chat_window %}
+<section class="chat-room-page chat-room--{{ room.appearance|default:'standard' }}" aria-labelledby="chat-room-heading">
   <header class="chat-room-head">
-    <a class="icon-button" href="/chat/" aria-label="Zurück zur Chatübersicht">←</a>
-    <span class="conversation-avatar">{{ room_title|first }}</span>
-    <div>
-      <h1>{{ room_title }}</h1>
-      <small>{% if is_direct %}Private Unterhaltung · {% endif %}{% if room.is_open %}{% if room.retention_category and room.retention_category.automatic_deletion_enabled %}Automatische Löschung nach {{ room.retention_category.retention_days }} Tagen{% else %}Keine automatische Löschung{% endif %}{% else %}Nur noch lesbar{% endif %}</small>
-    </div>
+    <a class="button button-quiet" href="{% url 'ui-chat' %}" aria-label="Zur Chatübersicht">←</a>
+    <span class="conversation-avatar" aria-hidden="true">{{ room_title|slice:":1"|upper }}</span>
+    <div class="chat-room-head__identity"><h2 id="chat-room-heading">{{ room_title }}</h2><small>{% if is_direct %}Persönliche Unterhaltung{% else %}Gruppenchat{% endif %}</small></div>
+    <div class="chat-room-head__status"><span class="chat-room-status-dot" aria-hidden="true"></span><span>{% if room.is_open %}Geöffnet{% else %}Archiviert{% endif %}</span></div>
   </header>
-  <div class="chat-live-status" data-chat-poll data-chat-poll="{{ chat_poll_url }}"{% if chat_latest_at %} data-latest="{{ chat_latest_at|date:'c' }}"{% endif %} aria-live="polite">
-    <span data-chat-status>Aktualisiert</span>
-    <button class="button button-quiet button-compact" type="button" data-chat-retry>Jetzt aktualisieren</button>
+
+  {% if can_manage_chat_members %}
+    <details class="chat-members-panel">
+      <summary>Mitglieder und Moderation <span class="muted">{% if chat_members %}{{ chat_members|length }} ausgewählt{% else %}Klassenraum{% endif %}</span></summary>
+      <div class="chat-members-body">
+        <p class="muted">Ohne explizite Auswahl gilt die Zielgruppe des Raums. Sobald Mitglieder ausgewählt sind, sehen nur diese den Raum.</p>
+        {% if chat_members %}
+          <ul class="chat-member-list">
+            {% for member in chat_members %}<li><div><strong>{{ member.user.person.first_name }} {{ member.user.person.last_name }}</strong><small>{{ member.get_role_display }}</small></div><div class="chat-member-actions"><form method="post" class="chat-member-role-form">{% csrf_token %}<input type="hidden" name="action" value="member_role"><input type="hidden" name="user_id" value="{{ member.user_id }}"><label class="sr-only" for="member-role-{{ member.user_id }}">Rolle für {{ member.user.person.first_name }} ändern</label><select id="member-role-{{ member.user_id }}" name="role">{% for value, label in chat_member_roles %}<option value="{{ value }}"{% if member.role == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="button button-quiet button-compact" type="submit">Rolle speichern</button></form><form method="post">{% csrf_token %}<input type="hidden" name="action" value="member_remove"><input type="hidden" name="user_id" value="{{ member.user_id }}"><button class="button button-quiet button-compact" type="submit">Entfernen</button></form></div></li>{% endfor %}
+          </ul>
+          <form method="post" data-confirm="Die Mitgliederauswahl aufheben? Danach kann wieder die gesamte Zielgruppe des Raums mitlesen.">{% csrf_token %}<input type="hidden" name="action" value="member_reset"><button class="button button-secondary button-compact" type="submit">Mitgliederauswahl aufheben</button></form>
+        {% endif %}
+        <form method="post" class="chat-member-form"><input type="hidden" name="action" value="member_add">{% csrf_token %}<label>Person<select name="user_id" required><option value="">Auswählen …</option>{% for person in chat_member_candidates %}<option value="{{ person.user_id }}">{{ person.first_name }} {{ person.last_name }}</option>{% endfor %}</select></label><label>Rolle<select name="role">{% for value, label in chat_member_roles %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label><button class="button button-primary button-compact" type="submit">Hinzufügen</button></form>
+      </div>
+    </details>
+  {% endif %}
+
+  <div class="chat-live-status" data-chat-poll="{{ chat_poll_url }}" data-latest="{% if chat_latest_at %}{{ chat_latest_at|date:'c' }}{% endif %}">
+    <span data-chat-status role="status" aria-live="polite">Nachrichten werden aktuell gehalten.</span>
+    <button class="button button-secondary button-compact" type="button" data-chat-retry>Aktualisieren</button>
   </div>
 
-  <ol class="message-thread">
+  <ol class="message-thread" aria-label="Nachrichten">
     {% for message in chat_messages %}
-      <li class="message-row {% if message.author_id == request.user.id %}is-own{% endif %}"{% if message.author_id == request.user.id and not message.hidden_at and not message.withdrawn_at %} data-chat-message-swipe{% endif %}>
-        {% if message.author_id != request.user.id %}<span class="message-avatar">{{ message.author.person.chat_display_name|default:message.author.person.first_name|first|default:"?" }}</span>{% endif %}
+      <li class="message-row{% if message.author_id == request.user.id %} is-own{% endif %}" tabindex="0" data-chat-message-swipe data-chat-message-id="{{ message.public_id }}">
+        {% if message.author_id != request.user.id %}<span class="message-avatar" aria-hidden="true">{{ message.author.person.first_name|slice:":1"|upper }}</span>{% endif %}
         <div class="message-content">
-        <article class="message-bubble">
-          <header class="message-bubble-meta">
-            <strong>{{ message.author.person.chat_display_name|default:message.author.person.first_name|default:message.author.email }}</strong>
-            <time>{{ message.created_at|date:"d.m., H:i" }}</time>
-          </header>
-          {% if message.hidden_at %}
-            <p class="muted">Diese Nachricht wurde von der Moderation ausgeblendet.</p>
-          {% elif message.withdrawn_at %}
-            <p class="muted">Diese Nachricht wurde zurückgezogen.</p>
-          {% else %}
-            {% if message.body %}<p>{{ message.body }}</p>{% endif %}
-            {% if message.language_filter_hits %}<small class="safety-note">🛡 Direkte Beleidigung automatisch verdeckt</small>{% endif %}
-            {% if message.attachment %}
-              {% if message.attachment_content_type|slice:":6" == "audio/" %}
-                <audio controls preload="metadata" src="{% url 'ui-chat-attachment' message.public_id %}"></audio>
-              {% elif message.attachment_content_type|slice:":6" == "image/" %}
-                <a href="{% url 'ui-chat-attachment' message.public_id %}" target="_blank"><img class="chat-image" src="{% url 'ui-chat-attachment' message.public_id %}" alt="Gesendetes Bild"></a>
-                {% if message.attachment_safety_status != "approved" %}<small class="safety-note">🛡 Bildinhalt vorsorglich verpixelt</small>{% endif %}
-              {% else %}
-                <a class="chat-attachment" href="{% url 'ui-chat-attachment' message.public_id %}">📎 {{ message.attachment_name }}</a>
-              {% endif %}
+          <article class="message-bubble">
+            <strong>{% if message.author_id == request.user.id %}Du{% else %}{{ message.author.person.first_name }}{% endif %}</strong>
+            {% if message.hidden_at %}<p>Diese Nachricht wurde von der Moderation ausgeblendet.</p>{% elif message.withdrawn_at %}<p>Diese Nachricht wurde zurückgezogen.</p>{% elif message.body %}<p>{{ message.body|linebreaksbr }}</p>{% endif %}
+            {% if message.sticker and not message.hidden_at and not message.withdrawn_at %}<img class="chat-message-sticker" src="{% url 'chat-asset-image' message.sticker_id %}" alt="Sticker: {{ message.sticker.label }}">{% endif %}
+            {% if message.attachment and not message.hidden_at and not message.withdrawn_at %}
+              {% if message.attachment_content_type|slice:":6" == "audio/" %}<audio controls preload="metadata"><source src="{% url 'ui-chat-attachment' message.public_id %}" type="{{ message.attachment_content_type }}"></audio>
+              {% elif message.attachment_content_type|slice:":6" == "image/" %}<a href="{% url 'ui-chat-attachment' message.public_id %}" target="_blank" rel="noopener"><img class="chat-image" src="{% url 'ui-chat-attachment' message.public_id %}" alt="{{ message.attachment_name|default:'Bildanhang' }}"></a>
+              {% else %}<a class="chat-attachment" href="{% url 'ui-chat-attachment' message.public_id %}" target="_blank" rel="noopener">Anhang: {{ message.attachment_name|default:"öffnen" }}</a>{% endif %}
             {% endif %}
-            {% if message.author_id != request.user.id %}
-              <details class="message-report">
-                <summary>Nachricht melden</summary>
-                <form method="post" action="{% url 'chat-report' message.public_id %}">
-                  {% csrf_token %}
-                  <input type="hidden" name="return_to" value="room">
-                  <label>Grund<select name="reason"><option value="inappropriate">Ungeeignet</option><option value="privacy">Datenschutz</option><option value="other">Sonstiges</option></select></label>
-                  <button class="button button-secondary button-compact" type="submit">An Moderation senden</button>
-                </form>
-              </details>
-            {% endif %}
+            <time datetime="{{ message.created_at|date:'c' }}">{{ message.created_at|date:"H:i" }} Uhr</time>
+          </article>
+          <details class="message-menu"><summary aria-label="Nachrichtenaktionen">•••</summary><div class="message-actions" aria-label="Nachrichtenaktionen">
+          {% if message.author_id == request.user.id and not message.hidden_at and not message.withdrawn_at %}
+            <button id="edit-message-{{ message.public_id }}" class="message-action" type="button" data-message-edit-open data-message-body="{{ message.body }}" data-message-url="{% url 'chat-message' message.public_id %}">Bearbeiten</button>
+            <form method="post" action="{% url 'chat-message' message.public_id %}" data-chat-delete-form data-url="{% url 'chat-message' message.public_id %}">{% csrf_token %}<button id="delete-message-{{ message.public_id }}" class="message-action" type="submit" aria-label="Nachricht löschen">Löschen</button><span class="sr-only" data-chat-action-status></span></form>
           {% endif %}
-        </article>
-        {% if message.author_id == request.user.id and not message.hidden_at and not message.withdrawn_at %}
-          <div class="message-actions" data-chat-message-actions>
-            <button type="button" class="message-action" data-dialog-open="edit-message-{{ message.public_id }}">Bearbeiten</button>
-            <button type="button" class="message-action message-action--danger" data-dialog-open="delete-message-{{ message.public_id }}">Löschen</button>
-          </div>
-          <dialog id="edit-message-{{ message.public_id }}" class="app-dialog message-action-dialog" aria-labelledby="edit-message-title-{{ message.public_id }}">
-            <form class="form-stack" data-chat-edit-form data-url="{% url 'chat-message' message.public_id %}">
-              <header class="dialog-head"><div><p class="eyebrow">Eigene Nachricht</p><h2 id="edit-message-title-{{ message.public_id }}">Nachricht bearbeiten</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header>
-              <label>Nachricht<textarea name="body" rows="5" maxlength="2000" required>{{ message.body }}</textarea></label>
-              <output class="form-error" data-chat-action-status aria-live="polite"></output>
-              <footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-primary" type="submit">Speichern</button></footer>
-            </form>
-          </dialog>
-          <dialog id="delete-message-{{ message.public_id }}" class="app-dialog message-action-dialog" aria-labelledby="delete-message-title-{{ message.public_id }}">
-            <form class="form-stack" data-chat-delete-form data-url="{% url 'chat-message' message.public_id %}">
-              {% csrf_token %}
-              <header class="dialog-head"><div><p class="eyebrow">Eigene Nachricht</p><h2 id="delete-message-title-{{ message.public_id }}">Nachricht löschen?</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header>
-              <p>Die Nachricht wird für alle Beteiligten zurückgezogen.</p>
-              <output class="form-error" data-chat-action-status aria-live="polite"></output>
-              <footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-danger" type="submit">Löschen</button></footer>
-            </form>
-          </dialog>
-        {% endif %}
+          <details class="message-report"><summary class="message-action">Melden</summary><form method="post" action="{% url 'chat-report' message.public_id %}" class="message-report__form">{% csrf_token %}<input type="hidden" name="return_to" value="room"><label>Grund<select name="reason"><option value="inappropriate">Unangemessener Inhalt</option><option value="privacy">Datenschutz</option><option value="other">Sonstiger Grund</option></select></label><button class="message-action" type="submit">Meldung senden</button></form></details>
+          {% if message.can_moderate and not message.hidden_at and not message.withdrawn_at %}<form method="post" action="{% url 'chat-moderate' message.public_id %}" data-confirm="Diese Nachricht wirklich ausblenden?">{% csrf_token %}<input type="hidden" name="return_to" value="room"><button class="message-action message-action--danger" type="submit">Ausblenden</button></form>{% endif %}
+          </div></details>
         </div>
       </li>
-    {% empty %}
-      <li class="empty-state">Noch keine Nachrichten. Schreib die erste.</li>
-    {% endfor %}
+    {% empty %}<li class="empty-state">Schreibe die erste Nachricht.</li>{% endfor %}
   </ol>
 
-  {% if room.is_open %}
-    <form method="post" enctype="multipart/form-data" class="chat-composer-modern" data-chat-composer>
-      {% csrf_token %}
-      <div class="composer-tools" aria-label="Nachricht ergänzen">
-        <button type="button" class="composer-tool composer-tool-emoji" data-emoji-toggle aria-label="Emoji auswählen" title="Emoji auswählen">😊</button>
-        <label class="composer-tool composer-tool-attachment" aria-label="Datei oder Bild hinzufügen" title="Datei oder Bild hinzufügen" tabindex="0">+<input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf,audio/webm,audio/ogg,audio/mp4" hidden data-chat-file></label>
-        <button type="button" class="composer-tool composer-tool-voice" data-voice-record aria-label="Sprachnachricht aufnehmen" title="Sprachnachricht aufnehmen">🎤</button>
-      </div>
-      <div class="emoji-picker" data-emoji-picker hidden>{% for emoji in emojis %}<button type="button" data-emoji="{{ emoji }}">{{ emoji }}</button>{% endfor %}</div>
-      <label class="sr-only" for="chat-body">Nachricht</label>
-      <textarea id="chat-body" name="body" rows="1" maxlength="2000" placeholder="Nachricht schreiben …"></textarea>
-      <button class="send-button" type="submit" aria-label="Nachricht senden" title="Nachricht senden">➤</button>
-      <output class="composer-status" data-composer-status aria-live="polite"></output>
-    </form>
-  {% endif %}
+  {% if room.is_open and can_publish_chat %}
+  <form method="post" enctype="multipart/form-data" action="{% url 'ui-chat-room' room.public_id %}" class="chat-composer-modern" data-chat-composer>
+    {% csrf_token %}
+    <input type="hidden" name="sticker_id" value="" data-chat-sticker-id>
+    <div class="composer-tools"><button class="composer-tool" type="button" data-emoji-toggle aria-label="Emoji einfügen" title="Emoji einfügen">☺</button><button class="composer-tool" type="button" data-sticker-toggle aria-label="Sticker einfügen" title="Sticker einfügen">★</button><label class="composer-tool" title="Datei anhängen"><input type="file" name="attachment" data-chat-file class="sr-only" accept="image/jpeg,image/png,image/webp,application/pdf,audio/webm,audio/ogg,audio/mp4"><span aria-hidden="true">⌇</span><span class="sr-only">Datei anhängen</span></label><button class="composer-tool" type="button" data-voice-record aria-label="Sprachnachricht aufnehmen" title="Sprachnachricht aufnehmen">●</button></div>
+    <label class="sr-only" for="chat-message">Nachricht schreiben</label><textarea id="chat-message" name="body" rows="1" maxlength="2000" data-chat-message-input placeholder="Nachricht schreiben …" title="Enter sendet · Strg+Enter fügt eine neue Zeile ein">{{ composer_body }}</textarea>
+    <button class="send-button" type="submit" aria-label="Nachricht senden">➤</button>
+    <div class="emoji-picker" data-emoji-picker hidden>{% for emoji in emojis %}<button type="button" data-emoji="{{ emoji }}">{{ emoji }}</button>{% endfor %}</div>
+    <div class="emoji-picker sticker-picker" data-sticker-picker hidden>{% for asset in chat_assets %}{% if asset.kind == 'sticker' %}<button type="button"{% if asset.image %} data-sticker-id="{{ asset.pk }}"{% else %} data-sticker="{{ asset.value }}"{% endif %} title="{{ asset.label }}">{% if asset.image %}<img src="{% url 'chat-asset-image' asset.pk %}" alt="">{% else %}★{% endif %}<small>{{ asset.label }}</small></button>{% endif %}{% endfor %}</div>
+    <div class="chat-sticker-selection" data-sticker-selection hidden><span data-sticker-selection-label></span><button type="button" data-sticker-clear aria-label="Sticker-Auswahl entfernen">×</button></div>
+    <span class="composer-status" data-composer-status role="status" aria-live="polite">{{ composer_error }}</span>
+  </form>
+  {% elif not room.is_open %}<p class="empty-state">Dieser Raum ist archiviert. Nachrichten bleiben lesbar.</p>{% else %}<p class="empty-state">Du kannst die Nachrichten in diesem Raum lesen.</p>{% endif %}
 </section>
+<dialog id="edit-chat-message" class="app-dialog" aria-labelledby="edit-chat-message-title"><form class="form-stack" data-chat-edit-form method="post">{% csrf_token %}<header class="dialog-head"><h2 id="edit-chat-message-title">Nachricht bearbeiten</h2><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header><label>Nachricht<textarea name="body" rows="5" required maxlength="2000"></textarea></label><p data-chat-action-status role="status"></p><footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-primary" type="submit">Speichern</button></footer></form></dialog>
 {% endblock %}

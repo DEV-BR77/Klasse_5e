@@ -23,6 +23,14 @@ from .onboarding import active_decision, latest_text, may_decide, record_decisio
 from .registration import sanitized_profile_photo
 
 
+def family_privacy_consent_types():
+    """Keep technical school-data choices out of the privacy screen."""
+
+    return ConsentType.objects.exclude(key__startswith="webuntis_").order_by(
+        "category", "label"
+    )
+
+
 class FamilyPersonForm(forms.ModelForm):
     class Meta:
         model = Person
@@ -58,7 +66,7 @@ def person_card(person, user, editable, *, data=None):
     from .policies import consent_state
 
     consents = []
-    for consent in ConsentType.objects.order_by("category", "label"):
+    for consent in family_privacy_consent_types():
         text = latest_text(consent)
         if not text or not may_decide(user, person, consent):
             continue
@@ -132,7 +140,7 @@ def save_consents(request, person):
 
     consents = [
         consent
-        for consent in ConsentType.objects.order_by("category", "label")
+        for consent in family_privacy_consent_types()
         if latest_text(consent) and may_decide(request.user, person, consent)
     ]
     if not consents:

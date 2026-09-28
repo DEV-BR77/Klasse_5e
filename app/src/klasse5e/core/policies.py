@@ -10,6 +10,7 @@ PRIVILEGED_ROLES = {
     Role.DEPUTY_ADMIN,
     Role.TEACHER,
     Role.EDITOR,
+    Role.CONTENT_MANAGER,
     Role.MODERATOR,
     Role.ORGANIZER,
 }

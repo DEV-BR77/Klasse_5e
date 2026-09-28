@@ -192,7 +192,9 @@ def test_child_and_each_confirmed_guardian_see_the_childs_school_data(
 
     for user in (child_user, second_user):
         client.force_login(user)
-        dashboard = client.get("/", secure=True)
+        # Access policy must be checked on the day containing the fixture's
+        # lesson, independently of the dashboard's next-school-day default.
+        dashboard = client.get(f"/?tag={timezone.localdate().isoformat()}", secure=True)
         assert dashboard.status_code == 200
         html = dashboard.content.decode()
         assert "Privates Testfach" in html
@@ -214,7 +216,7 @@ def test_school_data_stays_child_scoped_and_relationship_revocation_is_immediate
     _child_user, second_user, outsider, second_person = shared_school_data
 
     client.force_login(outsider)
-    assert "Privates Testfach" not in client.get("/", secure=True).content.decode()
+    assert "Privates Testfach" not in client.get(f"/?tag={timezone.localdate().isoformat()}", secure=True).content.decode()
     assert "Private Lernplattform-Nachricht" not in client.get(
         "/itslearning/", secure=True
     ).content.decode()
@@ -223,7 +225,7 @@ def test_school_data_stays_child_scoped_and_relationship_revocation_is_immediate
         status="revoked"
     )
     client.force_login(second_user)
-    assert "Privates Testfach" not in client.get("/", secure=True).content.decode()
+    assert "Privates Testfach" not in client.get(f"/?tag={timezone.localdate().isoformat()}", secure=True).content.decode()
     assert "Private Lernplattform-Nachricht" not in client.get(
         "/itslearning/", secure=True
     ).content.decode()

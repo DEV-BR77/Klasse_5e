@@ -9,17 +9,18 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from klasse5e.core.models import AuditEvent
-from klasse5e.core.policies import has_active_membership
+from klasse5e.core.module_permissions import may_access_module
 
 from .models import ContributionCategory, ContributionItem, Event, Reservation
 from .services import cancel_reservation_for_user, create_reservation
+from .policies import may_manage_event
 from .spoonacular import SpoonacularUnavailable, recipe_ingredients
 
 
 @login_required
 def event_detail(request, event_id):
     event = get_object_or_404(Event, id=event_id, status="published")
-    if not has_active_membership(request.user, event.school_class):
+    if not may_access_module(request.user, "events", event.school_class):
         raise Http404
     return JsonResponse({"id": event.id, "title": event.title})
 
@@ -56,9 +57,9 @@ def cancel_reservation(request, reservation_id):
 
 def _organizer_event_or_404(request, event_id):
     event = get_object_or_404(Event, id=event_id, status=Event.Status.PUBLISHED)
-    if not has_active_membership(request.user, event.school_class):
+    if not may_access_module(request.user, "events", event.school_class):
         raise Http404
-    if not event.organizers.filter(id=request.user.id).exists():
+    if not may_manage_event(request.user, event):
         raise Http404
     return event
 

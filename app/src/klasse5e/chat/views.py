@@ -3,7 +3,7 @@ import json
 from django.contrib import messages as django_messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
@@ -11,7 +11,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from klasse5e.core.models import AuditEvent
 from klasse5e.core.policies import family_label
 
-from .models import ChatMessage, ChatReport, ChatRoom
+from .models import ChatAsset, ChatMessage, ChatReport, ChatRoom
 from .safety import filter_chat_language
 from .services import (
     create_message,
@@ -24,6 +24,33 @@ from .services import (
 
 def _room(room_id):
     return get_object_or_404(ChatRoom, public_id=room_id)
+
+
+@login_required
+def asset_image(request, asset_id):
+    """Serve only sanitized catalog images to current portal members."""
+    from klasse5e.core.models import SchoolClass
+    from klasse5e.core.module_permissions import may_access_module
+
+    user = request.user
+    if not user.is_active or user.locked_at:
+        raise Http404
+    if not any(
+        may_access_module(user, "chat", school_class)
+        for school_class in SchoolClass.objects.all()
+    ):
+        raise Http404
+    asset = get_object_or_404(ChatAsset, pk=asset_id, kind=ChatAsset.Kind.STICKER)
+    if not asset.image:
+        raise Http404
+    try:
+        image = asset.image.open("rb")
+    except (FileNotFoundError, OSError):
+        raise Http404 from None
+    response = FileResponse(image, content_type="image/png")
+    response["Cache-Control"] = "private, no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @login_required
@@ -53,7 +80,10 @@ def messages(request, room_id):
             reply_id = request.POST.get("reply_to")
             if reply_id:
                 reply = get_object_or_404(ChatMessage, public_id=reply_id, room=room)
-            message = create_message(room, request.user, request.POST.get("body", ""), reply)
+            message = create_message(
+                room, request.user, request.POST.get("body", ""), reply,
+                sticker_id=request.POST.get("sticker_id"),
+            )
             return JsonResponse({"id": str(message.public_id)}, status=201)
         since = request.GET.get("since")
         query = room.messages.select_related("author__person").order_by("created_at")
@@ -67,6 +97,7 @@ def messages(request, room_id):
                 "created_at": item.created_at.isoformat(),
                 "withdrawn": bool(item.withdrawn_at),
                 "hidden": bool(item.hidden_at),
+                "sticker_id": item.sticker_id if not item.withdrawn_at and not item.hidden_at else None,
             }
             for item in query[:200]
         ]
@@ -156,7 +187,7 @@ def report_message(request, message_id):
 @require_POST
 def moderate_message(request, message_id):
     message = get_object_or_404(ChatMessage, public_id=message_id)
-    if not may_moderate(request.user, message.room):
+    if not may_moderate(request.user, message.room, owner_id=message.author_id):
         raise Http404
     if (
         getattr(message.room, "direct_conversation", None)
@@ -174,4 +205,7 @@ def moderate_message(request, message_id):
         target_type="chat_message",
         target_id=str(message.public_id),
     )
+    if request.POST.get("return_to") == "room":
+        django_messages.success(request, "Die Nachricht wurde ausgeblendet.")
+        return redirect("ui-chat-room", room_id=message.room.public_id)
     return HttpResponse(status=204)

@@ -77,7 +77,8 @@ def test_first_login_shows_class_portal_welcome_with_direct_setup_links(client, 
     assert "Herzlich willkommen im Klassenportal der Klasse 5e" in html
     assert "Familienverwaltung öffnen" in html
     assert "Profil vervollständigen" in html
-    assert "WebUntis-Zugang pflegen" in html
+    assert "Schulzugänge je Kind verwalten" in html
+    assert "WebUntis-Zugang pflegen" not in html
     assert "Vorstellungstermine ansehen" in html
     assert "Station 1 von" not in html
 

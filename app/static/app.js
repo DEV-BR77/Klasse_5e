@@ -5,8 +5,8 @@
   document.querySelectorAll("[data-auto-dismiss]").forEach((notice) => {
     window.setTimeout(() => {
       notice.classList.add("is-dismissing");
-      window.setTimeout(() => notice.remove(), 220);
-    }, 5000);
+      window.setTimeout(() => notice.remove(), 500);
+    }, 2000);
   });
   if (document.querySelector("[data-login-form]")) {
     // Safari and Chromium may restore an old login form from bfcache. Its
@@ -62,45 +62,6 @@
     });
     select(tabs.find((tab) => tab.classList.contains("is-active"))?.dataset.dashboardTab || "schedule");
   });
-  const presentation = document.querySelector("[data-presentation]");
-  if (presentation) {
-    const slides = [...presentation.querySelectorAll("[data-slide]")];
-    const previous = presentation.querySelector("[data-slide-prev]");
-    const next = presentation.querySelector("[data-slide-next]");
-    const count = presentation.querySelector("[data-slide-count]");
-    const progress = presentation.querySelector("[data-slide-progress]");
-    const dots = presentation.querySelector("[data-slide-dots]");
-    let index = 0;
-    const show = (target) => {
-      index = Math.max(0, Math.min(slides.length - 1, target));
-      slides.forEach((slide, position) => slide.classList.toggle("is-active", position === index));
-      [...dots.children].forEach((dot, position) => dot.classList.toggle("is-active", position === index));
-      previous.disabled = index === 0;
-      next.textContent = index === slides.length - 1 ? "Von vorn ↺" : "Weiter →";
-      count.textContent = `${index + 1} / ${slides.length}`;
-      progress.value = index + 1;
-    };
-    slides.forEach((_slide, position) => {
-      const dot = document.createElement("button");
-      dot.type = "button";
-      dot.setAttribute("aria-label", `Folie ${position + 1}`);
-      dot.addEventListener("click", () => show(position));
-      dots.append(dot);
-    });
-    previous.addEventListener("click", () => show(index - 1));
-    next.addEventListener("click", () => show(index === slides.length - 1 ? 0 : index + 1));
-    presentation.querySelector("[data-demo-cancel]")?.addEventListener("click", () => {
-      const result = presentation.querySelector("[data-cancel-result]");
-      result.textContent = "🔔 07:45 Mathematik fällt aus · Kalender automatisch aktualisiert";
-      result.classList.add("is-notified");
-    });
-    presentation.querySelector("[data-demo-push]")?.addEventListener("click", () => {
-      const result = presentation.querySelector("[data-push-result]");
-      result.textContent = "🔔 Du wurdest im Chat „Klassenfrühstück“ erwähnt.";
-      result.classList.add("is-notified");
-    });
-    show(0);
-  }
   document.querySelectorAll("[data-replace-history]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -110,6 +71,13 @@
     });
   });
   document.querySelectorAll("[data-auto-submit]").forEach((form) => form.addEventListener("change", () => form.requestSubmit()));
+  document.querySelectorAll("[data-chat-message-input]").forEach((input) => input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.isComposing) return;
+    // Ctrl+Enter (Cmd+Enter on macOS) keeps the native newline behaviour.
+    if (event.ctrlKey || event.metaKey) return;
+    event.preventDefault();
+    input.form?.requestSubmit();
+  }));
   document.querySelectorAll("[data-menu-sort]").forEach((list) => {
     const syncPositions = () => list.querySelectorAll("[data-menu-row]").forEach((row, index) => {
       const input = row.querySelector("input[type='number']");
@@ -156,10 +124,9 @@
   const closeDialogSafely = (dialog) => {
     if (!dialog) return;
     if (dialogHasUnsavedChanges(dialog)) {
-      announce("Deine Eingaben sind noch nicht gespeichert. Speichere oder brich bewusst ab.");
-      dialog.querySelector("[data-dialog-dirty-note]")?.removeAttribute("hidden");
-      return;
+      if (!window.confirm('Ungespeicherte Eingaben verwerfen?')) return;
     }
+    dialog.querySelectorAll('form').forEach(form => form.reset());
     dialog.close();
   };
   document.querySelectorAll("dialog").forEach((dialog) => {
@@ -194,6 +161,7 @@
     // A labelled footer cancellation is a deliberate discard action. The
     // close icon, Escape and backdrop remain safe when the form is dirty.
     if (dialog && button.closest(".dialog-actions")) {
+      dialog.querySelectorAll('form').forEach(form => form.reset());
       dialog.dataset.dialogDirty = "false";
       dialog.close();
     } else closeDialogSafely(dialog);
@@ -201,6 +169,7 @@
   document.querySelectorAll("[data-dialog-discard]").forEach((button) => button.addEventListener("click", () => {
     const dialog = button.closest("dialog");
     if (!dialog) return;
+    dialog.querySelectorAll('form').forEach(form => form.reset());
     dialog.dataset.dialogDirty = "false";
     dialog.close();
   }));
@@ -244,8 +213,16 @@
     update();
   });
   document.addEventListener("click", (event) => {
-    document.querySelectorAll("details[open]").forEach((details) => {
+    document.querySelectorAll(".app-topbar details[open], .message-menu[open], .conversation-menu[open]").forEach((details) => {
       if (!details.contains(event.target)) details.removeAttribute("open");
+    });
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
+    document.querySelectorAll(".app-topbar details[open], .message-menu[open], .conversation-menu[open]").forEach((details) => {
+      const hadFocus = details.contains(document.activeElement);
+      details.open = false;
+      if (hadFocus) details.querySelector("summary")?.focus({preventScroll: true});
     });
   });
   document.querySelectorAll("details").forEach((details) => details.addEventListener("toggle", () => {
@@ -345,12 +322,23 @@
       if (submit) submit.disabled = false;
     }
   };
+  document.querySelectorAll('[data-message-edit-open]').forEach(button => button.addEventListener('click', () => {
+    const dialog = document.querySelector('#edit-chat-message');
+    const form = dialog.querySelector('form');
+    form.dataset.url = button.dataset.messageUrl;
+    form.elements.body.value = button.dataset.messageBody;
+    form.querySelector('[data-chat-action-status]').textContent = '';
+    dialog.showModal();
+    form.elements.body.focus();
+    dialog.addEventListener('close', () => button.focus({preventScroll: true}), {once: true});
+  }));
   document.querySelectorAll("[data-chat-edit-form]").forEach((form) => form.addEventListener("submit", (event) => {
     event.preventDefault();
     submitChatAction(form, "PATCH", {body: form.elements.body.value.trim()});
   }));
   document.querySelectorAll("[data-chat-delete-form]").forEach((form) => form.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (!window.confirm('Diese Nachricht wirklich zurückziehen?')) return;
     submitChatAction(form, "DELETE");
   }));
   document.querySelectorAll("[data-chat-message-swipe]").forEach((row) => {
@@ -367,6 +355,17 @@
       const dy = touch.clientY - start.y;
       start = null;
       if (dx > 52 && Math.abs(dx) > Math.abs(dy)) row.classList.toggle("is-actions-visible");
+    });
+  });
+
+  document.querySelectorAll("[data-chat-room-search]").forEach((input) => {
+    const list = document.querySelector("[data-chat-room-list]");
+    if (!list) return;
+    input.addEventListener("input", () => {
+      const query = input.value.trim().toLocaleLowerCase("de");
+      list.querySelectorAll(".conversation-row-wrap").forEach((row) => {
+        row.hidden = Boolean(query) && !row.textContent.toLocaleLowerCase("de").includes(query);
+      });
     });
   });
 
@@ -718,8 +717,31 @@
   document.querySelectorAll("[data-chat-composer]").forEach((composer) => {
     const textarea = composer.querySelector("textarea");
     const picker = composer.querySelector("[data-emoji-picker]");
+    const stickerPicker = composer.querySelector("[data-sticker-picker]");
+    const stickerInput = composer.querySelector("[data-chat-sticker-id]");
+    const stickerSelection = composer.querySelector("[data-sticker-selection]");
     const fileInput = composer.querySelector("[data-chat-file]");
     const status = composer.querySelector("[data-composer-status]");
+    composer.addEventListener("submit", async event => {
+      event.preventDefault();
+      const submit = composer.querySelector('.send-button');
+      if (submit.disabled) return;
+      if (!textarea.value.trim() && !fileInput?.files.length && !stickerInput?.value) {
+        status.textContent = "Bitte zuerst eine Nachricht, einen Anhang oder einen Sticker auswählen.";
+        textarea.focus();
+        return;
+      }
+      submit.disabled = true;
+      status.textContent = "Nachricht wird gesendet …";
+      try {
+        const response = await fetch(composer.action, {method: "POST", body: new FormData(composer), credentials: "same-origin"});
+        if (!response.ok || response.url.includes("/accounts/login/")) throw new Error();
+        window.location.reload();
+      } catch (_) {
+        status.textContent = "Nicht gesendet. Dein Entwurf bleibt erhalten. Bitte Verbindung und Anhang prüfen und erneut senden.";
+        submit.disabled = false;
+      }
+    });
     const mentionNames = readJsonScript("chat-mention-names", []);
     const mentionPicker = document.createElement("div"); mentionPicker.className = "mention-picker"; mentionPicker.hidden = true; composer.appendChild(mentionPicker);
     const insertMention = (name) => {
@@ -736,12 +758,47 @@
       mentionPicker.replaceChildren(...matches.map((name) => { const button=document.createElement("button"); button.type="button"; button.textContent=`@${name}`; button.addEventListener("click",()=>insertMention(name)); return button; }));
       mentionPicker.hidden = !matches.length;
     });
-    composer.querySelector("[data-emoji-toggle]")?.addEventListener("click", () => { picker.hidden = !picker.hidden; });
+    composer.querySelector("[data-emoji-toggle]")?.addEventListener("click", () => {
+      picker.hidden = !picker.hidden;
+      if (stickerPicker) stickerPicker.hidden = true;
+    });
+    composer.querySelector("[data-sticker-toggle]")?.addEventListener("click", () => {
+      if (stickerPicker) stickerPicker.hidden = !stickerPicker.hidden;
+      if (picker) picker.hidden = true;
+    });
     picker?.querySelectorAll("[data-emoji]").forEach((button) => button.addEventListener("click", () => {
       const start = textarea.selectionStart ?? textarea.value.length;
       textarea.value = `${textarea.value.slice(0,start)}${button.dataset.emoji}${textarea.value.slice(start)}`;
       textarea.focus(); picker.hidden = true;
     }));
+    stickerPicker?.querySelectorAll("[data-sticker]").forEach(button => button.addEventListener("click", () => {
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? start;
+      const value = button.dataset.sticker;
+      textarea.setRangeText(value, start, end, "end");
+      textarea.dispatchEvent(new Event("input", {bubbles: true}));
+      stickerPicker.hidden = true;
+      textarea.focus();
+    }));
+    stickerPicker?.querySelectorAll("[data-sticker-id]").forEach(button => button.addEventListener("click", () => {
+      stickerInput.value = button.dataset.stickerId;
+      stickerSelection.querySelector("[data-sticker-selection-label]").textContent = `Sticker: ${button.title}`;
+      stickerSelection.hidden = false;
+      stickerPicker.hidden = true;
+      textarea.focus();
+    }));
+    composer.querySelector("[data-sticker-clear]")?.addEventListener("click", () => {
+      stickerInput.value = "";
+      stickerSelection.hidden = true;
+      textarea.focus();
+    });
+    composer.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        if (picker) picker.hidden = true;
+        if (stickerPicker) stickerPicker.hidden = true;
+        mentionPicker.hidden = true;
+      }
+    });
     fileInput?.addEventListener("change", () => { if (fileInput.files[0]) status.textContent = `Anhang: ${fileInput.files[0].name}`; });
     const recordButton = composer.querySelector("[data-voice-record]");
     let recorder;
@@ -780,6 +837,15 @@
 
   const chat = document.querySelector("[data-chat-poll]");
   if (chat) {
+    const thread = document.querySelector(".message-thread");
+    if (thread) {
+      const scrollToLatest = () => { thread.scrollTop = thread.scrollHeight; };
+      scrollToLatest();
+      thread.querySelectorAll("img").forEach((picture) => {
+        if (!picture.complete) picture.addEventListener("load", scrollToLatest, {once: true});
+      });
+      window.addEventListener("load", scrollToLatest, {once: true});
+    }
     const status = document.querySelector("[data-chat-status]");
     const refreshButton = document.querySelector("[data-chat-retry]");
     let latest = chat.dataset.latest || "";
@@ -809,7 +875,11 @@
     refreshButton?.addEventListener("click", () => {
       // Reload only after the member explicitly chose it.  Background polling
       // must never discard text or an attachment in the composer.
-      if (hasUnreadUpdate) window.location.reload();
+      if (hasUnreadUpdate) {
+        const composer = document.querySelector("[data-chat-composer]");
+        const hasDraft = composer?.querySelector("textarea")?.value.trim() || composer?.querySelector("[data-chat-file]")?.files.length;
+        if (!hasDraft || window.confirm("Deinen ungesendeten Entwurf verwerfen und neue Nachrichten laden?")) window.location.reload();
+      }
       else poll();
     });
   }
@@ -818,114 +888,116 @@
 (() => {
   const dialog = document.querySelector("#avatar-designer");
   if (!dialog) return;
-  const data = JSON.parse(document.querySelector("#avatar-designer-data")?.textContent || "{}");
-  if (!data.components || !data.backgrounds) return;
-  const svgNs = "http://www.w3.org/2000/svg";
-  const keys = ["background", "body", "head", "face", "facial-hair", "accessories"];
-  const layers = {body: [13, 42, 70, 47], head: [33, 12, 42, 37], face: [47, 24, 25, 20], "facial-hair": [42, 34, 26, 18], accessories: [37, 27, 35, 12]};
+  const data = JSON.parse(document.querySelector("#avatar-designer-data").textContent);
+  const keys = ["background", "pose", "body", "head", "face", "facial-hair", "accessories"];
+  const ns = "http://www.w3.org/2000/svg";
   let target;
-  let selected = {background: 0, body: 0, head: 0, face: 0, "facial-hair": 0, accessories: 0};
-  const assetUrl = (category, filename) => `/static/vendor/avatar-atoms/${category}/${encodeURIComponent(filename)}`;
-  const makeSvg = (compact = false) => {
-    const svg = document.createElementNS(svgNs, "svg");
-    svg.setAttribute("viewBox", "0 0 240 324");
-    svg.setAttribute("aria-hidden", "true");
-    const background = document.createElementNS(svgNs, "rect");
-    background.setAttribute("width", "240"); background.setAttribute("height", "324"); background.setAttribute("rx", "26");
-    background.setAttribute("fill", data.backgrounds[selected.background]); svg.append(background);
-    Object.entries(layers).forEach(([category, values]) => {
-      const filename = data.components[category][selected[category]][0];
-      if (!filename) return;
-      const image = document.createElementNS(svgNs, "image");
-      image.setAttribute("href", assetUrl(category, filename));
-      image.setAttribute("x", `${values[0]}%`); image.setAttribute("y", `${values[1]}%`);
-      image.setAttribute("width", `${values[2]}%`); image.setAttribute("height", `${values[3]}%`);
-      image.setAttribute("preserveAspectRatio", "xMidYMid meet"); svg.append(image);
+  let selected = Object.fromEntries(keys.map(key => [key, 0]));
+  const url = (category, file) => `/static/vendor/avatar-atoms/${category}/${encodeURIComponent(file)}`;
+  const node = (tag, attrs) => {
+    const element = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, value));
+    return element;
+  };
+  const artwork = (config = selected) => {
+    const pose = data.poses[config.pose];
+    const svg = node("svg", {viewBox: "0 0 240 324", "aria-hidden": "true"});
+    svg.append(node("rect", {width: 240, height: 324, rx: 26, fill: data.backgrounds[config.background]}));
+    const figure = node("svg", {x: 12, y: 12, width: 216, height: 300, viewBox: pose.viewBox});
+    const add = (category, file, geometry) => {
+      if (!file) return;
+      const [x, y, width, height] = geometry;
+      figure.append(node("image", {href: url(category, file), x, y, width, height}));
+    };
+    add(pose.category, pose.clothes[config.body][0], pose.body);
+    Object.entries(data.headLayers).forEach(([category, geometry]) => {
+      const [x, y, width, height] = geometry;
+      add(category, data.components[category][config[category]][0],
+          [x + pose.head[0], y + pose.head[1], width, height]);
     });
-    if (compact) svg.classList.add("avatar-option-art");
+    svg.append(figure);
     return svg;
   };
+  const optionsFor = key => key === "background" ? data.backgrounds.map((_, i) => ["", `Farbe ${i + 1}`])
+    : key === "pose" ? data.poses.map(pose => ["", pose.label])
+    : key === "body" ? data.poses[selected.pose].clothes : data.components[key];
   const draw = () => {
-    const preview = dialog.querySelector("[data-avatar-preview]");
-    preview.replaceChildren(makeSvg());
-    keys.forEach((key) => dialog.querySelectorAll(`[data-avatar-option="${key}"]`).forEach((button) => {
-      button.classList.toggle("is-selected", Number(button.dataset.avatarIndex) === selected[key]);
-      button.setAttribute("aria-pressed", String(Number(button.dataset.avatarIndex) === selected[key]));
-    }));
+    dialog.querySelector("[data-avatar-preview]").replaceChildren(artwork());
+    keys.forEach(key => {
+      const holder = dialog.querySelector(`[data-avatar-options="${key}"]`);
+      holder.replaceChildren(...optionsFor(key).map(([file, label], index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "avatar-option";
+        button.dataset.avatarOption = key;
+        button.dataset.avatarIndex = index;
+        button.classList.toggle("is-selected", selected[key] === index);
+        button.setAttribute("aria-pressed", String(selected[key] === index));
+        if (key === "background") {
+          const swatch = document.createElement("span");
+          swatch.className = "avatar-color-swatch"; swatch.style.background = data.backgrounds[index]; button.append(swatch);
+        } else if (key === "pose" || key === "body") {
+          const preview = artwork({...selected, [key]: index}); preview.classList.add("avatar-option-art"); button.append(preview);
+        } else if (file) {
+          const img = document.createElement("img"); img.src = url(key, file); img.alt = ""; img.className = "avatar-option-art"; button.append(img);
+        }
+        const text = document.createElement("span"); text.textContent = label; button.append(text);
+        button.addEventListener("click", () => {
+          selected[key] = index; draw();
+          dialog.querySelector(`[data-avatar-option="${key}"][data-avatar-index="${index}"]`)?.focus({preventScroll: true});
+        });
+        return button;
+      }));
+    });
   };
-  const optionButton = (key, index, label) => {
-    const button = document.createElement("button"); button.type = "button"; button.className = "avatar-option";
-    button.dataset.avatarOption = key; button.dataset.avatarIndex = String(index); button.setAttribute("aria-pressed", "false");
-    if (key === "background") { const swatch = document.createElement("span"); swatch.className = "avatar-color-swatch"; swatch.style.background = data.backgrounds[index]; button.append(swatch); }
-    else { const art = document.createElement("span"); art.className = "avatar-option-art"; const image = document.createElement("img"); const filename = data.components[key][index][0]; if (filename) { image.src = assetUrl(key, filename); image.alt = ""; } art.append(image); button.append(art); }
-    const text = document.createElement("span"); text.textContent = label; button.append(text);
-    button.addEventListener("click", () => { selected[key] = index; draw(); }); return button;
-  };
-  keys.forEach((key) => {
-    const holder = dialog.querySelector(`[data-avatar-options="${key}"]`); if (!holder) return;
-    const options = key === "background" ? data.backgrounds.map((_, index) => ["", `Farbe ${index + 1}`]) : data.components[key];
-    options.forEach((item, index) => holder.append(optionButton(key, index, item[1])));
-    const carousel = document.createElement("div"); carousel.className = "avatar-options-carousel";
-    const previous = document.createElement("button"); previous.type = "button"; previous.className = "avatar-carousel-control avatar-carousel-control--previous"; previous.setAttribute("aria-label", `Vorherige ${key === "background" ? "Hintergründe" : "Optionen"}`); previous.textContent = "‹";
-    const next = document.createElement("button"); next.type = "button"; next.className = "avatar-carousel-control avatar-carousel-control--next"; next.setAttribute("aria-label", `Weitere ${key === "background" ? "Hintergründe" : "Optionen"}`); next.textContent = "›";
-    holder.parentNode.insertBefore(carousel, holder); carousel.append(previous, holder, next);
-    const updateControls = () => {
-      const maxScroll = Math.max(0, holder.scrollWidth - holder.clientWidth - 2);
-      previous.disabled = holder.scrollLeft <= 1;
-      next.disabled = holder.scrollLeft >= maxScroll;
-    };
-    previous.addEventListener("click", () => holder.scrollBy({left: -Math.max(160, holder.clientWidth * .8), behavior: "smooth"}));
-    next.addEventListener("click", () => holder.scrollBy({left: Math.max(160, holder.clientWidth * .8), behavior: "smooth"}));
-    holder.addEventListener("scroll", updateControls, {passive: true});
-    requestAnimationFrame(updateControls);
-  });
-  const selectCategory = (key) => {
-    dialog.querySelectorAll("[data-avatar-category]").forEach((tab) => {
+  const selectCategory = key => {
+    dialog.querySelectorAll("[data-avatar-category]").forEach(tab => {
       tab.setAttribute("aria-selected", String(tab.dataset.avatarCategory === key));
       tab.tabIndex = tab.dataset.avatarCategory === key ? 0 : -1;
     });
-    dialog.querySelectorAll("[data-avatar-panel]").forEach((panel) => {
-      panel.hidden = panel.dataset.avatarPanel !== key;
-    });
+    dialog.querySelectorAll("[data-avatar-panel]").forEach(panel => { panel.hidden = panel.dataset.avatarPanel !== key; });
   };
-  dialog.querySelectorAll("[data-avatar-category]").forEach((tab) => {
+  dialog.querySelectorAll("[data-avatar-category]").forEach(tab => {
     tab.addEventListener("click", () => selectCategory(tab.dataset.avatarCategory));
-    tab.addEventListener("keydown", (event) => {
-      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    tab.addEventListener("keydown", event => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
       event.preventDefault();
       const tabs = [...dialog.querySelectorAll("[data-avatar-category]")];
-      const next = tabs[(tabs.indexOf(tab) + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
-      next.focus(); selectCategory(next.dataset.avatarCategory);
+      const index = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1
+        : (tabs.indexOf(tab) + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
+      selectCategory(tabs[index].dataset.avatarCategory); tabs[index].focus();
     });
   });
   dialog.querySelector("[data-avatar-random]").addEventListener("click", () => {
-    selected.background = Math.floor(Math.random() * data.backgrounds.length);
-    keys.slice(1).forEach((key) => { selected[key] = Math.floor(Math.random() * data.components[key].length); }); draw();
+    keys.forEach(key => { selected[key] = Math.floor(Math.random() * optionsFor(key).length); }); draw();
   });
   dialog.querySelector("[data-avatar-apply]").addEventListener("click", () => {
     if (!target) return;
-    target.value = `v2:${keys.map((key) => selected[key]).join(":")}`;
+    target.value = `v3:${keys.map(key => selected[key]).join(":")}`;
     const form = target.closest("form");
-    const avatarMode = form.querySelector('[name="profile_image_mode"][value="avatar"]');
-    const hiddenMode = form.querySelector('input[type="hidden"][name="profile_image_mode"]');
-    if (avatarMode) avatarMode.checked = true;
-    if (hiddenMode) hiddenMode.value = "avatar";
-    const currentPreview = form.querySelector("[data-profile-current-preview]");
-    if (currentPreview) currentPreview.replaceChildren(makeSvg());
-    const saveHint = form.querySelector("[data-avatar-save-hint]");
-    if (saveHint) saveHint.textContent = "Avatar übernommen. Profilbild jetzt speichern.";
-    target.dispatchEvent(new Event("change", { bubbles: true }));
+    const mode = form.querySelector('input[type="hidden"][name="profile_image_mode"]');
+    if (mode) mode.value = "avatar";
+    const radio = form.querySelector('input[type="radio"][name="profile_image_mode"][value="avatar"]');
+    if (radio) radio.checked = true;
+    form.querySelector("[data-profile-current-preview]")?.replaceChildren(artwork());
+    const hint = form.querySelector("[data-avatar-save-hint]");
+    if (hint) hint.textContent = "Avatar übernommen. Zum dauerhaften Speichern das Profilformular speichern.";
+    target.dispatchEvent(new Event("change", {bubbles: true}));
   });
-  document.querySelectorAll("[data-avatar-open]").forEach((button) => button.addEventListener("click", () => {
+  document.querySelectorAll("[data-avatar-open]").forEach(button => button.addEventListener("click", () => {
     target = button.closest("form").querySelector("[data-avatar-seed]");
-    keys.forEach((key) => { selected[key] = 0; });
+    selected = Object.fromEntries(keys.map(key => [key, 0]));
     const values = target.value.split(":");
-    if (values[0] === "v2" && values.length === 7 && values.slice(1).every((value) => /^\d+$/.test(value))) keys.forEach((key, index) => {
-      const value = Number(values[index + 1]);
-      const limit = key === "background" ? data.backgrounds.length : data.components[key].length;
-      selected[key] = value >= 0 && value < limit ? value : 0;
-    });
-    selectCategory("background"); draw(); dialog.showModal();
+    const savedKeys = values[0] === "v3" ? keys : keys.filter(key => key !== "pose");
+    if (["v2", "v3"].includes(values[0]) && values.length === savedKeys.length + 1) {
+      savedKeys.forEach((key, i) => {
+        const value = Number(values[i + 1]);
+        if (Number.isInteger(value) && value >= 0 && value < optionsFor(key).length) selected[key] = value;
+      });
+    }
+    dialog.__opener = button;
+    selectCategory("pose"); draw();
+    if (!dialog.open) dialog.showModal();
   }));
 })();
 (() => {
@@ -935,6 +1007,59 @@
     url.searchParams.delete("timeout");
     window.history.replaceState({}, "", url);
   }));
+})();
+(() => {
+  const eyeIcon = '<path d="M2.1 12s3.5-6 9.9-6 9.9 6 9.9 6-3.5 6-9.9 6-9.9-6-9.9-6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"></circle>';
+  const eyeOffIcon = `${eyeIcon}<path d="m4 4 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>`;
+  const setPasswordToggleState = (button, visible) => {
+    button.innerHTML = `<svg class="password-toggle__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${visible ? eyeIcon : eyeOffIcon}</svg>`;
+    button.setAttribute('aria-label', visible ? 'Passwort verbergen' : 'Passwort anzeigen');
+    button.title = visible ? 'Passwort verbergen' : 'Passwort anzeigen';
+  };
+  document.querySelectorAll('input[type="password"]').forEach((input) => {
+    if (input.closest('.password-control')) return;
+    const wrapper = document.createElement('span'); wrapper.className = 'password-control';
+    input.parentNode.insertBefore(wrapper, input); wrapper.appendChild(input);
+    const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'password-toggle'; toggle.dataset.passwordToggle = '';
+    setPasswordToggleState(toggle, false); wrapper.appendChild(toggle);
+  });
+  document.querySelectorAll('[data-password-toggle]').forEach((button) => button.addEventListener('click', () => {
+    const input = button.closest('.password-control')?.querySelector('input'); if (!input) return;
+    const visible = input.type === 'text'; input.type = visible ? 'password' : 'text';
+    setPasswordToggleState(button, !visible);
+  }));
+})();
+(() => {
+  document.querySelectorAll('[data-live-table]').forEach((table) => {
+    const filter = document.querySelector(`[data-live-table-filter="${table.id}"]`);
+    const rows = [...table.querySelectorAll('[data-table-row]')];
+    filter?.addEventListener('input', () => {
+      const needle = filter.value.trim().toLocaleLowerCase();
+      rows.forEach((row) => { row.hidden = Boolean(needle) && !row.dataset.search.toLocaleLowerCase().includes(needle); });
+      const empty = document.querySelector(`[data-live-table-empty="${table.id}"]`);
+      if (empty) empty.hidden = !rows.length || rows.some(row => !row.hidden);
+    });
+    const mobileSort = document.querySelector(`[data-mobile-sort="${table.id}"]`);
+    const sortRows = (key, ascending) => {
+      const dataKey = `sort${key[0].toUpperCase()}${key.slice(1)}`;
+      table.querySelectorAll('[data-sort-key]').forEach((button) => {
+        button.dataset.sortDirection = button.dataset.sortKey === key ? (ascending ? 'asc' : 'desc') : '';
+        button.closest('th').removeAttribute('aria-sort');
+        if (button.dataset.sortKey === key) button.closest('th').setAttribute('aria-sort', ascending ? 'ascending' : 'descending');
+      });
+      if (mobileSort) mobileSort.value = `${key}:${ascending ? 'asc' : 'desc'}`;
+      rows.sort((a, b) => (a.dataset[dataKey] || '').localeCompare(b.dataset[dataKey] || '', 'de', { sensitivity: 'base' }) * (ascending ? 1 : -1));
+      rows.forEach((row) => table.tBodies[0].appendChild(row));
+    };
+    table.querySelectorAll('[data-sort-key]').forEach((button) => button.addEventListener('click', () => {
+      sortRows(button.dataset.sortKey, button.dataset.sortDirection !== 'asc');
+    }));
+    mobileSort?.addEventListener('change', () => {
+      if (!mobileSort.value) return;
+      const [key, direction] = mobileSort.value.split(':');
+      sortRows(key, direction === 'asc');
+    });
+  });
 })();
 (() => {
   document.querySelectorAll('[data-profile-photo-input]').forEach((input) => input.addEventListener('change', () => {
@@ -947,5 +1072,33 @@
   document.querySelectorAll('[data-toggle-column]').forEach((button) => button.addEventListener('click', () => {
     const inputs = [...button.closest('form').querySelectorAll(`[data-notification-channel="${button.dataset.toggleColumn}"]`)];
     const next = inputs.some((input) => !input.checked); inputs.forEach((input) => { input.checked = next; });
+  }));
+})();
+(() => {
+  const form = document.querySelector('[data-adapter-picker-form]');
+  if (!form) return;
+  const search = form.querySelector('[data-adapter-search]');
+  const cards = [...form.querySelectorAll('[data-adapter-option]')];
+  const provider = form.querySelector('[data-adapter-provider]');
+  const name = form.querySelector('[data-adapter-name]');
+  const submit = form.querySelector('[data-adapter-submit]');
+  const empty = form.querySelector('[data-adapter-empty]');
+  const filter = () => {
+    const query = (search?.value || '').trim().toLocaleLowerCase();
+    let visible = 0;
+    cards.forEach((card) => {
+      const matches = !query || card.dataset.search.includes(query);
+      card.hidden = !matches;
+      visible += matches ? 1 : 0;
+    });
+    if (empty) empty.hidden = visible !== 0;
+  };
+  search?.addEventListener('input', filter);
+  cards.forEach((card) => card.addEventListener('click', () => {
+    cards.forEach((item) => item.classList.remove('is-selected'));
+    card.classList.add('is-selected');
+    provider.value = card.dataset.provider;
+    if (name && !name.value.trim()) name.value = card.querySelector('strong')?.textContent?.trim() || '';
+    if (submit) submit.disabled = false;
   }));
 })();

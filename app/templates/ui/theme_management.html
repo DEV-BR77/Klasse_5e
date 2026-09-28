@@ -5,29 +5,60 @@
     <div>
       <p class="eyebrow">Portalverwaltung</p>
       <h1>Themes verwalten</h1>
-      <p class="lede">Sichere Design-Tokens statt frei ausführbarem CSS: Farben, Rundungen und Schatten gelten automatisch im gesamten Portal.</p>
+      <p class="lede">Sichere Design-Tokens statt frei ausführbarem CSS: Farben, Zustände, Typografie, Abstände, Rundungen und Schatten gelten automatisch im gesamten Portal.</p>
     </div>
-    <button class="button button-primary" type="button" data-dialog-open="new-theme">Theme anlegen</button>
+    <div class="button-row"><a class="button button-secondary" href="{% url 'design-system' %}">Designsystem bearbeiten</a><button class="button button-primary" type="button" data-dialog-open="new-theme">Theme anlegen</button></div>
   </header>
 
-  <div class="theme-admin-list">
+  <div class="theme-admin-list" aria-label="Verfügbare Themes">
     {% for theme in themes %}
-      <article class="settings-row">
-        <span class="theme-swatch" style="--swatch:{{ theme.primary }};--swatch-accent:{{ theme.accent }}"></span>
-        <div>
-          <strong>{{ theme.name }}</strong>
-          <small>{{ theme.get_audience_display }} · {% if theme.is_dark %}Dunkel{% else %}Hell{% endif %} · {{ theme.users.count }} Nutzer</small>
+      <article class="theme-admin-card" style="--theme-primary:{{ theme.primary }};--theme-accent:{{ theme.accent }};--theme-bg:{{ theme.background }};--theme-surface:{{ theme.surface }};--theme-text:{{ theme.text }};--theme-muted:{{ theme.text_muted }};--theme-radius:{{ theme.radius }}">
+        <div class="theme-admin-preview" aria-label="Miniaturvorschau für {{ theme.name }}">
+          <div class="theme-admin-preview__topbar"><span class="theme-admin-preview__logo">K</span><span class="theme-admin-preview__brand">KlassID</span><span class="theme-admin-preview__top-actions"><i></i><i></i><b></b></span></div>
+          <div class="theme-admin-preview__body"><aside><span class="is-active"></span><span></span><span></span><span></span></aside><main><div class="theme-admin-preview__heading"><span></span><b></b></div><div class="theme-admin-preview__cards"><section><i></i><span></span><em></em></section><section><i></i><span></span><em></em></section><section><i></i><span></span><em></em></section></div><div class="theme-admin-preview__table"><span></span><span></span><span></span><span></span></div></main></div>
         </div>
-        <div class="theme-admin-actions">
-          <a class="button button-secondary" href="{% url 'portal-theme-preview' theme_id=theme.id page='uebersicht' %}?zurueck=verwaltung">Vorschau</a>
-          <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="toggle">
-            <input type="hidden" name="theme_id" value="{{ theme.id }}">
-            <button class="button button-secondary">{% if theme.is_active %}Freigabe zurücknehmen{% else %}Freigeben{% endif %}</button>
-          </form>
+        <div class="theme-admin-card__content">
+          <div class="theme-admin-card__heading"><div><strong>{{ theme.name }}</strong><small>{{ theme.get_audience_display }} · {% if theme.is_dark %}Dunkel{% else %}Hell{% endif %} · {{ theme.users.count }} Nutzer</small></div><span class="status-chip {% if theme.is_active %}status-success{% endif %}">{% if theme.is_active %}Freigegeben{% else %}Entwurf{% endif %}</span></div>
+          {% if theme.description %}<p>{{ theme.description }}</p>{% endif %}
+          <div class="theme-admin-actions">
+            <a class="button button-secondary" href="{% url 'portal-theme-preview' theme_id=theme.id page='uebersicht' %}?zurueck=verwaltung">Vollständig ansehen</a>
+            <button class="button button-secondary" type="button" data-dialog-open="edit-theme-{{ theme.id }}">Theme bearbeiten</button>
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="toggle">
+              <input type="hidden" name="theme_id" value="{{ theme.id }}">
+              <button class="button {% if theme.is_active %}button-secondary{% else %}button-primary{% endif %}">{% if theme.is_active %}Freigabe zurücknehmen{% else %}Freigeben{% endif %}</button>
+            </form>
+          </div>
         </div>
       </article>
+      <dialog id="edit-theme-{{ theme.id }}" class="app-dialog app-dialog-wide">
+        <form method="post" class="form-stack">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="theme_id" value="{{ theme.id }}">
+          <header class="dialog-head"><div><p class="eyebrow">Designsystem</p><h2>{{ theme.name }} bearbeiten</h2><p class="muted">Speichern ändert dieses Theme für alle, die es bereits verwenden. Abbrechen verwirft deine Eingaben.</p></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header>
+          <div class="field-pair"><label>Name<input name="name" required maxlength="80" value="{{ theme.name }}"></label><label>Zielgruppe<select name="audience">{% for value,label in audiences %}<option value="{{ value }}" {% if theme.audience == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label></div>
+          <label>Beschreibung<input name="description" maxlength="180" value="{{ theme.description }}"></label>
+          <div class="theme-color-fields">
+            <label>Primär<input type="color" name="primary" value="{{ theme.primary }}"></label>
+            <label>Primär dunkel<input type="color" name="primary_dark" value="{{ theme.primary_dark }}"></label>
+            <label>Primär hell<input type="color" name="primary_light" value="{{ theme.primary_light }}"></label>
+            <label>Akzent<input type="color" name="accent" value="{{ theme.accent }}"></label>
+            <label>Hintergrund<input type="color" name="background" value="{{ theme.background }}"></label>
+            <label>Karten<input type="color" name="surface" value="{{ theme.surface }}"></label>
+            <label>Text<input type="color" name="text" value="{{ theme.text }}"></label>
+            <label>Nebentext<input type="color" name="text_muted" value="{{ theme.text_muted }}"></label>
+            <label>Rahmen<input type="color" name="border" value="{{ theme.border }}"></label>
+            <label>Erfolg<input type="color" name="success" value="{{ theme.success }}"></label>
+            <label>Warnung<input type="color" name="warning" value="{{ theme.warning }}"></label>
+            <label>Fehler<input type="color" name="danger" value="{{ theme.danger }}"></label>
+          </div>
+          <div class="field-pair"><label>Typografie<select name="typography"><option value="system" {% if theme.typography == 'system' %}selected{% endif %}>Klar und neutral</option><option value="rounded" {% if theme.typography == 'rounded' %}selected{% endif %}>Freundlich und rund</option><option value="editorial" {% if theme.typography == 'editorial' %}selected{% endif %}>Ruhig und redaktionell</option></select></label><label>Abstände<select name="density"><option value="compact" {% if theme.density == 'compact' %}selected{% endif %}>Kompakt</option><option value="comfortable" {% if theme.density == 'comfortable' %}selected{% endif %}>Ausgewogen</option><option value="spacious" {% if theme.density == 'spacious' %}selected{% endif %}>Großzügig</option></select></label><label>Rundungen<select name="radius"><option value=".7rem" {% if theme.radius == '.7rem' %}selected{% endif %}>Klar</option><option value="1rem" {% if theme.radius == '1rem' %}selected{% endif %}>Modern</option><option value="1.15rem" {% if theme.radius == '1.15rem' %}selected{% endif %}>Standard</option><option value="1.35rem" {% if theme.radius == '1.35rem' %}selected{% endif %}>Weich</option><option value="1.7rem" {% if theme.radius == '1.7rem' %}selected{% endif %}>Verspielt</option></select></label><label>Schatten<input type="range" min="0" max="30" name="shadow_strength" value="{{ theme.shadow_strength }}"></label></div>
+          <label class="compact-consent"><input type="checkbox" name="is_dark" {% if theme.is_dark %}checked{% endif %}><span>Dunkles Theme</span></label>
+          <footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-primary">Änderungen speichern</button></footer>
+        </form>
+      </dialog>
     {% endfor %}
   </div>
 
@@ -52,8 +83,14 @@
         <label>Karten<input type="color" name="surface" value="#FFFFFF"></label>
         <label>Text<input type="color" name="text" value="#25283A"></label>
         <label>Nebentext<input type="color" name="text_muted" value="#74778A"></label>
+        <label>Rahmen<input type="color" name="border" value="#DCE3F0"></label>
+        <label>Erfolg<input type="color" name="success" value="#087A4B"></label>
+        <label>Warnung<input type="color" name="warning" value="#A55A00"></label>
+        <label>Fehler<input type="color" name="danger" value="#C23737"></label>
       </div>
       <div class="field-pair">
+        <label>Typografie<select name="typography"><option value="system" selected>Klar und neutral</option><option value="rounded">Freundlich und rund</option><option value="editorial">Ruhig und redaktionell</option></select></label>
+        <label>Abstände<select name="density"><option value="compact">Kompakt</option><option value="comfortable" selected>Ausgewogen</option><option value="spacious">Großzügig</option></select></label>
         <label>Rundungen<select name="radius"><option value=".7rem">Klar</option><option value="1rem" selected>Modern</option><option value="1.35rem">Weich</option><option value="1.7rem">Verspielt</option></select></label>
         <label>Schatten<input type="range" min="0" max="30" name="shadow_strength" value="10"></label>
       </div>

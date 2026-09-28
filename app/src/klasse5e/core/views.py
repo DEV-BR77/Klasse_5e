@@ -436,6 +436,7 @@ def personal_profile(request):
 
 
 def _personal_profile_context(request, person, active_tab, *, profile_errors=()):
+    from .theme_policy import available_themes
     profile_values = {
         "first_name": person.first_name,
         "last_name": person.last_name,
@@ -458,7 +459,7 @@ def _personal_profile_context(request, person, active_tab, *, profile_errors=())
             "active_tab": active_tab,
             "avatar_presets": PROFILE_AVATAR_PRESETS,
             "avatar_designer": avatar_designer_context(),
-            "themes": PortalTheme.objects.filter(is_active=True),
+            "themes": available_themes(request.user),
             "can_manage_themes": request.user.is_superuser
             or request.user.roleassignment_set.filter(
                 active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
@@ -478,8 +479,10 @@ def _personal_profile_context(request, person, active_tab, *, profile_errors=())
 def _save_personal_profile(request, person):
     save_scope = request.POST.get("save_scope", "data")
     if save_scope == "themes":
+        from .theme_policy import available_themes
+
         theme = get_object_or_404(
-            PortalTheme.objects.filter(is_active=True), pk=request.POST.get("theme_id")
+            available_themes(request.user), pk=request.POST.get("theme_id")
         )
         request.user.selected_theme = theme
         request.user.save(update_fields=["selected_theme"])
@@ -487,7 +490,7 @@ def _save_personal_profile(request, person):
         return redirect(f"{reverse('personal-profile')}?tab=themes")
     if save_scope == "notifications":
         categories = (
-            "events", "timetable", "homework", "exams", "chat", "carpool", "absences", "system_alerts"
+            "events", "timetable", "homework", "exams", "chat", "absences", "system_alerts"
         )
         for category in categories:
             for channel in ("push", "inapp"):
@@ -508,8 +511,7 @@ def _save_personal_profile(request, person):
         return redirect(f"{reverse('personal-profile')}?tab=notifications")
     if save_scope == "appearance":
         # Appearance is intentionally isolated.  Saving a photo or an avatar
-        # must never reset contact fields, visibility toggles or the optional
-        # carpool area because none of those controls belong to this form.
+        # must never reset contact fields or visibility toggles.
         photo = request.FILES.get("profile_photo")
         if photo:
             encoded = sanitized_profile_photo(photo)
@@ -644,12 +646,6 @@ def _notification_rows(user):
         ("homework", "document", "Hausaufgaben", "Neue Hausaufgabe"),
         ("exams", "consent", "Prüfungen", "Neuer Test oder neue Prüfung"),
         ("chat", "chat", "Chat", "Wenn du mit @ erwähnt wirst"),
-        (
-            "carpool",
-            "people",
-            "Fahrgemeinschaft",
-            "Ausfall oder Problem in deiner Fahrgemeinschaft",
-        ),
         ("system_alerts", "bell", "Systemmeldungen", "Wichtige Betriebsstörungen"),
     )
     stored = {item.key: item.enabled for item in PushPreference.objects.filter(user=user)}
@@ -831,7 +827,11 @@ def notifications_read_all(request):
 
 @login_required
 def dashboard(request):
-    return render(request, "core/dashboard.html")
+    # Keep this legacy entry point aligned with the canonical dashboard view.
+    # The experimental Navigation.html shell is not an application page.
+    from klasse5e.core.ui_views import dashboard as canonical_dashboard
+
+    return canonical_dashboard(request)
 
 
 @csrf_protect
@@ -1100,3 +1100,105 @@ def service_worker(request):
 
 def offline(request):
     return render(request, "core/offline.html")
+# =====================================================================
+# DIESEN BLOCK GANZ UNTEN IN DEINER core/views.py ERGÄNZEN
+# =====================================================================
+
+@login_required
+@require_GET
+def get_portal_menu_data(request):
+    """
+    API-Endpunkt für das HTML5-Drill-Down-Menü.
+    Liefert die Menüpunkte und die Haushaltsmitglieder als JSON an das Frontend.
+    """
+    # 1. Dynamische Menüstruktur auslesen (Ebene 1 und Ebene 2)
+    menu_list = []
+    try:
+        # MenuItem wurde am Ende der models.py ergänzt
+        from .models import MenuItem
+        root_menu_items = MenuItem.objects.filter(parent__isnull=True)
+        for item in root_menu_items:
+            menu_list.append({
+                "name": item.name,
+                "icon": item.icon,
+                "route": item.route,
+                "children": [
+                    {"name": child.name, "icon": child.icon, "route": child.route}
+                    for child in item.children.all()
+                ]
+            })
+    except Exception:
+        # Fallback mit Ihren Kerndaten aus der Dokumentation, falls die Tabelle noch leer ist
+        menu_list = [
+            {
+                "name": "Mein Konto", "icon": "👤", "route": "/einstellungen/profil/",
+                "children": [
+                    {"name": "Mein Profil", "icon": "📝", "route": "/einstellungen/profil/"},
+                    {"name": "Familie", "icon": "👨‍👩‍👧", "route": "/einstellungen/familie/"},
+                    {"name": "Benachrichtigungen", "icon": "🔔", "route": "/benachrichtigungen/"}
+                ]
+            },
+            {
+                "name": "Portalverwaltung", "icon": "⚙️", "route": "/verwaltung/",
+                "children": [
+                    {"name": "Menüstruktur", "icon": "🗺️", "route": "/verwaltung/menue/"},
+                    {"name": "Themes", "icon": "🎨", "route": "/einstellungen/design/"}
+                ]
+            }
+        ]
+
+    # 2. Familie & Kinder ermitteln basierend auf Ihren echten produktiven Modellen
+    family_list = []
+    try:
+        # Über den angemeldeten UserAccount suchen wir die zugehörige Person
+        current_person = Person.objects.get(user=request.user)
+        
+        # Das Hauptkonto (den angemeldeten User selbst) hinzufügen
+        family_list.append({
+            "name": current_person.first_name,
+            "role": "Hauptkonto · Elternteil",
+            "gender": current_person.gender or "male",
+            "initial": current_person.first_name[0] if current_person.first_name else "P",
+            # Nutzt Ihr echtes Feld 'profile_photo' aus der models.py
+            "image": current_person.profile_photo.url if current_person.profile_photo else None
+        })
+        
+        # Kinder suchen über Ihre Verknüpfungstabelle 'GuardianChildRelationship'
+        relationships = GuardianChildRelationship.objects.filter(guardian_person=current_person)
+        
+        for rel in relationships:
+            child = rel.student_person
+            
+            # Textliche Rolle bestimmen (wichtig für die lila/grünen Kacheln im Frontend)
+            if child.gender == "female":
+                role_text = "Tochter"
+            else:
+                role_text = "Sohn"
+                
+            # Schauen, ob das Kind in einer Klasse angemeldet ist (ClassMembership aus Ihrer models.py)
+            # Ihr Beziehungsfeld heißt rückwärts automatisch 'classmembership_set'
+            if child.classmembership_set.exists():
+                membership = child.classmembership_set.first()
+                role_text += f" · Klasse {membership.school_class.name}"
+
+            family_list.append({
+                "name": child.first_name,
+                "role": role_text,
+                "gender": child.gender or "male",
+                "initial": child.first_name[0] if child.first_name else "K",
+                "image": child.profile_photo.url if child.profile_photo else None
+            })
+            
+    except Person.DoesNotExist:
+        # Sicherer Entwicklungs-Fallback, falls der Admin-User im System noch keinem Personenprofil zugeordnet ist
+        family_list = [
+            {"name": "Björn (Test)", "role": "Hauptkonto · Elternteil", "gender": "male", "initial": "B", "image": None},
+            {"name": "Mila (Test)", "role": "Klasse 5e · Tochter", "gender": "female", "initial": "M", "image": None},
+            {"name": "Lukas (Test)", "role": "Klasse 2b · Sohn", "gender": "male", "initial": "L", "image": None}
+        ]
+
+    # Rückgabe als sauberes JSON an das JavaScript im Frontend
+    return JsonResponse({
+        "menu": menu_list,
+        "family": family_list
+    }, safe=False)

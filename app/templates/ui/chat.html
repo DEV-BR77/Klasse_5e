@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="chat-page{% if room %} has-active-room{% endif %}">
+  <header class="page-heading compact-heading">
+    <div><p class="eyebrow">Miteinander verbunden</p><h1>Chat</h1></div>
+    {% if can_create_chat %}
+      <button class="button button-primary" type="button" data-dialog-open="new-chat-room">Neuen Raum anlegen</button>
+    {% endif %}
+  </header>
+
+  <div class="chat-layout">
+    <nav class="conversation-list" aria-label="Unterhaltungen" data-chat-room-list>
+  <div class="chat-search" role="search">
+    {% include "ui/_icon.html" with name="search" %}
+    <label class="sr-only" for="chat-room-search">Unterhaltung suchen</label>
+    <input id="chat-room-search" type="search" placeholder="Unterhaltung suchen …" autocomplete="off" data-chat-room-search>
+  </div>
+
+
+      {% for row in room_rows %}
+        <div class="conversation-row-wrap"><a class="conversation-row" href="{% url 'ui-chat-room' row.room.public_id %}"{% if room and room.id == row.room.id %} aria-current="page"{% endif %}>
+          <span class="conversation-avatar" aria-hidden="true">{{ row.display_title|slice:":1"|upper }}</span>
+          <span class="conversation-copy"><strong>{{ row.display_title }}</strong><small>{% if row.last_message %}{{ row.last_message.author.person.first_name }}: {% if row.last_message.body %}{{ row.last_message.body }}{% elif row.last_message.sticker_id %}Sticker{% elif row.last_message.attachment %}Anhang{% endif %}{% else %}Noch keine Nachrichten{% endif %}</small></span>
+          <span class="conversation-meta">{% if row.last_message %}<time datetime="{{ row.last_message.created_at|date:'c' }}">{{ row.last_message.created_at|date:"H:i" }}</time>{% endif %}{% if row.unread %}<b aria-label="{{ row.unread }} ungelesene Nachrichten">{{ row.unread }}</b>{% endif %}</span>
+        </a>{% if row.can_edit or row.can_manage %}<details class="conversation-menu"><summary aria-label="Chatraum verwalten">•••</summary><div class="conversation-actions">{% if row.can_edit %}<button class="button button-quiet button-compact" type="button" data-dialog-open="edit-chat-room-{{ row.room.public_id }}">Bearbeiten</button>{% endif %}{% if row.can_manage %}{% if row.room.is_open %}<form method="post" action="{% url 'ui-chat' %}" class="conversation-delete-form" data-confirm="Diesen Chatraum wirklich archivieren?">{% csrf_token %}<input type="hidden" name="action" value="archive"><input type="hidden" name="room_id" value="{{ row.room.public_id }}"><button class="button button-quiet button-compact" type="submit">Archivieren</button></form>{% endif %}<form method="post" action="{% url 'ui-chat' %}" class="conversation-delete-form" data-confirm="Diesen Chatraum wirklich löschen?">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="room_id" value="{{ row.room.public_id }}"><button class="button button-quiet button-compact" type="submit">Löschen</button></form>{% endif %}</div></details>{% endif %}</div>
+        {% if row.can_edit %}<dialog id="edit-chat-room-{{ row.room.public_id }}" class="app-dialog" aria-labelledby="edit-chat-room-title-{{ row.room.public_id }}"><form method="post" action="{% url 'ui-chat' %}" class="form-stack">{% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="room_id" value="{{ row.room.public_id }}"><header class="dialog-head"><div><p class="eyebrow">Chatraum verwalten</p><h2 id="edit-chat-room-title-{{ row.room.public_id }}">{{ row.display_title }}</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header><label>Name des Raums<input type="text" name="title" value="{{ row.room.title }}" required maxlength="120"></label><div class="field-pair"><label>Zielgruppe<select name="audience">{% for value, label in audience_choices %}<option value="{{ value }}"{% if row.room.audience == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><label>Darstellung<select name="appearance">{% for value, label in appearance_choices %}<option value="{{ value }}"{% if row.room.appearance == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label></div><label>Aufbewahrung<select name="retention_category"><option value="">Standard (unbegrenzt)</option>{% for category in retention_categories %}<option value="{{ category.id }}"{% if row.room.retention_category_id == category.id %} selected{% endif %}>{{ category.name }} ({{ category.retention_days }} Tage)</option>{% endfor %}</select></label>{% if row.can_manage %}<label class="check-row"><input type="checkbox" name="is_open"{% if row.room.is_open %} checked{% endif %}><span>Chatraum ist geöffnet</span></label>{% elif row.room.is_open %}<input type="hidden" name="is_open" value="on">{% endif %}<footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-primary" type="submit">Änderungen speichern</button></footer></form></dialog>{% endif %}
+      {% empty %}
+        {% if room %}
+          <a class="conversation-row conversation-row--current" href="{% url 'ui-chat-room' room.public_id %}" aria-current="page">
+            <span class="conversation-avatar" aria-hidden="true">{{ room_title|slice:":1"|upper }}</span>
+            <span class="conversation-copy"><strong>{{ room_title }}</strong><small>Geöffnete Unterhaltung</small></span>
+            <span class="conversation-meta">›</span>
+          </a>
+        {% else %}
+          <p class="empty-state">Keine Chaträume verfügbar.</p>
+        {% endif %}
+      {% endfor %}
+    </nav>
+
+    {% block chat_window %}
+      <article class="settings-panel chat-empty-state"><div class="settings-details-body"><h2>Unterhaltung auswählen</h2><p>Wähle einen Chat aus der Liste, um Nachrichten zu lesen oder zu schreiben.</p></div></article>
+    {% endblock %}
+  </div>
+</section>
+
+{% if can_create_chat %}
+<dialog id="new-chat-room" class="app-dialog" aria-labelledby="new-chat-room-title">
+  <form method="post" action="{% url 'ui-chat' %}" class="form-stack">
+    {% csrf_token %}
+    <header class="dialog-head"><div><p class="eyebrow">Gruppenchat</p><h2 id="new-chat-room-title">Neuen Chatraum anlegen</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header>
+    <label>Name des Raums<input type="text" name="title" required maxlength="120" placeholder="z. B. Klassenfahrt 2026"></label>
+    <div class="field-pair"><label>Zielgruppe<select name="audience">{% for value, label in audience_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label><label>Darstellung<select name="appearance">{% for value, label in appearance_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label></div>
+    <label>Aufbewahrungsregel<select name="retention_category"><option value="">Standard (unbegrenzt)</option>{% for category in retention_categories %}<option value="{{ category.id }}">{{ category.name }} ({{ category.retention_days }} Tage)</option>{% endfor %}</select></label>
+    <footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-primary" type="submit">Anlegen</button></footer>
+  </form>
+</dialog>
+{% endif %}
+{% endblock %}

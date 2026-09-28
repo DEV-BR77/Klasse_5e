@@ -31,7 +31,7 @@ def managed_child(guardian):
     GuardianChildRelationship.objects.create(
         guardian_person=guardian.person,
         student_person=child,
-        relationship_type="mother",
+        relationship_type="guardian",
         is_legal_guardian=True,
         may_view_student_profile=True,
         may_manage_profile=True,

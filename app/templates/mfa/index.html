@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<section class="settings-page mfa-page" aria-labelledby="mfa-page-title">
+  {% include "ui/_settings_navigation.html" %}
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Sicherheit</p>
+      <h1 id="mfa-page-title">Zwei-Faktor-Anmeldung</h1>
+      <p class="lede">Schütze dein KlassID-Konto zusätzlich mit einer Authenticator-App und Wiederherstellungscodes.</p>
+    </div>
+  </header>
+
+  <div class="mfa-card-grid">
+    {% if "totp" in MFA_SUPPORTED_TYPES %}
+    <article class="settings-panel mfa-card">
+      <header>
+        <div>
+          <p class="eyebrow">Empfohlen</p>
+          <h2>Authenticator-App</h2>
+          <p>Erzeuge beim Anmelden einen zusätzlichen Einmalcode auf deinem Gerät.</p>
+        </div>
+        {% if authenticators.totp %}<span class="status status-success">Aktiv</span>{% else %}<span class="status status-warning">Nicht aktiv</span>{% endif %}
+      </header>
+      <div class="settings-details-body">
+        {% if authenticators.totp %}
+          <p class="status-banner status-banner--success">Die Authenticator-App schützt dieses Konto.</p>
+          <a class="button button-secondary" href="{% url 'mfa_deactivate_totp' %}">Authenticator-App verwalten</a>
+        {% else %}
+          <p class="muted">Richte die App einmalig mit einem QR-Code ein. Danach brauchst du beim Anmelden zusätzlich den angezeigten Code.</p>
+          <a class="button button-primary" href="{% url 'mfa_activate_totp' %}">Authenticator-App einrichten</a>
+        {% endif %}
+      </div>
+    </article>
+    {% endif %}
+
+    {% if "recovery_codes" in MFA_SUPPORTED_TYPES %}
+    {% with total_count=authenticators.recovery_codes.generate_codes|length unused_count=authenticators.recovery_codes.get_unused_codes|length %}
+    <article class="settings-panel mfa-card">
+      <header>
+        <div>
+          <p class="eyebrow">Für den Notfall</p>
+          <h2>Wiederherstellungscodes</h2>
+          <p>Einmalcodes helfen dir, wenn du keinen Zugriff auf deine Authenticator-App hast.</p>
+        </div>
+        {% if authenticators.recovery_codes %}<span class="status status-success">{{ unused_count }} verfügbar</span>{% else %}<span class="status status-warning">Nicht eingerichtet</span>{% endif %}
+      </header>
+      <div class="settings-details-body">
+        {% if authenticators.recovery_codes %}
+          <p class="muted">{{ unused_count }} von {{ total_count }} Codes sind noch verfügbar.</p>
+          <div class="flow-actions">
+            {% if unused_count > 0 and not MFA_RECOVERY_CODES_SHOW_ONCE %}<a class="button button-secondary" href="{% url 'mfa_view_recovery_codes' %}">Codes anzeigen</a><a class="button button-secondary" href="{% url 'mfa_download_recovery_codes' %}">Herunterladen</a>{% endif %}
+            <a class="button button-secondary" href="{% url 'mfa_generate_recovery_codes' %}">Neue Codes erzeugen</a>
+          </div>
+        {% else %}
+          <p class="muted">Erzeuge nach der Einrichtung der Authenticator-App einen persönlichen Satz Wiederherstellungscodes.</p>
+          <a class="button button-secondary" href="{% url 'mfa_generate_recovery_codes' %}">Codes einrichten</a>
+        {% endif %}
+      </div>
+    </article>
+    {% endwith %}
+    {% endif %}
+  </div>
+</section>
+{% endblock content %}

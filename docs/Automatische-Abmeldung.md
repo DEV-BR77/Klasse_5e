@@ -5,11 +5,14 @@ Inaktivitätsgrenze. Der Standard beträgt 15 Minuten. Nach Ablauf ohne Bedienun
 endet die Sitzung, der Browser zeigt wieder die Anmeldung und der Server
 verweigert beim nächsten Zugriff den bisherigen Zugang.
 
-Portaladministratoren finden die Einstellung unter **Verwaltung → Automatische
-Abmeldung**. Erlaubt sind 1 bis 120 ganze Minuten. Die Einstellung gilt global
+Portaladministratoren finden die Einstellung unter **Einstellungen →
+Portalverwaltung → Automatische Abmeldung**. Der Wert `0` deaktiviert die
+automatische Abmeldung wegen Inaktivität. Ansonsten sind 1 bis 120 ganze
+Minuten erlaubt. Die Einstellung gilt global
 für alle Klassen, Schulen, Rollen und Geräte; sie lässt sich nicht je Klasse
 abschwächen. Jede Änderung erzeugt ein Audit-Ereignis ohne personenbezogene
-Inhalte außer dem authentisierten Administrator.
+Inhalte außer dem authentisierten Administrator. Speichern und Abbrechen
+führen anschließend zurück zu **Einstellungen → Portalverwaltung**.
 
 Die Frist wird durch konkrete Bedienung (`pointerdown`, Tastatureingabe oder
 Berührung) erneuert. Reines Anzeigen, Laden im Hintergrund oder Chat-Polling

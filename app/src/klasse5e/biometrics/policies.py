@@ -8,7 +8,8 @@ from klasse5e.core.models import (
     GuardianChildRelationship,
     Role,
 )
-from klasse5e.core.policies import active_roles, has_active_membership
+from klasse5e.core.policies import has_active_membership
+from klasse5e.core.module_permissions import MANAGED_ROLES, effective_module_roles
 
 
 def feature_enabled():
@@ -78,8 +79,8 @@ def may_manage_biometrics(user, school_class):
     return bool(
         feature_enabled()
         and has_active_membership(user, school_class)
-        and active_roles(user, school_class)
-        & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.MODERATOR}
+        and effective_module_roles(user, "photo_memory", "moderate", school_class)
+        & (MANAGED_ROLES | {Role.DEPUTY_ADMIN})
     )
 
 
@@ -92,8 +93,10 @@ def may_search_profile(user, profile):
     consent, _ = biometric_consent(profile.student.person)
     if not consent:
         return False
-    roles = active_roles(user, school_class)
-    if roles & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.TEACHER, Role.MODERATOR}:
+    roles = effective_module_roles(
+        user, "photo_memory", "read", school_class, owner_id=profile.student.person.user_id,
+    )
+    if roles & (MANAGED_ROLES | {Role.DEPUTY_ADMIN, Role.TEACHER}):
         return True
     if not hasattr(user, "person"):
         return False

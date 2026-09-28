@@ -72,7 +72,7 @@ def test_owner_can_preview_a_saved_profile_photo_and_switch_to_an_avatar(client,
 
 
 @pytest.mark.django_db
-def test_profile_home_area_persists_one_current_location(client, guardian):
+def test_profile_keeps_geocoordinates_without_showing_a_carpool_card(client, guardian):
     client.force_login(guardian)
     response = client.post(
         reverse("personal-profile"),
@@ -92,8 +92,8 @@ def test_profile_home_area_persists_one_current_location(client, guardian):
     assert str(guardian.person.home_latitude) == "52.423991"
     assert str(guardian.person.home_longitude) == "10.786222"
     page = client.get(reverse("personal-profile"), secure=True)
-    assert b"Mein Wohnbereich" in page.content
-    assert b"Wohnbereich gespeichert" in page.content
+    assert b"Mein Wohnbereich" not in page.content
+    assert b"Wohnbereich gespeichert" not in page.content
     assert b"Dein Profil wurde gespeichert." in page.content
     assert b"data-auto-dismiss" in page.content
 
@@ -147,12 +147,12 @@ def test_profile_stores_contact_visibility_and_notification_preferences(client, 
     assert page.content.decode().count('class="sharing-toggle"') == 3
     response = client.post(
         reverse("personal-profile"),
-        {"tab": "notifications", "save_scope": "notifications", "push_chat": "on", "inapp_carpool": "on"},
+        {"tab": "notifications", "save_scope": "notifications", "push_chat": "on"},
         secure=True,
     )
     assert response.status_code == 302
     page = client.get(f"{reverse('personal-profile')}?tab=notifications", secure=True)
-    assert b"Fahrgemeinschaft" in page.content
+    assert b"Fahrgemeinschaft" not in page.content
 
 
 @pytest.mark.django_db
@@ -237,6 +237,26 @@ def test_profile_persists_a_designed_svg_avatar(client, guardian):
     assert guardian.person.avatar_seed == "v2:2:1:3:4:1:2"
     page = client.get(f"{reverse('personal-profile')}?tab=appearance", secure=True)
     assert b"Avatar-Designer" in page.content
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("pose,label", [(0, "Stehend"), (1, "Sitzend")])
+def test_profile_saves_and_renders_full_body_pose(client, guardian, pose, label):
+    client.force_login(guardian)
+    seed = f"v3:1:{pose}:0:0:0:0:0"
+    response = client.post(
+        reverse("personal-profile"),
+        {"tab": "appearance", "save_scope": "appearance", "profile_image_mode": "avatar",
+         "avatar_seed": seed},
+        secure=True,
+    )
+    assert response.status_code == 302
+    guardian.person.refresh_from_db()
+    assert guardian.person.avatar_seed == seed
+    page = client.get(f"{reverse('personal-profile')}?tab=appearance", secure=True)
+    assert page.status_code == 200
+    assert label in page.content.decode()
+    assert f"pose/{'standing' if pose == 0 else 'sitting'}" in page.content.decode()
 
 
 @pytest.mark.django_db

@@ -1,7 +1,8 @@
 from django.utils import timezone
 
 from klasse5e.core.models import ClassMembership, ConsentType, Role
-from klasse5e.core.policies import active_roles, consent_state, has_active_membership
+from klasse5e.core.policies import consent_state, has_active_membership
+from klasse5e.core.module_permissions import effective_module_roles, may_manage_module
 
 PHOTO_POLICY_VERSION = "photo-policy-v1"
 
@@ -16,13 +17,15 @@ def may_access_gallery(user, gallery):
     if has_active_membership(user, gallery.school_class):
         return True
     return bool(
-        active_roles(user, gallery.school_class)
+        effective_module_roles(user, "gallery", "read", gallery.school_class, owner_id=gallery.created_by_id)
         & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.TEACHER, Role.MODERATOR}
     )
 
 
-def may_manage_gallery(user, gallery):
-    roles = active_roles(user, gallery.school_class)
+def may_manage_gallery(user, gallery, action="moderate"):
+    roles = effective_module_roles(
+        user, "gallery", action, gallery.school_class, owner_id=gallery.created_by_id,
+    )
     if roles & {
         Role.PRIMARY_ADMIN,
         Role.DEPUTY_ADMIN,
@@ -41,6 +44,16 @@ def may_manage_gallery(user, gallery):
         and Role.ORGANIZER in roles
         and gallery.event.organizers.filter(id=user.id).exists()
     )
+
+
+def may_create_gallery(user, school_class):
+    legacy = {
+        Role.DEPUTY_ADMIN, Role.CLASS_ADMIN, Role.TEACHER, Role.SCHOOL_LEADERSHIP,
+        Role.PARENT_REPRESENTATIVE, Role.DEPUTY_PARENT_REPRESENTATIVE,
+    }
+    return all(may_manage_module(
+        user, "gallery", action, school_class, legacy_roles=legacy, owner_id=user.pk,
+    ) for action in ("create", "publish"))
 
 
 def may_upload(user, gallery, accepted_rules=False):

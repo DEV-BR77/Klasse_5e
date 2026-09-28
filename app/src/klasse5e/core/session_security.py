@@ -7,7 +7,7 @@ from .models import PortalConfigurationKey
 
 SESSION_IDLE_TIMEOUT_KEY = "session_idle_timeout_minutes"
 DEFAULT_IDLE_TIMEOUT_MINUTES = 15
-MIN_IDLE_TIMEOUT_MINUTES = 1
+MIN_IDLE_TIMEOUT_MINUTES = 0
 MAX_IDLE_TIMEOUT_MINUTES = 120
 
 

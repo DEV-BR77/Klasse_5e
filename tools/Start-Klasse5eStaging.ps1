@@ -1,6 +1,7 @@
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [switch]$Start
+    [switch]$Start,
+    [switch]$AllowMfaBypass
 )
 
 Set-StrictMode -Version Latest
@@ -46,7 +47,7 @@ try {
         '-f', (Join-Path $repoRoot 'compose.yaml'),
         '-f', (Join-Path $repoRoot 'compose.staging.yaml')
     )
-    & (Join-Path $PSScriptRoot 'Test-StagingConfiguration.ps1') -EnvironmentFile 'staging.public.env'
+    & (Join-Path $PSScriptRoot 'Test-StagingConfiguration.ps1') -EnvironmentFile 'staging.public.env' -AllowMfaBypass:$AllowMfaBypass
     if ($LASTEXITCODE -ne 0) {
         throw 'Die Staging-Konfiguration ist ungültig.'
     }

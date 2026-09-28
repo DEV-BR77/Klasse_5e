@@ -99,7 +99,7 @@ def onboarding_step(request, step=1):
         state.save()
         return redirect("onboarding-step", step=state.current_step)
     if state.completed_at and state.completed_policy_version == current_policy_version():
-        return redirect("ui-consents")
+        return redirect("ui-family")
     if step > state.current_step:
         return redirect("onboarding-step", step=state.current_step)
     return _render_step(
@@ -150,7 +150,7 @@ def _render_step(request, state, step, subject, error=""):
 def consent_withdraw(request, key, subject_id):
     subject = _person_or_404(request.user, subject_id)
     withdraw_decision(user=request.user, subject=subject, key=key)
-    return redirect("ui-consents")
+    return redirect("ui-family")
 
 
 @login_required

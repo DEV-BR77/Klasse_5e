@@ -35,7 +35,7 @@ def personal_homework(guardian, school_class):
     GuardianChildRelationship.objects.create(
         guardian_person=guardian.person,
         student_person=student,
-        relationship_type="father",
+        relationship_type="guardian",
         is_legal_guardian=True,
         may_view_student_profile=True,
         valid_from=school_class.school_year.starts_on,
@@ -75,7 +75,7 @@ def test_dashboard_keeps_full_homework_text_in_readable_dialog(rf, guardian, per
     assert response.status_code == 200
     assert "homework-detail-" in response.content.decode()
     assert "begründe ausführlich jeden einzelnen Schritt" in response.content.decode()
-    assert "data-homework-toggle" not in response.content.decode()
+    assert "data-homework-toggle" in response.content.decode()
 
     request.user = personal_homework.connection.student.user
     student_response = dashboard(request)
@@ -126,16 +126,10 @@ def test_dashboard_names_tomorrow_and_renders_a_double_lesson_time_range(
 
 
 @pytest.mark.django_db
-def test_only_student_can_store_and_reopen_own_homework(client, guardian, personal_homework):
+def test_guardian_or_student_can_store_and_reopen_homework(client, guardian, personal_homework):
     client.force_login(guardian)
     url = f"/hausaufgaben/{personal_homework.id}/erledigt/"
 
-    response = client.post(url, {"completed": "yes"})
-
-    assert response.status_code == 404
-    assert not HomeworkProgress.objects.exists()
-
-    client.force_login(personal_homework.connection.student.user)
     response = client.post(url, {"completed": "yes"})
 
     assert response.status_code == 200
@@ -143,6 +137,14 @@ def test_only_student_can_store_and_reopen_own_homework(client, guardian, person
         student=personal_homework.connection.student,
         external_fingerprint=personal_homework.external_fingerprint,
     )
+    assert progress.completed is True
+    assert progress.completed_by == guardian
+
+    client.force_login(personal_homework.connection.student.user)
+    response = client.post(url, {"completed": "yes"})
+
+    assert response.status_code == 200
+    progress.refresh_from_db()
     assert progress.completed is True
     assert progress.completed_by == personal_homework.connection.student.user
     assert progress.completed_at is not None

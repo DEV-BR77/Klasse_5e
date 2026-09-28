@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import HttpResponseForbidden, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
@@ -15,6 +15,7 @@ from klasse5e.webuntis.notifications import configured_sender
 
 from .models import (
     MonitoringComponent,
+    MonitoringConfiguration,
     MonitoringSnapshot,
     PushPreference,
     PushSubscription,
@@ -126,4 +127,32 @@ def monitoring_dashboard(request):
     snapshots = {}
     for snapshot in MonitoringSnapshot.objects.order_by("-captured_at"):
         snapshots.setdefault(snapshot.source, snapshot)
-    return render(request, "ui/monitoring_dashboard.html", {"components": MonitoringComponent.objects.all(), "snapshots": snapshots})
+    configuration = MonitoringConfiguration.current()
+    return render(
+        request,
+        "ui/monitoring_dashboard.html",
+        {"components": MonitoringComponent.objects.all(), "snapshots": snapshots, "configuration": configuration},
+    )
+
+
+@login_required
+@require_POST
+def monitoring_configuration(request):
+    _require_portal_admin(request.user)
+    item = MonitoringConfiguration.current()
+    try:
+        warning = int(request.POST.get("warning_threshold_percent", item.warning_threshold_percent))
+        critical = int(request.POST.get("critical_threshold_percent", item.critical_threshold_percent))
+        retention = int(request.POST.get("retention_days", item.retention_days))
+    except (TypeError, ValueError):
+        return redirect("monitoring-dashboard")
+    if not 1 <= warning < critical <= 100 or not 1 <= retention <= 3650:
+        return redirect("monitoring-dashboard")
+    item.source_windows_enabled = request.POST.get("source_windows_enabled") == "on"
+    item.source_edge_enabled = request.POST.get("source_edge_enabled") == "on"
+    item.warning_threshold_percent = warning
+    item.critical_threshold_percent = critical
+    item.retention_days = retention
+    item.cleanup_enabled = request.POST.get("cleanup_enabled") == "on"
+    item.save()
+    return redirect("monitoring-dashboard")

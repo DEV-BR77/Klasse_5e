@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="events-page">
-  <header class="page-heading compact-heading"><div><p class="eyebrow">Gemeinsam planen</p><h1>Veranstaltungen</h1></div>{% if can_manage_portal %}<div class="flow-actions"><button class="button button-primary" type="button" data-dialog-open="new-event-dialog">Neue Veranstaltung</button></div>{% endif %}</header>
+  <header class="page-heading compact-heading"><div><p class="eyebrow">Gemeinsam planen</p><h1>Veranstaltungen</h1></div>{% if can_create_event %}<div class="flow-actions"><button class="button button-primary" type="button" data-dialog-open="new-event-dialog">Neue Veranstaltung</button></div>{% endif %}</header>
   <div class="event-card-grid">{% for item in events %}<a class="event-list-card" href="/mehr/veranstaltungen/{{ item.id }}/"><time><strong>{{ item.starts_at|date:"d" }}</strong><span>{{ item.starts_at|date:"M" }}</span></time><div><span class="soft-badge">Veranstaltung</span><h2>{{ item.title }}</h2><p>{{ item.starts_at|date:"H:i" }} Uhr · {{ item.location }}</p><small>{{ item.description|truncatechars:120 }}</small></div><span class="card-arrow">→</span></a>{% empty %}<p class="empty-state">Noch keine Veranstaltungen geplant.</p>{% endfor %}</div>
-  {% if can_manage_portal %}
+  {% if can_create_event %}
   <dialog id="new-event-dialog" class="app-dialog app-dialog-wide" aria-labelledby="new-event-title">
     <form method="post" class="form-stack">
       {% csrf_token %}

@@ -11,7 +11,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
 from klasse5e.core.models import AuditEvent, Role
-from klasse5e.core.policies import active_class_for_user, active_roles
+from klasse5e.core.policies import active_class_for_user
 
 from .forms import MeetingPointForm, MobilityListingForm
 from .models import (
@@ -92,10 +92,12 @@ def _map_points(listing):
     return points
 
 
-def _can_moderate(user, school_class):
+def _can_moderate(user, school_class, *, owner_id=None):
+    from klasse5e.core.module_permissions import MANAGED_ROLES, effective_module_roles
+
     return bool(
-        active_roles(user, school_class)
-        & {Role.MODERATOR, Role.CLASS_ADMIN, Role.SCHOOL_ADMIN, Role.PRIMARY_ADMIN}
+        effective_module_roles(user, "mobility", "moderate", school_class, owner_id=owner_id)
+        & (MANAGED_ROLES | {Role.CLASS_ADMIN, Role.SCHOOL_ADMIN})
     )
 
 
@@ -205,7 +207,7 @@ def detail(request, public_id):
             "map_bounds": MAP_BOUNDS,
             "map_points": _map_points(listing),
             "idempotency_key": secrets.token_urlsafe(18),
-            "can_moderate": _can_moderate(request.user, listing.school_class),
+            "can_moderate": _can_moderate(request.user, listing.school_class, owner_id=listing.creator_id),
             "report_count": listing.reports.filter(resolved_at__isnull=True).count(),
         },
     )
@@ -333,7 +335,7 @@ def revoke_disclosure(request, disclosure_id):
 @require_POST
 def moderate(request, public_id):
     listing = _listing_or_404(request.user, public_id)
-    if not _can_moderate(request.user, listing.school_class):
+    if not _can_moderate(request.user, listing.school_class, owner_id=listing.creator_id):
         raise Http404
     action = request.POST.get("action", "")
     if action not in {"pause", "withdraw", "restore"}:

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page">
+  <header class="page-heading"><div><p class="eyebrow">Design</p><h1>Theme {% if editing_theme %}bearbeiten{% else %}anlegen{% endif %}</h1><p>Bitte korrigiere die markierten Eingaben. Deine Angaben bleiben erhalten.</p></div></header>
+  <form method="post" action="{% url 'theme-management' %}" class="settings-panel form-stack settings-details-body">
+    {% csrf_token %}<input type="hidden" name="action" value="{% if editing_theme %}update{% else %}create{% endif %}">
+    {% if editing_theme %}<input type="hidden" name="theme_id" value="{{ editing_theme.pk }}">{% endif %}
+    {{ theme_form.non_field_errors }}
+    <div class="token-editor-fields">{% for field in theme_form %}<label for="{{ field.id_for_label }}">{{ field.label }}{{ field }}{{ field.errors }}</label>{% endfor %}</div>
+    <footer class="form-actions"><a class="button button-secondary" href="{% url 'theme-management' %}">Abbrechen</a><button class="button button-primary" type="submit">Änderungen speichern</button></footer>
+  </form>
+</section>
+{% endblock %}

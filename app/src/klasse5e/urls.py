@@ -7,10 +7,12 @@ from klasse5e.biometrics import views as biometric_views
 from klasse5e.chat import views as chat_views
 from klasse5e.content import views as content_views
 from klasse5e.core import (
+    model_visualizer_views,
     onboarding_experience_views,
     onboarding_views,
     operations_views,
     role_views,
+    theme_views,
     ui_views,
     views,
 )
@@ -25,6 +27,21 @@ from klasse5e.webuntis import views as webuntis_views
 from klasse5e.webuntis.absences import absence_portal
 
 urlpatterns = [
+    path(
+        "verwaltung/modellvisualisierung/",
+        model_visualizer_views.graph,
+        name="model-visualizer",
+    ),
+    path(
+        "verwaltung/modellvisualisierung/api/graph/",
+        model_visualizer_views.graph_api,
+        name="model-visualizer-api",
+    ),
+    path(
+        "verwaltung/modellvisualisierung/export/",
+        model_visualizer_views.export_graph,
+        name="model-visualizer-export",
+    ),
     path("abwesenheiten/", absence_portal, name="absence-portal"),
     path("registrieren/", views.register, name="register"),
     path("einladung/", views.invitation_entry, name="invitation-entry"),
@@ -89,7 +106,6 @@ urlpatterns = [
         name="portal-theme-preview",
     ),
     path("einstellungen/konto-loeschen/", views.delete_account, name="delete-account"),
-    path("praesentation/", ui_views.presentation, name="presentation"),
     path("profile/<int:person_id>/foto/", views.profile_photo, name="profile-photo"),
     path("familie/foto/<int:photo_id>/", views.family_photo, name="family-photo"),
     path("benachrichtigungen/", views.notification_list, name="notification-list"),
@@ -119,8 +135,21 @@ urlpatterns = [
         name="ui-chat-attachment",
     ),
     path("verwaltung/rollen/", role_views.role_management, name="role-management"),
+    path("verwaltung/rollen/berechtigungen/", role_views.role_permissions, name="role-permissions"),
+    path("verwaltung/rollen/personen/", role_views.role_people, name="role-people"),
     path("verwaltung/", ui_views.portal_management, name="portal-management"),
+    path(
+        "verwaltung/pilotmeldungen/",
+        ui_views.pilot_reports_management,
+        name="pilot-reports-management",
+    ),
+    path(
+        "verwaltung/pilotmeldungen/<int:report_id>/screenshot/",
+        ui_views.pilot_report_screenshot,
+        name="pilot-report-screenshot",
+    ),
     path("verwaltung/betrieb/", operations_views.monitoring_dashboard, name="monitoring-dashboard"),
+    path("verwaltung/betrieb/konfiguration/", operations_views.monitoring_configuration, name="monitoring-configuration"),
     path("intern/monitoring/messwerte/", operations_views.monitoring_ingest, name="monitoring-ingest"),
     path("intern/monitoring/zustaende/", operations_views.monitoring_component_state, name="monitoring-component-state"),
     path(
@@ -130,6 +159,11 @@ urlpatterns = [
     ),
     path("verwaltung/schulen/", ui_views.school_management, name="school-management"),
     path("verwaltung/schulen/<int:school_id>/", ui_views.school_detail, name="school-detail"),
+    path(
+        "verwaltung/klassen/<int:class_id>/",
+        ui_views.school_class_detail,
+        name="school-class-detail",
+    ),
     path(
         "verwaltung/schulen/import/",
         ui_views.school_catalog_import,
@@ -155,6 +189,11 @@ urlpatterns = [
         ui_views.portal_adapter_detail,
         name="portal-adapter-detail",
     ),
+    path(
+        "verwaltung/adapter-definition/<int:definition_id>/",
+        ui_views.portal_adapter_definition_detail,
+        name="portal-adapter-definition-detail",
+    ),
     path("verwaltung/anmeldung/", ui_views.registration_invitation, name="registration-invitation"),
     path(
         "verwaltung/familien-einladungen/",
@@ -162,6 +201,7 @@ urlpatterns = [
         name="family-invitations",
     ),
     path("verwaltung/themes/", ui_views.theme_management, name="theme-management"),
+    path("verwaltung/designsystem/", theme_views.design_system, name="design-system"),
     path("verwaltung/menue/", ui_views.menu_management, name="menu-management"),
     path(
         "verwaltung/terminumfrage/",
@@ -172,6 +212,11 @@ urlpatterns = [
         "verwaltung/chat-aufbewahrung/",
         ui_views.chat_retention_settings,
         name="chat-retention-settings",
+    ),
+    path(
+        "verwaltung/chat-elemente/",
+        ui_views.chat_assets_settings,
+        name="chat-assets-settings",
     ),
     path(
         "verwaltung/anmeldung/qr.svg",
@@ -414,6 +459,7 @@ urlpatterns = [
     ),
     path("chat/rooms/<uuid:room_id>/", chat_views.room_detail, name="chat-room"),
     path("chat/rooms/<uuid:room_id>/messages/", chat_views.messages, name="chat-messages"),
+    path("chat/sticker-assets/<int:asset_id>/image/", chat_views.asset_image, name="chat-asset-image"),
     path(
         "chat/messages/<uuid:message_id>/", chat_views.edit_or_delete_message, name="chat-message"
     ),
@@ -429,5 +475,10 @@ urlpatterns = [
         "schedule/classes/<int:class_id>/ical-token/",
         schedule_views.issue_ical,
         name="schedule-ical-issue",
+    ),
+    path(
+        "api/portal-navigation/",
+        views.get_portal_menu_data,
+        name="api-portal-navigation",
     ),
 ]

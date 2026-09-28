@@ -12,8 +12,10 @@ from klasse5e.core.models import (
     ClassMembership,
     GuardianChildRelationship,
     Person,
+    PortalModule,
     RelationshipStatus,
     RoleAssignment,
+    RoleModulePermission,
     UserAccount,
     Visibility,
 )
@@ -57,6 +59,18 @@ def test_authorized_original_and_fillable_download_audited(client, guardian, doc
         response = client.get(f"/documents/{document.id}/{variant}/")
         assert response.status_code == 200 and response["Content-Type"] == "application/pdf"
     assert AuditEvent.objects.filter(action="document.download").count() == 2
+
+
+@pytest.mark.django_db
+def test_document_role_grant_can_be_revoked(client, admin_user, document):
+    client.force_login(admin_user)
+    url = f"/documents/{document.id}/original/"
+    response = client.get(url)
+    assert response.status_code == 200
+    RoleModulePermission.objects.filter(
+        role="primary_admin", module=PortalModule.objects.get(key="pdf_forms"), action="read",
+    ).update(active=False)
+    assert client.get(url).status_code == 404
 
 
 def test_pdf_content_is_validated():
@@ -146,12 +160,12 @@ def test_family_label_only_from_verified_relation(guardian):
     GuardianChildRelationship.objects.create(
         guardian_person=guardian.person,
         student_person=student,
-        relationship_type="father",
+        relationship_type="guardian",
         status=RelationshipStatus.VERIFIED,
         verified_at=timezone.now(),
         valid_from=date(2026, 1, 1),
     )
-    assert family_label(guardian) == "Alex · Vater von Mia"
+    assert family_label(guardian) == "Alex · Erziehungsberechtigte Person von Mia"
 
 
 @pytest.mark.django_db

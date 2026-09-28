@@ -5,6 +5,7 @@ from django.views.decorators.http import require_POST
 
 from klasse5e.core.models import AuditEvent, Role
 from klasse5e.core.policies import active_roles, has_active_membership
+from klasse5e.core.module_permissions import role_allows_module_action
 
 from .models import Comment, Post, ProtectedDocument
 
@@ -16,7 +17,9 @@ def _member(user, school_class):
 @login_required
 def document_download(request, document_id, variant):
     document = get_object_or_404(ProtectedDocument, id=document_id, status="published")
-    if not _member(request.user, document.school_class):
+    if not (has_active_membership(request.user, document.school_class) or role_allows_module_action(
+        request.user, "pdf_forms", "read", document.school_class,
+    )):
         raise Http404
     file = (
         document.original

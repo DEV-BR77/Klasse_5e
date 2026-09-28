@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}<link rel="stylesheet" href="{% static 'model_visualizer/styles.css' %}">{% endblock %}
+
+{% block content %}
+<section class="mv-shell" aria-labelledby="model-visualizer-title">
+  <div id="mv-toast" class="mv-toast" hidden></div>
+  <aside class="mv-sidebar">
+    <p class="eyebrow">Technische Verwaltung</p><h1 id="model-visualizer-title">Django-Modellvisualisierung</h1>
+    <p>Modelle und Beziehungen des aktuellen KlassID-Codes.</p>
+    <form id="filter-form" class="mv-form"><label><span>App-Label</span><input type="text" name="app_label" value="{{ request.GET.app_label|default:'' }}"></label><label class="mv-check"><input type="checkbox" name="include_auto_created" {% if request.GET.include_auto_created %}checked{% endif %}><span>Automatische Modelle</span></label><label class="mv-check"><input type="checkbox" name="include_proxy" {% if request.GET.include_proxy %}checked{% endif %}><span>Proxy-Modelle</span></label><label class="mv-check"><input type="checkbox" name="include_django_apps" {% if request.GET.include_django_apps %}checked{% endif %}><span>Django-interne Apps</span></label><button class="button button-primary" type="submit">Ansicht aktualisieren</button></form>
+    <div class="mv-meta"><div><strong>Modelle:</strong> <span id="meta-model-count">{{ graph_meta.model_count }}</span></div><div><strong>Beziehungen:</strong> <span id="meta-edge-count">{{ graph_meta.edge_count }}</span></div></div>
+    <div class="mv-legend"><h2>Legende</h2><ul><li><span class="legend-line fk"></span> ForeignKey</li><li><span class="legend-line o2o"></span> OneToOne</li><li><span class="legend-line m2m"></span> ManyToMany</li></ul></div>
+    <div class="mv-exports"><h2>Export</h2><a href="{% url 'model-visualizer-export' %}?format=json">JSON</a><a href="{% url 'model-visualizer-export' %}?format=xlsx">Excel (XLSX)</a><a href="{% url 'model-visualizer-export' %}?format=csv">CSV</a><a href="{% url 'model-visualizer-export' %}?format=tsv">TSV</a><a href="{% url 'model-visualizer-export' %}?format=markdown">Markdown</a></div>
+    <p><a href="{% url 'portal-management' %}">← Zur Portalverwaltung</a></p>
+  </aside>
+  <main class="mv-main"><div id="viz-toolbar" class="mv-toolbar"><button class="button button-secondary" type="button" data-action="zoom-in">Vergrößern</button><button class="button button-secondary" type="button" data-action="zoom-out">Verkleinern</button><button class="button button-secondary" type="button" data-action="reset-layout">Layout zurücksetzen</button></div><div class="mv-canvas-shell"><svg id="graph" class="mv-graph"></svg></div><div class="mv-help"><strong>Bedienung</strong><ul><li>Karten verschieben</li><li>Leere Fläche zum Verschieben ziehen</li><li>Mausrad zum Zoomen</li><li>Modell anklicken, um Beziehungen hervorzuheben</li></ul></div></main>
+</section>
+{% endblock %}
+
+{% block extra_body %}<script>window.MODEL_GRAPH_API_URL = "{% url 'model-visualizer-api' %}";</script><script src="{% static 'model_visualizer/app.js' %}"></script>{% endblock %}

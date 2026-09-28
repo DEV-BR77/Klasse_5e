@@ -19,6 +19,7 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 INSTALLED_APPS = [
+    "model_visualizer",
     "klasse5e.core",
     "klasse5e.content",
     "klasse5e.events",
@@ -64,6 +65,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "klasse5e.core.middleware.StagingMfaDisabledMiddleware",
     "klasse5e.core.middleware.ActiveAccessMiddleware",
     "klasse5e.core.middleware.IdleSessionTimeoutMiddleware",
     "klasse5e.core.module_flags.ModuleGateMiddleware",
@@ -117,7 +119,7 @@ else:
     }
 
 if RUNNING_TESTS:
-    DATABASES["default"]["TEST"] = {"NAME": BASE_DIR / ".pytest.sqlite3"}
+    DATABASES["default"]["TEST"] = {"NAME": os.environ.get("TEST_DATABASE_NAME", BASE_DIR / ".pytest.sqlite3")}
 
 AUTH_USER_MODEL = "core.UserAccount"
 AUTHENTICATION_BACKENDS = [
@@ -134,9 +136,13 @@ ACCOUNT_SESSION_REMEMBER = False
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes"]
 MFA_PASSKEY_LOGIN_ENABLED = False
 MFA_ADAPTER = "klasse5e.core.adapters.KlassIDMFAAdapter"
+MFA_LOGIN_DISABLED = os.environ.get("MFA_LOGIN_DISABLED", "0") == "1"
 TEMPORARY_ADMIN_MFA_BYPASS = os.environ.get("TEMPORARY_ADMIN_MFA_BYPASS", "0") == "1"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
+LEAK_CHECK_TIMEOUT_SECONDS = float(os.environ.get("LEAK_CHECK_TIMEOUT_SECONDS", "3"))
+HIBP_PASSWORD_RANGE_URL = "https://api.pwnedpasswords.com/range"
+XPOSEDORNOT_CHECK_URL = "https://api.xposedornot.com/v1/check-email"
 
 LANGUAGE_CODE = "de"
 TIME_ZONE = "Europe/Berlin"
@@ -244,7 +250,8 @@ EMAIL_USE_TLS = True
 EMAIL_TIMEOUT = 15
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 12}},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "klasse5e.core.password_validators.PasswordCompositionValidator"},
 ]

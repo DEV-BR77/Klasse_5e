@@ -32,6 +32,16 @@ class UserAccount(AbstractUser):
     email = models.EmailField(unique=True)
     email_verified_at = models.DateTimeField(null=True, blank=True)
     locked_at = models.DateTimeField(null=True, blank=True)
+    email_leak_state = models.CharField(
+        max_length=12, choices=(("unknown", "Ungeprüft"), ("clear", "Keine Treffer"), ("found", "Treffer")), default="unknown"
+    )
+    email_leak_count = models.PositiveIntegerField(default=0)
+    email_leak_checked_at = models.DateTimeField(null=True, blank=True)
+    password_leak_state = models.CharField(
+        max_length=12, choices=(("unknown", "Ungeprüft"), ("clear", "Keine Treffer"), ("found", "Treffer")), default="unknown"
+    )
+    password_leak_count = models.PositiveIntegerField(default=0)
+    password_leak_checked_at = models.DateTimeField(null=True, blank=True)
     selected_theme = models.ForeignKey(
         "PortalTheme", null=True, blank=True, on_delete=models.SET_NULL, related_name="users"
     )
@@ -45,6 +55,16 @@ class PortalTheme(models.Model):
         ALL = "all", "Alle"
         ADULTS = "adults", "Eltern und Erwachsene"
         CHILDREN = "children", "Kinder"
+
+    class Typography(models.TextChoices):
+        SYSTEM = "system", "Klar und neutral"
+        ROUNDED = "rounded", "Freundlich und rund"
+        EDITORIAL = "editorial", "Ruhig und redaktionell"
+
+    class Density(models.TextChoices):
+        COMPACT = "compact", "Kompakt"
+        COMFORTABLE = "comfortable", "Ausgewogen"
+        SPACIOUS = "spacious", "Großzügig"
 
     key = models.SlugField(unique=True)
     name = models.CharField(max_length=80)
@@ -60,6 +80,14 @@ class PortalTheme(models.Model):
     surface = models.CharField(max_length=7, default="#FFFFFF")
     text = models.CharField(max_length=7, default="#25283A")
     text_muted = models.CharField(max_length=7, default="#74778A")
+    border = models.CharField(max_length=7, default="#DCE3F0")
+    success = models.CharField(max_length=7, default="#087A4B")
+    warning = models.CharField(max_length=7, default="#A55A00")
+    danger = models.CharField(max_length=7, default="#C23737")
+    typography = models.CharField(
+        max_length=16, choices=Typography, default=Typography.SYSTEM
+    )
+    density = models.CharField(max_length=16, choices=Density, default=Density.COMFORTABLE)
     radius = models.CharField(max_length=12, default="1.15rem")
     shadow_strength = models.PositiveSmallIntegerField(default=10)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -90,6 +118,19 @@ class PortalTheme(models.Model):
 
     @property
     def css_variables(self):
+        font_families = {
+            self.Typography.SYSTEM: 'Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif',
+            self.Typography.ROUNDED: '"Nunito Sans",Inter,ui-rounded,system-ui,sans-serif',
+            self.Typography.EDITORIAL: '"Source Sans 3",Inter,ui-sans-serif,system-ui,sans-serif',
+        }
+        density_tokens = {
+            self.Density.COMPACT: ("2.5rem", "1rem"),
+            self.Density.COMFORTABLE: ("2.75rem", "1.25rem"),
+            self.Density.SPACIOUS: ("3rem", "1.5rem"),
+        }
+        control_height, panel_padding = density_tokens.get(
+            self.density, density_tokens[self.Density.COMFORTABLE]
+        )
         return ";".join(
             (
                 f"--color-primary:{self.primary}",
@@ -101,6 +142,13 @@ class PortalTheme(models.Model):
                 f"--color-surface:{self.surface}",
                 f"--color-text:{self.text}",
                 f"--color-text-muted:{self.text_muted}",
+                f"--color-border:{self.border}",
+                f"--color-success:{self.success}",
+                f"--color-warning:{self.warning}",
+                f"--color-error:{self.danger}",
+                f"--font-body:{font_families.get(self.typography, font_families[self.Typography.SYSTEM])}",
+                f"--control-height-md:{control_height}",
+                f"--theme-panel-padding:{panel_padding}",
                 f"--radius:{self.radius}",
                 f"--shadow-card:0 10px 30px rgb(20 24 50/{min(self.shadow_strength, 30)}%)",
             )
@@ -132,9 +180,19 @@ class Person(models.Model):
         AVATAR = "avatar", "Avatar"
         PHOTO = "photo", "Profilfoto"
 
+    # NEU: Das biologische Geschlecht für Anrede und Kachel-Farbe (Tochter=Lila, Sohn=Grün)
+    class GenderType(models.TextChoices):
+        FEMALE = "female", "Weiblich"
+        MALE = "male", "Männlich"
+        OTHER = "other", "Divers"
+
     user = models.OneToOneField(UserAccount, null=True, blank=True, on_delete=models.SET_NULL)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
+
+    # HIER FÜGEN WIR DAS NEUE FELD EIN:
+    gender = models.CharField(max_length=10, choices=GenderType.choices, blank=True, null=True)
+
     birth_date = models.DateField(null=True, blank=True)
     phone = models.CharField(max_length=50, blank=True)
     other_contact = models.CharField(max_length=200, blank=True)
@@ -627,10 +685,43 @@ class RoleAssignment(models.Model):
             )
         ]
 
+
+class RoleModulePermission(models.Model):
+    class Action(models.TextChoices):
+        VIEW = "view", "Sichtbar"
+        READ = "read", "Lesen"
+        CREATE = "create", "Erstellen"
+        EDIT = "edit", "Bearbeiten"
+        MODERATE = "moderate", "Moderieren"
+        PUBLISH = "publish", "Veröffentlichen"
+
+    class Scope(models.TextChoices):
+        PLATFORM = "platform", "Plattform"
+        SCHOOL = "school", "Schule"
+        CLASS = "class", "Klasse"
+        OWN = "own", "Eigene Daten"
+
+    role = models.CharField(max_length=32, choices=Role)
+    module = models.ForeignKey(PortalModule, on_delete=models.CASCADE, related_name="role_permissions")
+    action = models.CharField(max_length=16, choices=Action)
+    scope = models.CharField(max_length=16, choices=Scope, default=Scope.CLASS)
+    active = models.BooleanField(default=True)
+    updated_by = models.ForeignKey(
+        UserAccount, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="updated_role_permissions",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["role", "module", "action"],
+                name="unique_role_module_action_permission",
+            )
+        ]
+
 class RelationshipType(models.TextChoices):
-    MOTHER = "mother", "Mutter"
-    FATHER = "father", "Vater"
-    GUARDIAN = "guardian", "Sorgeberechtigte Person"
+    GUARDIAN = "guardian", "Erziehungsberechtigte Person"
     FOSTER = "foster", "Pflegeelternteil"
     STEP = "step", "Stiefelternteil"
     OTHER = "other", "Sonstige autorisierte Bezugsperson"
@@ -966,6 +1057,27 @@ class MonitoringComponent(models.Model):
         ordering = ["component"]
 
 
+class MonitoringConfiguration(models.Model):
+    """Datensparsame Konfiguration für die externe Betriebsüberwachung."""
+
+    source_windows_enabled = models.BooleanField(default=True)
+    source_edge_enabled = models.BooleanField(default=True)
+    warning_threshold_percent = models.PositiveSmallIntegerField(default=80)
+    critical_threshold_percent = models.PositiveSmallIntegerField(default=90)
+    retention_days = models.PositiveSmallIntegerField(default=30)
+    cleanup_enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Monitoring-Konfiguration"
+        verbose_name_plural = "Monitoring-Konfiguration"
+
+    @classmethod
+    def current(cls):
+        item = cls.objects.order_by("pk").first()
+        return item or cls.objects.create()
+
+
 class PushSubscription(models.Model):
     user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
     endpoint_hash = models.CharField(max_length=64, unique=True)
@@ -1067,3 +1179,23 @@ class TutorialState(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
     dismissed_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+# Ganz am Ende der Datei einfügen:
+class MenuItem(models.Model):
+    name = models.CharField(max_length=100)
+    route = models.CharField(max_length=200, help_text="z.B. /einstellungen/profil/")
+    icon = models.CharField(max_length=10, help_text="Emoji wie 👤 oder ⚙️")
+    parent = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='children'
+    )
+    order = models.IntegerField(default=0, help_text="Sortierung im Menü")
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return self.name

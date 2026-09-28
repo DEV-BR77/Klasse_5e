@@ -5,7 +5,7 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from klasse5e.core.avatar_designer import AVATAR_COMPONENTS, BACKGROUND_COLORS, parse_avatar_seed
+from klasse5e.core.avatar_designer import AVATAR_COMPONENTS, BACKGROUND_COLORS, HEAD_LAYERS, POSES, parse_avatar_seed
 
 register = template.Library()
 
@@ -16,6 +16,21 @@ def avatar_composite(seed, class_name=""):
     config = parse_avatar_seed(seed)
     if not config:
         return ""
+    if "pose" in config:
+        pose = POSES[config["pose"]]
+        filename = pose["clothes"][config["body"]][0]
+        layers = [(pose["category"], filename, *pose["body"])]
+        for category, (x, y, width, height) in HEAD_LAYERS.items():
+            filename = AVATAR_COMPONENTS[category][config[category]][0]
+            if filename:
+                layers.append((category, filename, x + pose["head"][0], y + pose["head"][1], width, height))
+        images = [format_html('<image href="{}" x="{}" y="{}" width="{}" height="{}" />',
+                  staticfiles_storage.url(f"vendor/avatar-atoms/{category}/{filename}"), x, y, width, height)
+                  for category, filename, x, y, width, height in layers]
+        return format_html(
+            '<svg viewBox="0 0 240 324" class="{}" role="img" aria-label="Individueller Avatar – {}" xmlns="http://www.w3.org/2000/svg"><rect width="240" height="324" rx="26" fill="{}"/><svg x="12" y="12" width="216" height="300" viewBox="{}">{}</svg></svg>',
+            class_name, pose["label"], BACKGROUND_COLORS[config["background"]], pose["viewBox"], mark_safe("".join(images)),
+        )
     layers = (
         ("body", 13, 42, 70, 47),
         ("head", 33, 12, 42, 37),

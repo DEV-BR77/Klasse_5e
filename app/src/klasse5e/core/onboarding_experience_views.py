@@ -142,7 +142,7 @@ def onboarding_step(request, step=None):
         if editing:
             state.completed_policy_version = current_policy_version()
             state.save(update_fields=["completed_policy_version", "updated_at"])
-            return redirect("ui-consents")
+            return redirect("ui-family")
         if step == TOTAL_ONBOARDING_STEPS:
             state.current_step = TOTAL_ONBOARDING_STEPS
             state.completed_at = timezone.now()
@@ -159,7 +159,7 @@ def onboarding_step(request, step=None):
         and state.completed_policy_version == current_policy_version()
         and not editing
     ):
-        return redirect("ui-consents")
+        return redirect("ui-family")
     return _render_step(request, state, step, subject, subjects, editing)
 
 

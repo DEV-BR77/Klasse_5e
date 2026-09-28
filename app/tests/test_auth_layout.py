@@ -17,7 +17,7 @@ def test_login_uses_branded_invitation_layout(client):
     assert "Hausaufgaben, Stundenplan, Speiseplan, Mitteilungen, Abwesenheiten." in content
     assert "Klar, geschützt, alles an einem Ort." in content
     assert "DSGVO-konform und lokal" in content
-    assert "Keine Cookies, keine Werbe-Tracker" in content
+    assert "Nur erforderliche Sitzungscookies, keine Werbe-Tracker" in content
     assert "Du entscheidest, was angezeigt wird." in content
     assert "Du hast einen Einladungscode erhalten?" in content
     assert "/einladung/" in content
@@ -30,6 +30,8 @@ def test_login_uses_branded_invitation_layout(client):
     assert "Willkommen zurück" not in content
     assert "Melde dich mit deinem bestätigten KlassID-Konto an" not in content
     assert "/accounts/signup/" not in content
+    assert content.count("Passwort vergessen?") == 1
+    assert content.count('class="auth-benefit-icon" aria-hidden="true"') == 3
 
 
 @pytest.mark.django_db

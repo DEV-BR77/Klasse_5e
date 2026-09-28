@@ -15,7 +15,9 @@ from klasse5e.core.models import (
     ConsentTextVersion,
     ConsentType,
     Person,
+    PortalModule,
     RoleAssignment,
+    RoleModulePermission,
     UserAccount,
 )
 from klasse5e.events.models import Event
@@ -285,6 +287,11 @@ def test_upload_batch_and_moderator_permissions(client, gallery, guardian, moder
     declaration.status = "confirmed"
     declaration.confirmed_by = moderator
     declaration.save()
+    assert client.post(f"/photos/{photo.id}/moderate/", {"decision": "publish"}).status_code == 404
+    RoleModulePermission.objects.update_or_create(
+        role="moderator", module=PortalModule.objects.get(key="gallery"), action="publish",
+        defaults={"active": True, "scope": "class"},
+    )
     assert client.post(f"/photos/{photo.id}/moderate/", {"decision": "publish"}).status_code == 204
     settings.GALLERY_MAX_BATCH = 1
     client.force_login(guardian)

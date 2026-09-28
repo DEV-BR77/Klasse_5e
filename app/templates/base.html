@@ -18,28 +18,17 @@
 <div class="tailwind-shell{% if request.user.is_authenticated %} app-shell-authenticated{% else %} app-shell-public{% endif %}">
   <header class="app-topbar">
     {% if request.user.is_authenticated %}
-    <div class="app-topbar__leading">
-      {% if active_section != "start" and request.path != "/mehr/" %}
-        <a class="app-topbar__back" href="/">← <span>Zur Startseite</span></a>
-      {% else %}
-        <details class="app-topbar__legal">
-          <summary>Rechtliches</summary>
-          <nav aria-label="Rechtliche Informationen">
-            <span>© 2026 KlassID</span>
-            <a href="{% url 'privacy-information' %}">Datenschutz</a>
-            <a href="{% url 'imprint' %}">Impressum</a>
-            <a href="{% url 'terms' %}">Hinweise</a>
-          </nav>
-        </details>
-      {% endif %}
-    </div>
-    {% if family_children %}
-    <nav class="app-family-tabs" aria-label="Familienansicht auswählen" style="--family-tab-count: {{ family_children|length|add:'1' }}">
-      <form method="post" action="{% url 'family-overview-select' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="app-family-tab app-family-tab--self" type="submit"{% if not active_child %} aria-current="page"{% endif %}>{{ personal_display_name|default:request.user.first_name }}</button></form>
+    <div class="app-topbar__leading"><span class="app-topbar__section">{{ page_title|default:"Übersicht" }}</span><span class="app-topbar__context">KlassID Portal</span></div>
+    {% if family_children and context_switcher_visible %}
+    <details class="app-child-context" name="header-menu">
+      <summary aria-label="Familienansicht auswählen"><span class="app-child-context__label">{% if active_child %}{{ active_child.student.first_name }}{% else %}Alle Kinder{% endif %}</span><span class="app-child-context__meta">Ansicht wechseln</span></summary>
+      <nav class="app-child-context__panel" aria-label="Familienansicht auswählen">
+      <form method="post" action="{% url 'family-overview-select' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit"{% if not active_child %} aria-current="page"{% endif %}>Alle Kinder<small>Gemeinsame Übersicht</small></button></form>
       {% for child in family_children %}
-      <form method="post" action="{% url 'family-child-select' child.student.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="app-family-tab app-family-tab--child-{{ forloop.counter }}" type="submit"{% if active_child and active_child.student.pk == child.student.pk %} aria-current="page"{% endif %}>{{ child.student.first_name }}</button></form>
+      <form method="post" action="{% url 'family-child-select' child.student.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit"{% if active_child and active_child.student.pk == child.student.pk %} aria-current="page"{% endif %}>{{ child.student.first_name }}</button></form>
       {% endfor %}
     </nav>
+    </details>
     {% endif %}
     <div class="app-topbar__actions">
       {% if enabled_modules.chat %}
@@ -52,11 +41,16 @@
         {% include "ui/_icon.html" with name="bell" %}
         {% if notification_unread_count %}<span class="app-notification-badge" aria-hidden="true">{% if notification_unread_count > 99 %}99+{% else %}{{ notification_unread_count }}{% endif %}</span>{% endif %}
       </a>
-      <details class="app-profile-menu">
-        <summary aria-label="Profilmenü öffnen">
-          <span class="app-avatar" aria-hidden="true">{% if profile_image_mode == "photo" and profile_photo_person_id %}<img src="{% url 'profile-photo' profile_photo_person_id %}" alt="">{% elif profile_avatar_seed %}{% avatar_composite profile_avatar_seed %}{% else %}<img src="{% static profile_avatar_path %}" alt="">{% endif %}</span>
-          <span class="app-profile-menu__name">{{ personal_display_name|default:request.user.email }}</span>
-        </summary>
+      <details class="app-topbar__legal">
+        <summary>Rechtliches</summary>
+        <nav aria-label="Rechtliche Informationen">
+          <a href="/datenschutz/">Datenschutz</a>
+          <a href="/impressum/">Impressum</a>
+          <a href="/nutzung/">Nutzung</a>
+        </nav>
+      </details>
+      <details class="app-profile-menu" name="header-menu">
+        <summary aria-label="Konto öffnen">{% if profile_image_mode == 'photo' and profile_photo_person_id %}<img class="app-profile-initial" src="{% url 'profile-photo' profile_photo_person_id %}" alt="">{% else %}<b class="app-profile-initial">{{ personal_display_name|default:'K'|slice:':1'|upper }}</b>{% endif %}<span class="app-profile-menu__name">Konto</span><span aria-hidden="true">⌄</span></summary>
         <nav class="app-profile-menu__panel" aria-label="Profilmenü">
           <a href="/einstellungen/profil/">Mein Profil</a>
           <button class="app-profile-menu__action" type="button" data-dialog-open="logout-confirmation">Abmelden</button>
@@ -77,6 +71,9 @@
   </header>
   {% if request.user.is_authenticated %}
     <nav class="app-bottom-nav" aria-label="Hauptnavigation">
+    <a class="app-brand" href="/" aria-label="KlassID Startseite"><span class="app-brand__mark">K</span><span><strong>KlassID</strong><small>Dein Klassenportal</small></span></a>
+    <div class="app-nav__links">
+    <p class="app-nav__label">Arbeitsbereich</p>
     <a href="/" class="app-bottom-nav__item" {% if active_section == "start" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="home" %}
       <span class="app-bottom-nav__label">Start</span>
@@ -93,15 +90,24 @@
       <span class="app-bottom-nav__label">Chat</span>
     </a>
     {% endif %}
-    <a href="/mehr/" class="app-bottom-nav__item" {% if active_section == "more" %}aria-current="page"{% endif %}>
+    {% if enabled_modules.contacts %}<a href="{% url 'ui-contacts' %}" class="app-bottom-nav__item app-nav-desktop" {% if active_section == "contacts" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="people" %}<span>Kontaktliste</span></a>{% endif %}
+    <a href="/mehr/familie/" class="app-bottom-nav__item app-nav-desktop" {% if active_section == "family" %}aria-current="page"{% endif %}>
+      {% include "ui/_icon.html" with name="people" %}
+      <span class="app-bottom-nav__label">Familie</span>
+    </a>
+    {% if enabled_modules.gallery %}<a href="{% url 'ui-galleries' %}" class="app-bottom-nav__item app-nav-desktop" {% if active_section == "gallery" %}aria-current="page"{% endif %}>{% include "ui/_icon.html" with name="photo" %}<span>Fotos</span></a>{% endif %}
+    <a href="{% url 'ui-more' %}" class="app-bottom-nav__item" {% if active_section == "management" or active_section == "more" %}aria-current="page"{% endif %}>
       {% include "ui/_icon.html" with name="more" %}
       <span class="app-bottom-nav__label">Mehr</span>
     </a>
+    </div>
+    <div class="app-nav__footer"><span class="app-nav__status"><i></i> Sicher verbunden</span><a href="/einstellungen/profil/" class="app-nav__account">Konto &amp; Profil <span aria-hidden="true">↗</span></a></div>
   </nav>
   {% endif %}
   <main id="main-content" class="main-content" tabindex="-1">
+    {% if page_parent %}<nav class="page-back-navigation" aria-label="Zurück"><a href="{{ page_parent.url }}">← Zurück zu {{ page_parent.label }}</a></nav>{% endif %}
     {% if messages %}<div class="toast-stack" aria-live="polite">{% for message in messages %}<p class="status-banner status-banner--{{ message.tags|default:'info' }}" data-auto-dismiss>{{ message }}</p>{% endfor %}</div>{% endif %}
-    {% if request.user.is_authenticated and not request.user.onboardingstate.completed_at %}<aside class="kid-section-nav" aria-label="Starthilfe"><a href="{% url 'onboarding-resume' %}">Starthilfe: Familie, Klasse und Datenschutz einrichten</a></aside>{% endif %}
+    {% if request.user.is_authenticated and active_section == 'start' and not request.user.onboardingstate.completed_at %}<aside class="onboarding-reminder" aria-label="Starthilfe"><a href="{% url 'onboarding-resume' %}">Starthilfe: Familie und Klasse einrichten →</a></aside>{% endif %}
     {% block content %}{% endblock %}
   </main>
   {% if not request.user.is_authenticated %}{% include "includes/site_footer.html" %}{% endif %}
@@ -121,6 +127,7 @@
 <div id="live-status" class="sr-only" aria-live="polite"></div>
 <script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
   <script src="{% static 'app.js' %}?v=login-csrf-v1" defer></script>
+<script src="{% static 'theme-preview.js' %}" defer></script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js')}</script>
 </body>
 </html>

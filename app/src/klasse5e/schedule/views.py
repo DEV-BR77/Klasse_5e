@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 
 from klasse5e.core.models import SchoolClass
 from klasse5e.core.policies import has_active_membership
+from klasse5e.core.module_permissions import may_access_module
 
 from .models import CalendarEntry, ICalSubscription, TimetableEntry
 
@@ -15,7 +16,7 @@ from .models import CalendarEntry, ICalSubscription, TimetableEntry
 @login_required
 def week(request, class_id):
     school_class = get_object_or_404(SchoolClass, id=class_id)
-    if not has_active_membership(request.user, school_class):
+    if not may_access_module(request.user, "calendar", school_class):
         raise Http404
     start = timezone.localdate()
     start -= timedelta(days=start.weekday())

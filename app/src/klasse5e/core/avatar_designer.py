@@ -38,11 +38,35 @@ AVATAR_COMPONENTS = {
 
 BACKGROUND_COLORS = ("#bae6fd", "#bbf7d0", "#fef08a", "#fbcfe8", "#fed7aa", "#ddd6fe", "#cbd5e1")
 CONFIG_KEYS = ("background", "body", "head", "face", "facial-hair", "accessories")
+V3_KEYS = ("background", "pose", "body", "head", "face", "facial-hair", "accessories")
+# Coordinates from the upstream complete-person templates. Standing and
+# sitting are distinct full-body assets, never stretched bust illustrations.
+POSES = (
+    {"label": "Stehend", "category": "pose/standing", "viewBox": "-180 0 1900 3300",
+     "body": (-121, 634, 1645, 2500), "head": (404, 180),
+     "clothes": (("crossed_arms-1.svg", "Arme verschränkt"), ("blazer-1.svg", "Blazer"))},
+    {"label": "Sitzend", "category": "pose/sitting", "viewBox": "-140 0 1800 2600",
+     "body": (-81, 637, 1534, 1856), "head": (345, 180),
+     "clothes": (("crossed_legs.svg", "Beine gekreuzt"), ("hands_back-1.svg", "Entspannt"))},
+)
+HEAD_LAYERS = {
+    "head": (0, 0, 473, 567), "face": (159, 186, 289, 293),
+    "facial-hair": (123, 338, 280, 230), "accessories": (47, 241, 392, 138),
+}
 
 
 def parse_avatar_seed(seed):
     """Return a safe avatar configuration or ``None`` for the old avatar choices."""
     values = str(seed or "").split(":")
+    if len(values) == 8 and values[0] == "v3":
+        try:
+            indexes = [int(value) for value in values[1:]]
+        except ValueError:
+            return None
+        limits = (len(BACKGROUND_COLORS), len(POSES), 2, *(len(AVATAR_COMPONENTS[key]) for key in V3_KEYS[3:]))
+        if any(index < 0 or index >= limit for index, limit in zip(indexes, limits, strict=True)):
+            return None
+        return dict(zip(V3_KEYS, indexes, strict=True))
     if len(values) != 7 or values[0] != "v2":
         return None
     try:
@@ -62,4 +86,5 @@ def validate_avatar_seed(seed):
 
 
 def avatar_designer_context():
-    return {"components": AVATAR_COMPONENTS, "backgrounds": BACKGROUND_COLORS}
+    return {"components": AVATAR_COMPONENTS, "backgrounds": BACKGROUND_COLORS,
+            "poses": POSES, "headLayers": HEAD_LAYERS}

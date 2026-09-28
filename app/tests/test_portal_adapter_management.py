@@ -18,6 +18,7 @@ from klasse5e.core.models import (
 from klasse5e.portal_adapters.models import (
     ChildModuleConnection,
     PortalAdapter,
+    PortalAdapterDefinition,
     PortalAdapterModule,
 )
 from klasse5e.webuntis.models import WebUntisConnection
@@ -139,6 +140,87 @@ def test_school_admin_can_limit_a_module_to_selected_classes(client, admin_user,
 
 
 @pytest.mark.django_db
+def test_admin_can_edit_class_and_review_module_freigabe(client, admin_user, school_class):
+    adapter = PortalAdapter.objects.create(
+        school=school_class.school,
+        provider="webuntis",
+        name="WebUntis",
+        is_enabled=True,
+    )
+    module = PortalAdapterModule.objects.create(
+        adapter=adapter,
+        key="timetable",
+        label="Stundenplan",
+        is_enabled=True,
+    )
+    client.force_login(admin_user)
+    response = client.post(
+        f"/verwaltung/klassen/{school_class.pk}/",
+        {
+            "action": "save_class",
+            "name": "5e-neu",
+            "display_name": "Klasse 5e",
+            "code": "5e",
+            "grade_level": "5",
+        },
+        secure=True,
+    )
+    assert response.status_code == 302
+    school_class.refresh_from_db()
+    assert school_class.name == "5e-neu"
+
+    response = client.post(
+        f"/verwaltung/klassen/{school_class.pk}/",
+        {"action": "toggle_module", "module_id": module.pk},
+        secure=True,
+    )
+    assert response.status_code == 302
+    assert module.available_to_classes.filter(pk=school_class.pk).exists()
+
+
+@pytest.mark.django_db
+def test_admin_can_edit_central_adapter_definition_and_module(client, admin_user):
+    definition = PortalAdapterDefinition.objects.create(
+        provider="synthetic",
+        label="Synthetic Portal",
+        hint="Testanbieter",
+        is_published=True,
+    )
+    client.force_login(admin_user)
+    response = client.post(
+        f"/verwaltung/adapter-definition/{definition.pk}/",
+        {
+            "action": "add_module",
+            "key": "calendar",
+            "label": "Kalender",
+            "description": "Termine",
+            "access_model": "child",
+            "is_published": "on",
+        },
+        secure=True,
+    )
+    assert response.status_code == 302
+    module = definition.modules.get(key="calendar")
+    assert module.access_model == "child"
+    response = client.post(
+        f"/verwaltung/adapter-definition/{definition.pk}/",
+        {
+            "action": "save_definition",
+            "label": "Synthetic Portal 2",
+            "hint": "Aktualisiert",
+            "integration_type": "external",
+            "is_published": "on",
+            "is_technically_reviewed": "on",
+        },
+        secure=True,
+    )
+    assert response.status_code == 302
+    definition.refresh_from_db()
+    assert definition.label == "Synthetic Portal 2"
+    assert definition.integration_type == "external"
+
+
+@pytest.mark.django_db
 def test_webuntis_adapter_only_requests_its_school_url(client, admin_user, school):
     adapter = PortalAdapter.objects.create(
         school=school,
@@ -189,7 +271,7 @@ def test_guardian_can_only_activate_school_approved_modules_for_own_child(
     relationship = GuardianChildRelationship.objects.create(
         guardian_person=guardian.person,
         student_person=child,
-        relationship_type="father",
+        relationship_type="guardian",
         is_legal_guardian=True,
         may_view_student_profile=True,
         may_manage_profile=True,

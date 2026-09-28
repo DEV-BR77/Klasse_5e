@@ -1,0 +1,375 @@
+/*
+ * KlassID central UI foundation.
+ *
+ * Feature templates may arrange content, but shared controls, surfaces,
+ * states and responsive behavior are defined here. Keep this file free of
+ * business rules and page-specific exceptions.
+ */
+
+:root {
+  --ds-space-1: .25rem;
+  --ds-space-2: .5rem;
+  --ds-space-3: .75rem;
+  --ds-space-4: 1rem;
+  --ds-space-5: 1.25rem;
+  --ds-space-6: 1.5rem;
+  --ds-space-8: 2rem;
+  --ds-control-sm: 2.25rem;
+  --ds-control-md: 2.75rem;
+  --ds-control-lg: 3.25rem;
+  --ds-ring: 0 0 0 3px color-mix(in srgb, var(--brand) 24%, transparent);
+}
+
+/* The portal uses a restrained work-surface rhythm: readable content widths,
+   deliberate interior padding and small, repeatable elevations. These rules
+   are intentionally component-level so the same geometry is shared by
+   profile, family, chat and administration pages. */
+:where(.tailwind-shell, .auth-page) {
+  --ds-page-width: 75rem;
+  --ds-content-gutter: clamp(1rem, 3vw, 2.5rem);
+  --ds-panel-padding: var(--theme-panel-padding, clamp(1.15rem, 2vw, 1.75rem));
+}
+
+
+:where(.tailwind-shell, .auth-page) .page-heading {
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-block: 0 1.5rem;
+}
+
+:where(.tailwind-shell, .auth-page) .page-heading > :last-child {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
+:where(.tailwind-shell, .auth-page) :is(.settings-panel, .content-card, .card, .feature-card, .contacts-directory, .calendar-shell, .conversation-list) {
+  overflow: hidden;
+}
+
+:where(.tailwind-shell, .auth-page) :is(.settings-panel, .content-card, .card, .feature-card) > header,
+:where(.tailwind-shell, .auth-page) .settings-panel > form > header {
+  padding: var(--ds-panel-padding);
+  border-bottom: 1px solid var(--line);
+}
+
+:where(.tailwind-shell, .auth-page) :is(.settings-panel, .content-card, .card, .feature-card) > :not(header):not(footer),
+:where(.tailwind-shell, .auth-page) .settings-details-body {
+  padding: var(--ds-panel-padding);
+}
+
+:where(.tailwind-shell, .auth-page) :is(.settings-panel, .content-card, .card, .feature-card) > footer,
+:where(.tailwind-shell, .auth-page) :is(.settings-panel, .form-stack) > .form-actions,
+:where(.tailwind-shell, .auth-page) .form-actions {
+  margin: 0;
+  padding: 1rem var(--ds-panel-padding) var(--ds-panel-padding);
+  border-top: 1px solid var(--line);
+}
+
+:where(.tailwind-shell, .auth-page) .button-row,
+:where(.tailwind-shell, .auth-page) .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .75rem;
+}
+
+:where(.tailwind-shell, .auth-page) .form-actions > :first-child:not(.button-primary) {
+  margin-inline-start: 0;
+}
+
+:where(.tailwind-shell, .auth-page) .form-actions .button-primary:last-child,
+:where(.tailwind-shell, .auth-page) .form-actions button[type="submit"]:last-child {
+  margin-inline-start: auto;
+}
+
+/* Tables are work surfaces, not oversized cards. */
+:where(.tailwind-shell, .auth-page) .table-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: .75rem;
+  padding: 1rem var(--ds-panel-padding);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 94%, var(--brand-soft));
+}
+
+:where(.tailwind-shell, .auth-page) .table-toolbar > label,
+:where(.tailwind-shell, .auth-page) .table-toolbar .table-search {
+  flex: 1 1 14rem;
+  min-width: 12rem;
+}
+
+:where(.tailwind-shell, .auth-page) .table-toolbar > .button,
+:where(.tailwind-shell, .auth-page) .table-toolbar > a.button { flex: 0 0 auto; }
+
+:where(.tailwind-shell, .auth-page) .table-scroll { overflow-x: auto; }
+:where(.tailwind-shell, .auth-page) .admin-table { min-width: 56rem; width: 100%; border-collapse: collapse; }
+:where(.tailwind-shell, .auth-page) .admin-table th,
+:where(.tailwind-shell, .auth-page) .admin-table td { padding: .9rem var(--ds-panel-padding); text-align: left; vertical-align: middle; }
+:where(.tailwind-shell, .auth-page) .admin-table tbody tr:hover { background: color-mix(in srgb, var(--brand-soft) 35%, var(--surface)); }
+:where(.tailwind-shell, .auth-page) .admin-table th button { min-height: 2rem; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 800; cursor: pointer; }
+:where(.tailwind-shell, .auth-page) .table-stack { display: grid; gap: .2rem; }
+:where(.tailwind-shell, .auth-page) .table-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+:where(.tailwind-shell, .auth-page) .table-chips > span { padding: .25rem .5rem; border-radius: var(--radius-pill); background: var(--brand-soft); color: var(--brand-strong); font-size: .8rem; font-weight: 700; }
+:where(.tailwind-shell, .auth-page) .person-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; padding: var(--ds-panel-padding); border-bottom: 1px solid var(--line); }
+:where(.tailwind-shell, .auth-page) .detail-list { display: grid; gap: .75rem; margin: 0; }
+:where(.tailwind-shell, .auth-page) .detail-list div { display: grid; gap: .2rem; }
+:where(.tailwind-shell, .auth-page) .detail-list dt { color: var(--muted); font-size: .82rem; font-weight: 750; }
+:where(.tailwind-shell, .auth-page) .detail-list dd { margin: 0; }
+
+@media (max-width: 48rem) {
+  :where(.tailwind-shell, .auth-page) .page-heading { flex-direction: column; }
+  :where(.tailwind-shell, .auth-page) .page-heading > :last-child { margin-inline-start: 0; }
+  :where(.tailwind-shell, .auth-page) .form-actions .button-primary:last-child,
+  :where(.tailwind-shell, .auth-page) .form-actions button[type="submit"]:last-child { margin-inline-start: 0; }
+  :where(.tailwind-shell, .auth-page) .form-actions > .button { flex: 1 1 10rem; }
+  :where(.tailwind-shell, .auth-page) .person-detail-grid { grid-template-columns: 1fr; }
+
+  /* The role manager keeps its table horizontally scrollable, but its
+     filter controls must become a single-column form on narrow screens. */
+  :where(.tailwind-shell, .auth-page) .role-admin-page,
+  :where(.tailwind-shell, .auth-page) .people-table-panel,
+  :where(.tailwind-shell, .auth-page) .person-role-card { min-width: 0; }
+  :where(.tailwind-shell, .auth-page) .role-admin-page { width: 100%; max-width: 100%; overflow-x: hidden; }
+  :where(.tailwind-shell, .auth-page) .role-admin-page .table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; contain: inline-size; }
+  :where(.tailwind-shell, .auth-page) .people-filter-bar { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+  :where(.tailwind-shell, .auth-page) .people-filter-bar > label,
+  :where(.tailwind-shell, .auth-page) .people-filter-bar .table-search { width: 100%; min-width: 0; }
+  :where(.tailwind-shell, .auth-page) .people-filter-bar :is(input, select) { width: 100%; min-width: 0; max-width: 100%; }
+  :where(.tailwind-shell, .auth-page) .people-filter-bar > .button,
+  :where(.tailwind-shell, .auth-page) .people-filter-bar > a.button { width: 100%; }
+  :where(.tailwind-shell, .auth-page) .person-role-card > header { flex-wrap: wrap; }
+}
+
+/* Chat is a two-pane work surface on wide screens and one clear flow on
+   smaller screens. The room background remains a room-level option; it does
+   not leak into the portal shell. */
+:where(.tailwind-shell) .chat-page { max-width: var(--ds-page-width); }
+:where(.tailwind-shell) .chat-layout { display: grid; grid-template-columns: minmax(15rem, 19rem) minmax(0, 1fr); align-items: stretch; gap: 1rem; }
+:where(.tailwind-shell) .chat-search { margin: 0; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); box-shadow: none; }
+:where(.tailwind-shell) .conversation-list { min-height: 32rem; align-content: start; }
+:where(.tailwind-shell) .conversation-row-wrap { border-bottom: 1px solid var(--line); }
+:where(.tailwind-shell) .conversation-row-wrap:last-child { border-bottom: 0; }
+:where(.tailwind-shell) .conversation-row { border: 0; border-radius: 0; }
+:where(.tailwind-shell) .conversation-row[aria-current="page"] { background: var(--brand-soft); box-shadow: inset .2rem 0 var(--brand); }
+:where(.tailwind-shell) .chat-room-page { max-width: none; min-width: 0; margin: 0; }
+:where(.tailwind-shell) .chat-room-head { margin: 0; padding: var(--ds-panel-padding); border: 1px solid var(--line); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface); color: var(--ink); }
+:where(.tailwind-shell) .chat-live-status { border-radius: 0; border-inline: 1px solid var(--line); background: var(--surface); }
+:where(.tailwind-shell) .chat-room-page .message-thread { min-height: 24rem; max-height: 58vh; overflow-y: auto; padding: var(--ds-panel-padding); border: 1px solid var(--line); border-radius: 0; background: color-mix(in srgb, var(--background) 82%, var(--brand-soft)); }
+:where(.tailwind-shell) .chat-room-page .chat-composer-modern { position: sticky; bottom: .75rem; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+
+@media (max-width: 48rem) {
+  :where(.tailwind-shell) .chat-layout { grid-template-columns: 1fr; }
+  :where(.tailwind-shell) .conversation-list { min-height: 0; max-height: 18rem; overflow-y: auto; }
+  :where(.tailwind-shell) .chat-room-page .message-thread { min-height: 18rem; max-height: none; }
+}
+
+/* Buttons have one visual language. Icon-only controls are separate from
+   action buttons and never receive a filled button surface by accident. */
+:where(.tailwind-shell, .auth-page) :is(.button, button.button, a.button) {
+  min-height: var(--ds-control-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-md);
+  padding: .625rem 1rem;
+  background: var(--brand);
+  color: var(--on-brand) !important;
+  font: inherit;
+  font-weight: 750;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+:where(.tailwind-shell, .auth-page) :is(.button, button.button, a.button):hover {
+  border-color: var(--brand-strong);
+  background: var(--brand-strong);
+}
+
+:where(.tailwind-shell, .auth-page) :is(.button, button.button, a.button):focus-visible,
+:where(.tailwind-shell, .auth-page) :is(button, a, summary):focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+:where(.tailwind-shell, .auth-page) :is(.button-secondary, .button-quiet) {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink) !important;
+}
+
+:where(.tailwind-shell, .auth-page) .button-secondary:hover,
+:where(.tailwind-shell, .auth-page) .button-quiet:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-strong) !important;
+}
+
+:where(.tailwind-shell, .auth-page) .button-danger {
+  border-color: var(--status-danger);
+  background: var(--status-danger);
+  color: #fff !important;
+}
+
+:where(.tailwind-shell, .auth-page) :is(.button, button.button):disabled,
+:where(.tailwind-shell, .auth-page) :is(.button, button.button)[aria-disabled="true"] {
+  border-color: var(--disabled-border);
+  background: var(--disabled-surface);
+  color: var(--disabled-text) !important;
+  cursor: not-allowed;
+  opacity: .72;
+}
+
+/* Tabs are navigation, not buttons. They share one scrollable component on
+   desktop and mobile; the selected tab is identified by aria-current or
+   aria-selected. */
+:where(.settings-tabs, .settings-subtabs, .app-family-tabs, .ds-tabs) {
+  display: flex;
+  gap: var(--ds-space-1);
+  overflow-x: auto;
+  padding: var(--ds-space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  scrollbar-width: thin;
+}
+
+:where(.settings-tabs, .settings-subtabs, .app-family-tabs, .ds-tabs) :is(a, button, [role="tab"]) {
+  flex: 0 0 auto;
+  min-height: var(--ds-control-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: .5rem .8rem;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 750;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+:where(.settings-tabs, .settings-subtabs, .app-family-tabs, .ds-tabs) :is(a, button, [role="tab"]):hover {
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+
+:where(.settings-tabs, .settings-subtabs, .app-family-tabs, .ds-tabs) :is(a, button, [role="tab"])[aria-current="page"],
+:where(.settings-tabs, .settings-subtabs, .app-family-tabs, .ds-tabs) :is(a, button, [role="tab"])[aria-selected="true"] {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+/* Shared field geometry. The password toggle is intentionally transparent
+   and lives inside the field without changing the field's border or radius. */
+:where(.tailwind-shell, .auth-page) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea) {
+  min-height: var(--ds-control-md);
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  background: var(--input-surface);
+  color: var(--ink);
+  padding: .625rem .8rem;
+  font: inherit;
+}
+
+:where(.tailwind-shell, .auth-page) :is(input, select, textarea)::placeholder {
+  color: var(--input-placeholder);
+}
+
+:where(.tailwind-shell, .auth-page) :is(input, select, textarea):focus-visible {
+  border-color: var(--brand);
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.password-control { position: relative; display: block; width: 100%; }
+.password-control input { padding-right: 3rem !important; }
+.password-toggle,
+:where(.tailwind-shell, .auth-page) .password-toggle {
+  position: absolute;
+  inset: 50% .55rem auto auto;
+  width: 2rem !important;
+  min-width: 2rem !important;
+  max-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  max-height: 2rem !important;
+  display: inline-grid !important;
+  place-items: center;
+  transform: translateY(-50%);
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+/* allauth styles submit buttons through a more specific selector.  The
+   password control is deliberately exempt: it is an input affordance, not
+   a second action button attached to the field. */
+.auth-page .auth-card form .password-toggle {
+  width: 2rem !important;
+  min-width: 2rem !important;
+  max-width: 2rem !important;
+  height: 2rem !important;
+  min-height: 2rem !important;
+  max-height: 2rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--muted) !important;
+}
+
+.password-toggle:hover { background: color-mix(in srgb, var(--brand) 10%, transparent) !important; color: var(--brand) !important; }
+.password-toggle:focus-visible { outline: 2px solid var(--focus-ring-color) !important; outline-offset: 2px; }
+.password-toggle__icon { width: 1.05rem; height: 1.05rem; pointer-events: none; }
+
+/* Shared surfaces, notices and tables. */
+:where(.tailwind-shell, .auth-page) :is(.card, .content-card, .settings-panel, .feature-card, .action-tile, .module-link) {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--app-shadow);
+}
+
+:where(.tailwind-shell, .auth-page) :is(.notice, .status-banner, .form-error-summary, .errorlist) {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+:where(.tailwind-shell, .auth-page) :is(.notice-error, .status-error) { border-color: var(--status-danger); background: var(--status-danger-soft); }
+:where(.tailwind-shell, .auth-page) :is(.notice-success, .status-success) { border-color: var(--status-success); background: var(--status-success-soft); }
+:where(.tailwind-shell, .auth-page) :is(.notice-warning, .status-warning) { border-color: var(--status-warning); background: var(--status-warning-soft); }
+
+:where(.tailwind-shell, .admin-table, .consent-table) th { color: var(--muted); font-weight: 750; }
+:where(.tailwind-shell, .admin-table, .consent-table) :is(th, td) { border-color: var(--line); }
+
+@media (max-width: 42rem) {
+  :where(.settings-tabs, .settings-subtabs, .app-family-tabs, .ds-tabs) { border-radius: var(--radius-md); }
+  :where(.settings-tabs, .settings-subtabs, .app-family-tabs, .ds-tabs) :is(a, button, [role="tab"]) { min-height: 2.5rem; padding-inline: .65rem; font-size: .875rem; }
+  :where(.tailwind-shell, .auth-page) :is(.card, .content-card, .settings-panel, .feature-card, .action-tile, .module-link) { border-radius: var(--radius-md); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.tailwind-shell, .auth-page) * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

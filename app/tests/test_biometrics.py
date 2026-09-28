@@ -18,6 +18,8 @@ from klasse5e.core.models import (
     ConsentType,
     GuardianChildRelationship,
     Person,
+    PortalModule,
+    PortalModuleOverride,
     Role,
     RoleAssignment,
     School,
@@ -82,6 +84,9 @@ def domain(db):
     school_class = SchoolClass.objects.create(
         school=school, name="Synthetic", code="synthetic", school_year=year
     )
+    PortalModuleOverride.objects.create(
+        module=PortalModule.objects.get(key="photo_memory"), school_class=school_class, enabled=True,
+    )
     admin = UserAccount.objects.create_user(email="ada@example.test", password="x")
     admin_person = Person.objects.create(user=admin, first_name="Ada", last_name="Admin")
     ClassMembership.objects.create(school_class=school_class, person=admin_person, valid_from=today)
@@ -144,7 +149,7 @@ def test_profile_requires_every_current_guardian_consent(domain):
     GuardianChildRelationship.objects.create(
         guardian_person=other,
         student_person=student.person,
-        relationship_type="mother",
+        relationship_type="guardian",
         is_legal_guardian=True,
         may_manage_biometric_consents=True,
         valid_from=timezone.localdate(),

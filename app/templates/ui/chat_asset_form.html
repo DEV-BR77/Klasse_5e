@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page">
+  <header class="page-heading"><div><p class="eyebrow">Chatkatalog</p><h1>Chat-Element {% if editing_asset.pk %}bearbeiten{% else %}anlegen{% endif %}</h1><p>Bitte korrigiere die markierten Eingaben. Deine Angaben bleiben erhalten.</p></div></header>
+  <form method="post" enctype="multipart/form-data" action="{% url 'chat-assets-settings' %}" class="settings-panel form-stack">
+    {% csrf_token %}<input type="hidden" name="action" value="save">
+    {% if editing_asset.pk %}<input type="hidden" name="asset_id" value="{{ editing_asset.pk }}">{% endif %}
+    <div class="settings-details-body form-stack">
+      {{ asset_form.non_field_errors }}
+      {% for field in asset_form %}
+        {% if field.field.widget.input_type == 'checkbox' %}
+          <label class="check-row" for="{{ field.id_for_label }}">{{ field }}<span>{{ field.label }}</span></label>{{ field.errors }}
+        {% else %}
+          <div class="form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% if field.help_text %}<p class="muted">{{ field.help_text }}</p>{% endif %}</div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% url 'chat-assets-settings' as cancel_url %}
+    {% include "ui/_form_actions.html" with cancel_url=cancel_url %}
+  </form>
+</section>
+{% endblock %}

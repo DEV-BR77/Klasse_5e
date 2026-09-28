@@ -4,10 +4,12 @@ from django.utils import timezone
 from klasse5e.core.models import AuditEvent
 
 from .models import (
+    ChatAsset,
     ChatPreference,
     ChatReport,
     ChatRetentionCategory,
     ChatRoom,
+    ChatRoomMember,
 )
 
 
@@ -16,6 +18,14 @@ class ChatRetentionCategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "automatic_deletion_enabled", "retention_days", "intended_for_events", "is_active")
     list_editable = ("automatic_deletion_enabled", "retention_days", "is_active")
     list_filter = ("automatic_deletion_enabled", "intended_for_events", "is_active")
+
+
+@admin.register(ChatAsset)
+class ChatAssetAdmin(admin.ModelAdmin):
+    list_display = ("kind", "label", "value", "is_active", "sort_order")
+    list_editable = ("is_active", "sort_order")
+    list_filter = ("kind", "is_active")
+    search_fields = ("label", "value")
 
 
 @admin.register(ChatRoom)
@@ -78,3 +88,10 @@ class ChatReportAdmin(admin.ModelAdmin):
 
 
 admin.site.register(ChatPreference)
+
+
+@admin.register(ChatRoomMember)
+class ChatRoomMemberAdmin(admin.ModelAdmin):
+    list_display = ("room", "user", "role", "active", "added_by", "updated_at")
+    list_filter = ("role", "active")
+    search_fields = ("room__title", "user__email", "user__person__first_name", "user__person__last_name")

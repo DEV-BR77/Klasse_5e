@@ -9,6 +9,8 @@ from klasse5e.core.models import (
     AuditEvent,
     Role,
     RoleAssignment,
+    RoleModulePermission,
+    PortalModule,
     School,
     SchoolClass,
     UserNotification,
@@ -99,6 +101,93 @@ def test_management_ui_and_mfa(client, guardian, admin_user, school_class):
     response = client.get("/verwaltung/rollen/", secure=True)
     assert response.status_code == 302
     assert "totp" in response.url
+
+
+def test_role_permission_and_people_pages(client, guardian, admin_user, school_class):
+    module = PortalModule.objects.get(key="events")
+    client.force_login(admin_user)
+    response = client.get("/verwaltung/rollen/berechtigungen/?role=content_manager", secure=True)
+    assert response.status_code == 200
+    assert b"Rollenberechtigungen" in response.content
+    response = client.post("/verwaltung/rollen/berechtigungen/", {
+        "role": Role.CONTENT_MANAGER,
+        f"permission-{module.pk}-view": "on",
+        f"scope-{module.pk}-view": "platform",
+    }, secure=True)
+    assert response.status_code == 302
+    assert RoleModulePermission.objects.get(
+        role=Role.CONTENT_MANAGER, module=module, action=RoleModulePermission.Action.VIEW
+    ).active
+    response = client.get(f"/verwaltung/rollen/personen/?user={guardian.pk}", secure=True)
+    assert response.status_code == 200
+    assert guardian.email.encode() in response.content
+    response = client.post("/verwaltung/rollen/personen/", {
+        "action": "assign", "user_id": guardian.pk, "role": Role.CONTENT_MANAGER,
+    }, secure=True)
+    assert response.status_code == 302
+    assert RoleAssignment.objects.filter(user=guardian, role=Role.CONTENT_MANAGER, active=True).exists()
+
+
+def test_permission_matrix_rejects_invalid_role_and_incomplete_or_invalid_scope(client, admin_user):
+    module = PortalModule.objects.get(key="events")
+    permission = RoleModulePermission.objects.get(
+        role=Role.CONTENT_MANAGER, module=module,
+        action=RoleModulePermission.Action.VIEW,
+    )
+    client.force_login(admin_user)
+    url = "/verwaltung/rollen/berechtigungen/"
+    checkbox = f"permission-{module.pk}-view"
+    scope = f"scope-{module.pk}-view"
+    for changes in (
+        {"role": "unknown", "permission_matrix": "1", checkbox: "on", scope: "class"},
+        {"role": Role.CONTENT_MANAGER, "permission_matrix": "1", checkbox: "on"},
+        {"role": Role.CONTENT_MANAGER, "permission_matrix": "1", checkbox: "on", scope: "invalid"},
+    ):
+        response = client.post(url, changes, secure=True)
+        assert response.status_code == 400
+        permission.refresh_from_db()
+        assert permission.active and permission.scope == RoleModulePermission.Scope.PLATFORM
+    assert not AuditEvent.objects.filter(action="role.permissions.updated").exists()
+
+
+def test_permission_partial_update_preserves_other_rules_and_inactive_scope(client, admin_user):
+    first = PortalModule.objects.get(key="events")
+    second = PortalModule.objects.get(key="calendar")
+    previous = RoleModulePermission.objects.create(
+        role=Role.CONTENT_MANAGER, module=second,
+        action=RoleModulePermission.Action.READ,
+        scope=RoleModulePermission.Scope.SCHOOL, active=True,
+    )
+    client.force_login(admin_user)
+    url = "/verwaltung/rollen/berechtigungen/"
+    response = client.post(url, {
+        "role": Role.CONTENT_MANAGER,
+        f"permission-{first.pk}-view": "on",
+        f"scope-{first.pk}-view": "own",
+    }, secure=True)
+    assert response.status_code == 302
+    previous.refresh_from_db()
+    assert previous.active and previous.scope == RoleModulePermission.Scope.SCHOOL
+    response = client.get(url + "?role=content_manager", secure=True)
+    assert response.status_code == 200
+    assert b"Events und Mitbringlisten" in response.content
+
+
+def test_role_management_shows_revoke_control_and_handles_invalid_id(client, admin_user, guardian, school_class):
+    assignment = RoleAssignment.objects.create(
+        user=guardian, role=Role.PARENT_REPRESENTATIVE, school_class=school_class,
+    )
+    client.force_login(admin_user)
+    response = client.get("/verwaltung/rollen/", secure=True)
+    assert response.status_code == 200
+    assert b'name="assignment_id"' in response.content
+    assert b"Entziehen" in response.content
+    response = client.post("/verwaltung/rollen/", {
+        "action": "revoke", "assignment_id": "invalid",
+    }, secure=True)
+    assert response.status_code == 302
+    assignment.refresh_from_db()
+    assert assignment.active
 
 
 def test_role_management_can_assign_deputy_parent_representative(

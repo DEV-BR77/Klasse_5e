@@ -46,6 +46,39 @@ def test_pilot_report_records_page_without_exposing_github(client, guardian):
 
 
 @pytest.mark.django_db
+def test_portal_admin_can_review_and_reopen_pilot_reports(client, admin_user, guardian, school_class):
+    report = PilotReport.objects.create(
+        reporter=guardian,
+        school_class=school_class,
+        kind=PilotReport.Kind.BUG,
+        page_path="/chat/",
+        description="Nachrichtenbereich prüfen",
+    )
+    client.force_login(admin_user)
+    page = client.get("/verwaltung/pilotmeldungen/", secure=True)
+    assert page.status_code == 200
+    assert b"Nachrichtenbereich pr\xc3\xbcfen" in page.content
+
+    response = client.post(
+        "/verwaltung/pilotmeldungen/",
+        {"report_id": report.pk, "action": "resolve"},
+        secure=True,
+    )
+    assert response.status_code == 302
+    report.refresh_from_db()
+    assert report.resolved_at is not None
+
+    response = client.post(
+        "/verwaltung/pilotmeldungen/",
+        {"report_id": report.pk, "action": "reopen"},
+        secure=True,
+    )
+    assert response.status_code == 302
+    report.refresh_from_db()
+    assert report.resolved_at is None
+
+
+@pytest.mark.django_db
 def test_class_admin_can_create_chat_room_and_event(client, guardian, school_class):
     RoleAssignment.objects.filter(user=guardian).update(role="class_admin")
     guardian.email_verified_at = timezone.now()

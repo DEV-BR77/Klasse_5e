@@ -8,7 +8,9 @@ from klasse5e.core.models import (
     ClassMembership,
     GuardianChildRelationship,
     Person,
+    PortalModule,
     RoleAssignment,
+    RoleModulePermission,
     School,
     SchoolClass,
     StudentProfile,
@@ -211,7 +213,16 @@ def test_moderator_can_pause_listing(client, guardian, school_class):
         data={"secret": "synthetic-test-only"},
     )
     client.force_login(moderator)
+    url = f"/mehr/mobilitaet/{listing.public_id}/moderieren/"
+    assert client.post(url, {"action": "pause"}).status_code == 404
+    for action in ("view", "read", "moderate"):
+        RoleModulePermission.objects.update_or_create(
+            role="moderator", module=PortalModule.objects.get(key="mobility"), action=action,
+            defaults={"active": True, "scope": "class"},
+        )
     response = client.post(f"/mehr/mobilitaet/{listing.public_id}/moderieren/", {"action": "pause"})
     assert response.status_code == 302
     listing.refresh_from_db()
     assert listing.status == "paused"
+    RoleModulePermission.objects.filter(role="moderator", module__key="mobility", action="moderate").update(active=False)
+    assert client.post(url, {"action": "pause"}).status_code == 404

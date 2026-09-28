@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page">
+  <header class="page-heading"><div><p class="eyebrow">Globale Komponenten · Chat</p><h1>Emojis &amp; Sticker</h1><p class="lede">Diese Elemente stehen danach in jedem Chat zur Verfügung. Die Pflege ist zentral und nicht seitenindividuell.</p></div><a class="button button-secondary" href="{% url 'portal-management' %}">← Verwaltung</a></header>
+  <section class="settings-panel">
+    <header><div><h2>Neues Element</h2><p class="muted">Sticker können als bereinigte Grafik oder als bisheriger Text angelegt werden.</p></div></header>
+    <form method="post" enctype="multipart/form-data" class="form-stack settings-details-body">{% csrf_token %}<input type="hidden" name="action" value="save">
+      <div class="field-pair"><label>Typ<select name="kind"><option value="emoji">Emoji</option><option value="sticker">Sticker</option></select></label><label>Bezeichnung<input name="label" maxlength="80" required placeholder="z. B. Daumen hoch"></label></div>
+      <label>Emoji oder Text-Sticker<input name="value" maxlength="240" placeholder="👍 – bei Grafik-Stickern leer lassen"></label>
+      <label>Sticker-Grafik (PNG, JPEG oder WebP; maximal 2 MB)<input type="file" name="image" accept="image/png,image/jpeg,image/webp"></label>
+      <div class="field-pair"><label>Position<input type="number" name="sort_order" min="0" value="0"></label><label class="check-row"><input type="checkbox" name="is_active" checked><span>Direkt aktiv</span></label></div>
+      {% include "ui/_form_actions.html" with save_label="Element anlegen" %}
+    </form>
+  </section>
+  <section class="settings-panel"><header><div><h2>Aktueller Katalog</h2><p class="muted">Änderungen gelten zentral für den Chat-Composer.</p></div></header>
+    <div class="table-scroll"><table class="data-table"><thead><tr><th>Typ</th><th>Bezeichnung</th><th>Inhalt</th><th>Position</th><th>Status</th><th>Aktion</th></tr></thead><tbody>
+      {% for asset in chat_assets %}<tr><td>{{ asset.get_kind_display }}</td><td><strong>{{ asset.label }}</strong></td><td>{% if asset.image %}<img class="chat-asset-preview-image" src="{% url 'chat-asset-image' asset.pk %}" alt="{{ asset.label }}">{% else %}<span class="chat-asset-preview">{{ asset.value }}</span>{% endif %}</td><td>{{ asset.sort_order }}</td><td>{% if asset.is_active %}<span class="status-chip status-success">Aktiv</span>{% else %}<span class="status-chip">Pausiert</span>{% endif %}</td><td><div class="button-row"><button class="button button-secondary button-compact" type="button" data-dialog-open="edit-chat-asset-{{ asset.pk }}">Bearbeiten</button><form method="post" class="inline-form" data-confirm="Dieses Chat-Element wirklich entfernen?">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="asset_id" value="{{ asset.pk }}"><button class="button button-secondary button-compact">Entfernen</button></form></div></td></tr>{% empty %}<tr><td colspan="6" class="empty-state">Noch keine zentralen Chat-Elemente angelegt.</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% for asset in chat_assets %}
+    <dialog id="edit-chat-asset-{{ asset.pk }}" class="app-dialog" aria-labelledby="edit-chat-asset-title-{{ asset.pk }}"><form method="post" enctype="multipart/form-data" class="form-stack">{% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="asset_id" value="{{ asset.pk }}"><header class="dialog-head"><div><p class="eyebrow">Chatkatalog</p><h2 id="edit-chat-asset-title-{{ asset.pk }}">{{ asset.label }} bearbeiten</h2></div><button class="icon-button" type="button" data-dialog-close aria-label="Schließen">×</button></header><div class="field-pair"><label>Typ<select name="kind"><option value="emoji"{% if asset.kind == 'emoji' %} selected{% endif %}>Emoji</option><option value="sticker"{% if asset.kind == 'sticker' %} selected{% endif %}>Sticker</option></select></label><label>Bezeichnung<input name="label" value="{{ asset.label }}" maxlength="80" required></label></div><label>Emoji oder Text-Sticker<input name="value" value="{{ asset.value }}" maxlength="240"></label><label>Sticker-Grafik ersetzen<input type="file" name="image" accept="image/png,image/jpeg,image/webp"></label><div class="field-pair"><label>Position<input type="number" name="sort_order" min="0" value="{{ asset.sort_order }}"></label><label class="check-row"><input type="checkbox" name="is_active"{% if asset.is_active %} checked{% endif %}><span>Direkt aktiv</span></label></div><footer class="dialog-actions"><button class="button button-secondary" type="button" data-dialog-close>Abbrechen</button><button class="button button-primary" type="submit">Speichern</button></footer></form></dialog>
+    {% endfor %}
+  </section>
+</section>
+{% endblock %}

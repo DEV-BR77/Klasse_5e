@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page role-admin-page">
+  <header class="page-heading">
+    <div><p class="eyebrow">Portalverwaltung</p><h1>Rollenberechtigungen</h1><p class="lede">Bearbeite die Berechtigungsmatrix für Portalmodule und Aktionen.</p></div>
+    <div class="button-row"><a class="button button-secondary" href="{% url 'role-people' %}">Rollen &amp; Personen</a><a class="button button-secondary" href="{% url 'portal-management' %}">← Verwaltung</a></div>
+  </header>
+  <details class="settings-panel permission-card"><summary><strong>So wirken Rollenrechte</strong></summary><div class="permission-actions"><p>Änderungen gelten ab dem nächsten Zugriff. Sichtbar und Lesen sind Voraussetzungen für weitere Aktionen. Mehrere Rollen ergänzen sich; persönliche Eltern-, Mitglieder- und Organisatorenrechte bleiben bestehen.</p><p>Der Geltungsbereich reicht höchstens bis zur zugewiesenen Schule oder Klasse. Schule und Klasse erfordern eine aktive Zugehörigkeit; Eigene Daten erfordert zusätzlich einen Besitzbezug. Private Chats, Einwilligungen und persönliche Schulzugänge bleiben geschützt.</p></div></details>
+  <section class="settings-panel role-selector-panel">
+    <header><div><h2>Rolle auswählen</h2><p>Nach der Auswahl öffnet sich die Berechtigungskarte der Rolle.</p></div></header>
+    <nav class="role-selector" aria-label="Rollen auswählen">
+      {% for value, label in role_choices %}<a class="role-selector__item{% if value == selected_role %} is-selected{% endif %}" href="?role={{ value }}"><strong>{{ label }}</strong><span>Rechte bearbeiten</span></a>{% endfor %}
+    </nav>
+  </section>
+  {% if permission_error %}<p class="form-error" role="alert">{{ permission_error }}</p>{% endif %}
+  {% if selected_role %}
+  <form method="post" class="settings-panel role-permission-card">
+    {% csrf_token %}<input type="hidden" name="role" value="{{ selected_role }}"><input type="hidden" name="permission_matrix" value="1">
+    <header><div><p class="eyebrow">Ausgewählte Rolle</p><h2>{{ selected_role_label }}</h2><p>Aktiviere pro Modul nur die Aktionen, die diese Rolle wirklich benötigt.</p></div><span class="status-chip status-active">Bearbeitbar</span></header>
+    <div class="permission-grid">
+      {% for row in module_rows %}
+        <details class="permission-card" name="permission-module"><summary><strong>{{ row.module.label }}</strong><small>{{ row.module.get_stability_display }}</small></summary>
+          {% if row.permissions %}<div class="permission-actions">
+            <p class="help-text">{{ row.description }}</p>
+            {% for item in row.permissions %}<div class="permission-action"><label for="permission-{{ row.module.pk }}-{{ item.value }}"><input id="permission-{{ row.module.pk }}-{{ item.value }}" type="checkbox" name="permission-{{ row.module.pk }}-{{ item.value }}"{% if item.enabled %} checked{% endif %}><span>{{ item.label }}</span></label><select name="scope-{{ row.module.pk }}-{{ item.value }}" aria-label="Geltungsbereich für {{ item.label }} in {{ row.module.label }}"><option value="platform"{% if item.scope == 'platform' %} selected{% endif %}>Plattform</option><option value="school"{% if item.scope == 'school' %} selected{% endif %}>Schule</option><option value="class"{% if item.scope == 'class' %} selected{% endif %}>Klasse</option><option value="own"{% if item.scope == 'own' %} selected{% endif %}>Eigene Daten</option></select></div>{% endfor %}
+          </div>{% else %}<p class="empty-state">Dieses Modul verwendet persönliche Zuordnungen und Freigaben. Es vergibt keine zusätzlichen Rechte über diese Rollen.</p>{% endif %}
+        </details>
+      {% empty %}<p class="empty-state">Noch keine Portalmodule angelegt.</p>{% endfor %}
+    </div>
+    <footer class="form-actions"><a class="button button-secondary" href="?role={{ selected_role }}">Abbrechen</a><button class="button button-primary" type="submit">Berechtigungen speichern</button></footer>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,12 +1,16 @@
 """The small, reviewed catalogue of portal adapters and their import modules."""
 
-from .models import PortalAdapter, PortalAdapterModule
+from .models import (
+    PortalAdapter,
+    PortalAdapterDefinition,
+    PortalAdapterModule,
+)
 
 ADAPTER_CATALOG = {
     PortalAdapter.Provider.WEBUNTIS: {
-        "label": "Schuldaten-Zugang",
+        "label": "WebUntis",
         "default_url": "",
-        "hint": "Stundenplan und Schulorganisation werden erst nach der Freigabe einzelner Funktionen für die Schule angezeigt.",
+        "hint": "Schulplattform für Stundenplan, Vertretungen, Hausaufgaben, Prüfungen und Abwesenheiten.",
         "modules": (
             (
                 "timetable",
@@ -32,12 +36,18 @@ ADAPTER_CATALOG = {
                 "Angekündigte Arbeiten und Prüfungstermine anzeigen.",
                 True,
             ),
+            (
+                "absences",
+                "Abwesenheiten",
+                "Abwesenheiten aus WebUntis anzeigen und über den persönlichen Zugang melden.",
+                True,
+            ),
         ),
     },
     PortalAdapter.Provider.ITSLEARNING: {
-        "label": "Lernplattform-Zugang",
+        "label": "itslearning",
         "default_url": "",
-        "hint": "Lernmaterialien und Termine werden nur nach Freigabe der einzelnen Funktionen bereitgestellt.",
+        "hint": "Lernplattform für Materialien und schulische Termine.",
         "modules": (
             (
                 "learning-material",
@@ -150,9 +160,9 @@ ADAPTER_CATALOG = {
         ),
     },
     PortalAdapter.Provider.CUSTOM: {
-        "label": "Eigenes Portal",
+        "label": "Individuelle Schnittstelle",
         "default_url": "",
-        "hint": "Verbindungsweg und Module werden nach einer technischen Prüfung ergänzt.",
+        "hint": "Individuelle Schulplattform; Verbindungsweg und Module werden vor Freigabe technisch geprüft.",
         "modules": (),
     },
 }
@@ -163,9 +173,27 @@ def provider_definition(provider):
 
 
 def seed_default_modules(adapter):
+    definition = adapter.definition or PortalAdapterDefinition.objects.filter(
+        provider=adapter.provider
+    ).first()
+    if definition and adapter.definition_id != definition.pk:
+        adapter.definition = definition
+        adapter.save(update_fields=["definition"])
     for key, label, description, *credential_requirement in provider_definition(adapter.provider)[
         "modules"
     ]:
+        definition_module = (
+            definition.modules.filter(key=key).first() if definition else None
+        )
+        access_model = (
+            definition_module.access_model
+            if definition_module
+            else (
+                "child"
+                if credential_requirement and credential_requirement[0]
+                else "none"
+            )
+        )
         PortalAdapterModule.objects.get_or_create(
             adapter=adapter,
             key=key,
@@ -173,5 +201,7 @@ def seed_default_modules(adapter):
                 "label": label,
                 "description": description,
                 "requires_child_credentials": bool(credential_requirement and credential_requirement[0]),
+                "definition_module": definition_module,
+                "access_model": access_model,
             },
         )

@@ -2,6 +2,12 @@
 
 Stand: 28.09.2026. **Analyseblock abgeschlossen; Portal noch nicht insgesamt abgenommen.**
 
+Fortschreibung: Die Arbeitsblöcke 2a–2d wurden anschließend umgesetzt und
+lokal geprüft. Maßgeblich für den aktuellen Stand ist der
+[Prüfnachweis zu 2b–2d](Arbeitsblock-2b-2d-2026-09-28.md); als nächstes folgt
+2e (Build-/Staging-/Gerätezuordnung). Die nachstehende Analyse bleibt als
+Ausgangsbefund erhalten.
+
 Dieser Bericht schließt Punkt 1 der zuletzt vereinbarten Aufteilung ab:
 einmalige Gesamtanalyse → gezielte Korrekturen und fehlende Prüfungen → finale
 Abnahme. Das ist keine erneute Durchführung der acht ursprünglichen

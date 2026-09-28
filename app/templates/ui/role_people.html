@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page role-admin-page">
+  <header class="page-heading">
+    <div><p class="eyebrow">Portalverwaltung</p><h1>Personenverwaltung</h1><p class="lede">Kontakte, Zugehörigkeiten und Rollen – mit einer eigenen Detailansicht pro Person.</p></div>
+    <div class="button-row"><a class="button button-secondary" href="{% url 'role-management' %}">Rollenverwaltung</a><a class="button button-secondary" href="{% url 'role-permissions' %}">Rollenberechtigungen</a></div>
+  </header>
+  {% for error in people_errors %}<p class="form-error" role="alert">{{ error }}</p>{% endfor %}
+  {% if not selected_user %}
+  <section class="settings-panel people-table-panel">
+    <header><div><h2>Personenübersicht</h2><p>Die Liste filtert während der Eingabe. Spalten lassen sich direkt sortieren.</p></div></header>
+    <form class="table-toolbar people-filter-bar" method="get">
+      <label class="table-search"><span class="sr-only">Personen suchen</span><input type="search" name="q" value="{{ query }}" placeholder="Name oder E-Mail suchen …" data-live-table-filter="people-table" autocomplete="off"></label>
+      <label><span class="sr-only">Schule filtern</span><select name="school"><option value="">Alle Schulen</option>{% for school in schools %}<option value="{{ school.pk }}"{% if selected_school == school.pk|stringformat:'s' %} selected{% endif %}>{{ school.name }}</option>{% endfor %}</select></label>
+      <label><span class="sr-only">Klasse filtern</span><select name="class"><option value="">Alle Klassen</option>{% for school_class in school_classes %}<option value="{{ school_class.pk }}"{% if selected_class == school_class.pk|stringformat:'s' %} selected{% endif %}>{{ school_class.school.name }} · {{ school_class.name }}</option>{% endfor %}</select></label>
+      
+      <label>Rolle<select name="role"><option value="">Alle Rollen</option>{% for value,label in filter_roles %}<option value="{{ value }}" {% if value == selected_role %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+      <label>Status<select name="status"><option value="">Alle Konten</option><option value="active" {% if selected_status == 'active' %}selected{% endif %}>Aktiv</option><option value="inactive" {% if selected_status == 'inactive' %}selected{% endif %}>Inaktiv</option></select></label>
+      <button class="button button-secondary" type="submit">Filtern</button>
+      {% if query or selected_school or selected_class or selected_role or selected_status %}<a class="button button-quiet" href="{% url 'role-people' %}">Filter zurücksetzen</a>{% endif %}
+    </form>
+    <label class="people-mobile-sort" for="people-mobile-sort">Sortieren
+      <select id="people-mobile-sort" data-mobile-sort="people-table">
+        <option value="">Sortierung auswählen</option>
+        <option value="name:asc">Person A–Z</option><option value="name:desc">Person Z–A</option>
+        <option value="email:asc">E-Mail A–Z</option><option value="email:desc">E-Mail Z–A</option>
+        <option value="school:asc">Schule A–Z</option><option value="school:desc">Schule Z–A</option>
+      </select>
+    </label>
+    <div class="table-scroll"><table class="admin-table" id="people-table" data-live-table><thead><tr><th><button type="button" data-sort-key="name">Person</button></th><th><button type="button" data-sort-key="email">E-Mail</button></th><th><button type="button" data-sort-key="school">Schule / Klasse</button></th><th>Rollen</th><th>Status</th><th><span class="sr-only">Aktion</span></th></tr></thead><tbody>
+      {% for account in users %}<tr data-table-row data-search="{{ account.person.first_name }} {{ account.person.last_name }} {{ account.email }} {% for membership in account.active_memberships %}{{ membership.school_class.school.name }} {{ membership.school_class.name }}{% endfor %}" data-sort-name="{{ account.person.last_name }} {{ account.person.first_name }}" data-sort-email="{{ account.email }}" data-sort-school="{% for membership in account.active_memberships %}{{ membership.school_class.school.name }} {{ membership.school_class.name }} {% endfor %}"><td data-label="Person"><strong>{% if account.person %}{{ account.person.first_name }} {{ account.person.last_name }}{% else %}{{ account.email }}{% endif %}</strong></td><td data-label="E-Mail">{{ account.email }}</td><td data-label="Schule / Klasse"><div class="table-stack">{% for membership in account.active_memberships %}<span>{{ membership.school_class.school.name }} · {{ membership.school_class.name }}</span>{% empty %}<span class="muted">Keine aktive Klassenzuordnung</span>{% endfor %}</div></td><td data-label="Rollen"><div class="table-chips">{% for assignment in account.active_roles %}<span>{{ assignment.get_role_display }}</span>{% empty %}<span class="muted">Keine Rolle</span>{% endfor %}</div></td><td data-label="Status">{% if account.is_active and not account.locked_at %}<span class="status-chip status-active">Aktiv</span>{% else %}<span class="status-chip status-inactive">Inaktiv</span>{% endif %}</td><td><a class="button button-secondary button-small" href="{% url 'role-people' %}?user={{ account.pk }}{{ filter_suffix }}">Person öffnen</a></td></tr>{% empty %}<tr><td colspan="6" class="empty-state">Keine Personen gefunden.</td></tr>{% endfor %}
+    </tbody></table></div><p class="empty-state" data-live-table-empty="people-table" hidden role="status">Keine Personen für diese Suche gefunden.</p>
+  </section>
+  {% endif %}
+  {% if selected_user %}<section class="settings-panel person-role-card"><header><div><p class="eyebrow">Ausgewählte Person</p><h2>{% if selected_user.person %}{{ selected_user.person.first_name }} {{ selected_user.person.last_name }}{% else %}{{ selected_user.email }}{% endif %}</h2><p>{{ selected_user.email }}</p></div>{% if selected_user.is_active and not selected_user.locked_at %}<span class="status-chip status-active">Aktiv</span>{% else %}<span class="status-chip status-inactive">Inaktiv</span>{% endif %}</header>
+    <div class="person-detail-grid"><section><h3>Kontaktdaten</h3><dl class="detail-list"><div><dt>E-Mail</dt><dd>{{ selected_user.email }}</dd></div><div><dt>Telefon</dt><dd>{{ selected_user.person.phone|default:'Nicht hinterlegt' }}</dd></div><div><dt>Adresse</dt><dd>{% if selected_user.person.street %}{{ selected_user.person.street }}, {{ selected_user.person.postal_code }} {{ selected_user.person.city }}{% else %}Nicht hinterlegt{% endif %}</dd></div></dl></section><section><h3>Schule und Klasse</h3><ul class="plain-item-list">{% for membership in selected_memberships %}<li><strong>{{ membership.school_class.school.name }}</strong><span>{{ membership.school_class.name }} · {{ membership.school_class.school_year.label }}</span></li>{% empty %}<li class="muted">Keine aktive Klassenzuordnung.</li>{% endfor %}</ul></section></div>
+    <div class="person-role-layout"><div><h3>Aktive Rollen</h3><ul class="management-list">{% for assignment in selected_assignments %}<li><div><strong>{{ assignment.get_role_display }}</strong><span>{% if assignment.school_class %}{{ assignment.school_class }}{% elif assignment.school %}{{ assignment.school }}{% else %}Portalweit{% endif %}</span></div><form method="post" data-confirm="Diese Rolle wirklich entziehen? Die Zugriffsrechte ändern sich sofort.">{% csrf_token %}<input type="hidden" name="action" value="revoke"><input type="hidden" name="assignment_id" value="{{ assignment.pk }}"><input type="hidden" name="user_id" value="{{ selected_user.pk }}"><button class="button button-danger button-small" type="submit">Entziehen</button></form></li>{% empty %}<li class="muted">Noch keine aktiven Rollen.</li>{% endfor %}</ul></div>
+      <form method="post" class="form-stack person-assignment-form">{% csrf_token %}
+        <h3>Rolle zuweisen</h3><p class="muted">Eine ausgewählte Klasse begrenzt die Rolle auf diese Klasse.</p>
+        <input type="hidden" name="action" value="assign">{{ assignment_form.user_id }}
+        {% for field in assignment_form.visible_fields %}<label for="{{ field.id_for_label }}">{{ field.label }}{{ field }}{{ field.errors }}</label>{% endfor %}
+        <footer class="form-actions"><a class="button button-secondary" href="{% url 'role-people' %}?user={{ selected_user.pk }}{{ filter_suffix }}">Abbrechen</a><button class="button button-primary" type="submit">Rolle zuweisen</button></footer>
+      </form>
+    </div>
+  </section>{% endif %}
+</section>
+{% endblock %}

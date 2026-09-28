@@ -52,8 +52,11 @@ def test_guardian_cannot_read_or_change_idle_timeout(client, guardian):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("value", ["", "0", "121", "1.5", "true"])
+@pytest.mark.parametrize("value", ["", "-1", "121", "1.5", "true"])
 def test_timeout_configuration_rejects_invalid_bounds(client, admin_user, value):
+    PortalConfigurationValue.objects.filter(
+        key__key="session_idle_timeout_minutes"
+    ).delete()
     client.force_login(admin_user)
     response = client.post(
         "/verwaltung/automatische-abmeldung/", {"idle_timeout_minutes": value}, secure=True
@@ -62,6 +65,26 @@ def test_timeout_configuration_rejects_invalid_bounds(client, admin_user, value)
     assert not PortalConfigurationValue.objects.filter(
         key__key="session_idle_timeout_minutes"
     ).exists()
+
+
+@pytest.mark.django_db
+def test_zero_disables_the_idle_timeout_in_browser_and_middleware(client, admin_user):
+    client.force_login(admin_user)
+    response = client.post(
+        "/verwaltung/automatische-abmeldung/", {"idle_timeout_minutes": "0"}, secure=True
+    )
+    assert response.status_code == 302
+    assert idle_timeout_minutes() == 0
+
+    session = client.session
+    session["idle_session_last_activity"] = 1_000
+    session.save()
+    with patch("klasse5e.core.middleware.time", return_value=99_999):
+        response = client.get("/verwaltung/automatische-abmeldung/", secure=True)
+
+    assert response.status_code == 200
+    assert b'data-idle-session-timeout="0"' in response.content
+    assert "idle_session_last_activity" not in client.session
 
 
 @pytest.mark.django_db

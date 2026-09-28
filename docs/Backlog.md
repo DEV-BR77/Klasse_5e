@@ -17,6 +17,91 @@ Qualitätsgate, ein kleiner Commit und die Backlog-Aktualisierung.
 | 1 | Rollenverwaltung und Familien-Datenschutz live abnehmen | GPT-5.6 Terra · hoch | Berechtigungen und sofortigen Zugriffsentzug im laufenden Portal prüfen. |
 | 2 | BL-18 Schulmanager-Online-Adapter live abnehmen | GPT-5.6 Terra · hoch | Technische Umsetzung ist ausgerollt; echte Schulmanager-Sitzung, Datenzuordnung und Produktivfreigabe stehen noch aus. |
 
+## Nach Go-Live: technischer UI-Feinschliff
+
+- [ ] **Django-Modellvisualisierung an die zentralen Formular- und
+  Layout-Komponenten angleichen.** Die technische Seite bleibt in der
+  Portalverwaltung erreichbar. Die Auswahl des App-Labels wird als verständliche
+  Vorauswahl der vorhandenen Apps (zum Beispiel `core` und `portal_adapters`)
+  umgesetzt, nicht als freies, leeres Textfeld. Filter, Auswahlfelder,
+  Kontrollkästchen, Beschriftungen und Aktionen werden vertikal sauber
+  ausgerichtet und verwenden dieselben zentralen Formular-Komponenten wie die
+  übrige Verwaltung. Die Umsetzung erfolgt bewusst erst nach Go-Live als
+  abschließender Feinschliff; sie ist keine Voraussetzung für die fachliche
+  Verwaltungsstrecke oder deren Abnahme.
+
+- [ ] **Pilotmeldungen zentral verwalten.** Der vorhandene Feedback-Dialog
+  speichert Kategorie, Beschreibung, aktuelle Seitenadresse und optional einen
+  Screenshot. In Einstellungen → Portalverwaltung erhält er nach der
+  fachlichen Verwaltungsstrecke eine berechtigte Verwaltungsansicht: Liste,
+  Filter offen/erledigt, Kategorie, Quelle, Zeitstempel, geschützter
+  Screenshotzugriff und nachvollziehbarer Statuswechsel. Die Anzahl offener
+  Meldungen allein ist keine ausreichende Verwaltungsfunktion.
+
+- [ ] **Systemstatus-Einstellungen ergänzen.** Unter Einstellungen →
+  Portalverwaltung wird neben der reinen Übersicht „Systemstatus“ eine eigene
+  Seite „Systemstatus-Einstellungen“ angelegt. Dort werden ausschließlich
+  technische Messwertquellen, überwachte Komponenten, Grenzwerte,
+  Aufbewahrungsdauer und Bereinigung gepflegt. Die Statusseite selbst bleibt
+  eine datensparsame Anzeige und enthält keine Familien-, Chat- oder Bilddaten.
+
+- [ ] **Menüstruktur nach der finalen Navigation pflegbar machen.** Nach der
+  Go-Live-Abnahme werden Ober- und Unterpunkte, ihre Sichtbarkeit sowie ihre
+  Reihenfolge zentral verwaltbar. Bis die Navigation fachlich final ist,
+  werden keine vorläufigen Menükonfigurationen als dauerhaftes
+  Verwaltungsmodell festgeschrieben.
+
+## Vor der nächsten Staging-Abnahme
+
+- [ ] **Adapter-Grundkonfiguration vor der schulischen Freigabe trennen.**
+  Ein zentraler Adapterkatalog definiert zuerst Adapter und unterstützte
+  Module ohne Schulbezug. Jedes Modul erhält ein eindeutiges Zugangsmodell:
+  kein Login, persönlicher Zugang des Kindes oder persönlicher Zugang eines
+  Elternteils. Erst danach wird der Adapter einer Schule und optional ihren
+  Klassen zugeordnet und freigegeben. Adapterkarten tragen den echten
+  Anbieternamen (beispielsweise WebUntis, itslearning, Schulmanager Online
+  oder MensaMax), nie irreführende Sammelbezeichnungen wie
+  „Schuldaten-Zugang“ oder „Lernplattform-Zugang“. „Eigenes Portal“ ist kein
+  regulärer Standardadapter, sondern ein separat gekennzeichneter Vorgang für
+  technische Prüfung. Die aktuelle, unmittelbar schulisch gebundene
+  Adapteranlage ersetzt diese fachliche Reihenfolge nicht.
+
+- [ ] **Adapterübersicht und Adapterdetail als echte Pflegeoberfläche bauen.**
+  Die Übersicht zeigt geprüfte Adapterdefinitionen und öffnet je Eintrag eine
+  bearbeitbare Detailkarte. Dort werden Anbieter, Beschreibung,
+  Schnittstellenart, Ziel-URL, unterstützte Module, notwendige Zugangsdaten,
+  Zugangsmodell und technische Prüfung gepflegt. „Name des Schuladapters“ wird
+  nicht als redundantes Freitextfeld verwendet. Katalog-Veröffentlichung,
+  Schul-/Klassenfreigabe und Verbindungstest werden getrennt dargestellt.
+
+- [ ] **Formular-Layout portalweit gegen den zentralen Komponentenvertrag
+  prüfen.** Inhalte von Karten dürfen nicht am Kartenrand beginnen. Formulare
+  verwenden den gemeinsamen Innenbereich, einheitliche Feldabstände und eine
+  Aktionsleiste mit Abbrechen links sowie primärer Aktion rechts; auf kleinen
+  Displays stehen die Aktionen vollbreit untereinander. Die Prüfung erfolgt
+  Seite für Seite als Teil der CSS-Abnahme, nicht durch Einzelkorrekturen ohne
+  Gesamtprüfung.
+
+## Nach dem nächsten gebündelten Staging-Rollout
+
+- [ ] **Registrierungen & Einladungen gemeinsam abnehmen.** Der Bereich bleibt
+  während der jetzigen Seitenbesprechung ausgeklammert. Erst nachdem die
+  übrigen Verwaltungsbereiche abgestimmt und zusammen nach Staging ausgerollt
+  sind, werden persönliche E-Mail-Einladungen, QR-Familieneinladungen und
+  neue Registrierungen als ein zusammenhängender Ablauf geprüft.
+
+- [ ] **Chatverwaltung gemeinsam abnehmen.** Chatübersicht mit Auswahl eines
+  Raums; die Raumkarte bündelt Allgemein, Gestaltung, Funktionen, Emojis &
+  Sticker sowie Aufbewahrung als Reiter. Die Gestaltung erlaubt freigegebene
+  raumspezifische Hintergründe, einschließlich einer Tafeldarstellung. Dieser
+  Bereich wird erst nach dem gebündelten Staging-Rollout wieder aufgenommen.
+
+- [ ] **CSS-Verwaltung als Designsystem abnehmen.** Die Administrationsseite
+  für freigegebene Farben, Gestaltungs-Tokens und Designoptionen wird erst
+  nach dem gebündelten Staging-Rollout besprochen und umgesetzt. Sie ist von
+  den zentralen CSS-Korrekturen getrennt, die für die Seitenabnahme selbst
+  erforderlich bleiben.
+
 ## Dringend
 
 - [x] **Schuldaten im Familienkontext ausrollen und prüfen.** WebUntis- und

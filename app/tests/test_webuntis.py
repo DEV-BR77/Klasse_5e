@@ -38,7 +38,7 @@ def test_school_adapter_endpoint_is_resolved_per_child(guardian, school_class):
     GuardianChildRelationship.objects.create(
         guardian_person=guardian.person,
         student_person=student,
-        relationship_type="father",
+        relationship_type="guardian",
         is_legal_guardian=True,
         may_view_student_profile=True,
         valid_from=timezone.localdate(),

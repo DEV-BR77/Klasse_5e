@@ -25,7 +25,7 @@ def test_guardian_content_event_and_withdrawal_flow(client, guardian, school_cla
     GuardianChildRelationship.objects.create(
         guardian_person=guardian.person,
         student_person=student_person,
-        relationship_type="mother",
+        relationship_type="guardian",
         is_legal_guardian=True,
         may_view_student_profile=True,
         may_manage_general_consents=True,
@@ -105,7 +105,7 @@ def test_guardian_content_event_and_withdrawal_flow(client, guardian, school_cla
     )
     assert Comment.objects.get().author == guardian
     assert Reservation.objects.get().user == guardian
-    assert family_label(guardian) == "Alex · Mutter von Kim"
+    assert family_label(guardian) == "Alex · Erziehungsberechtigte Person von Kim"
 
     decision.revoked_at = timezone.now()
     decision.save(update_fields=["revoked_at"])

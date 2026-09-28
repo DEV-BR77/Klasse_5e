@@ -25,6 +25,38 @@ class ChatRetentionCategory(models.Model):
         return f"{self.name} ({self.retention_days} Tage)"
 
 
+class ChatAsset(models.Model):
+    """Centrally managed emoji and sticker catalog used by every chat composer."""
+
+    class Kind(models.TextChoices):
+        EMOJI = "emoji", "Emoji"
+        STICKER = "sticker", "Sticker"
+
+    kind = models.CharField(max_length=12, choices=Kind.choices)
+    label = models.CharField(max_length=80)
+    value = models.CharField(
+        max_length=240,
+        blank=True,
+        help_text="Emoji-Zeichen oder ein sicherer Sticker-Text/Asset-Identifier.",
+    )
+    image = models.ImageField(upload_to="chat/stickers/opaque/", blank=True)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("kind", "sort_order", "label")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["kind", "label"], name="unique_chat_asset_kind_label"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.get_kind_display()}: {self.label}"
+
+
 class ChatRoom(models.Model):
     class Audience(models.TextChoices):
         GENERAL = "general", "Alle Klassenmitglieder"
@@ -69,6 +101,40 @@ class ChatRoom(models.Model):
             or self.event.school_year_id != self.school_year_id
         ):
             raise ValidationError("event_class_mismatch")
+
+
+class ChatRoomMember(models.Model):
+    """Optional explicit membership and moderation role for a group room.
+
+    Rooms without rows keep their audience-based access policy. As soon as a
+    room has explicit members, access is narrowed to those active members.
+    This lets administrators create small working groups without changing the
+    class-wide room model.
+    """
+
+    class Role(models.TextChoices):
+        MEMBER = "member", "Mitglied"
+        MODERATOR = "moderator", "Moderator"
+
+    room = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name="members")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="chat_room_memberships")
+    role = models.CharField(max_length=16, choices=Role.choices, default=Role.MEMBER)
+    active = models.BooleanField(default=True)
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="chat_members_added",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["user__person__first_name", "user__email"]
+        constraints = [
+            models.UniqueConstraint(fields=["room", "user"], name="unique_chat_room_member"),
+        ]
 
 
 class DirectConversation(models.Model):
@@ -123,6 +189,10 @@ class ChatMessage(models.Model):
     reply_to = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL)
     mentions = models.ManyToManyField(
         settings.AUTH_USER_MODEL, blank=True, related_name="chat_mentions"
+    )
+    sticker = models.ForeignKey(
+        ChatAsset, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="messages",
     )
     body = models.CharField(max_length=2000, blank=True)
     attachment = models.FileField(upload_to="chat/opaque/", blank=True)

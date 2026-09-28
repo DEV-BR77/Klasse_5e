@@ -10,16 +10,17 @@
     <a class="button button-secondary" href="{% url 'ui-more' %}">← Zum Menü</a>
   </header>
   <div class="card-grid">
-    {% if can_manage_roles %}<a class="content-card" href="{% url 'role-management' %}"><h2>Rollenverwaltung</h2><p>Portal-Admins, Elternvertretungen und den zugehörigen Chat verwalten.</p></a>{% endif %}
-    <a class="content-card" href="/admin/core/brandingasset/"><h2>Logos &amp; Branding</h2><p>Logos und Rechte verwalten.</p></a>
+    {% if can_manage_roles %}<a class="content-card" href="{% url 'role-management' %}"><h2>Rollenverwaltung</h2><p>Rollen vergeben, entziehen und den Elternvertreter-Chat je Klasse verwalten.</p></a><a class="content-card" href="{% url 'role-permissions' %}"><h2>Rollenberechtigungen</h2><p>Festlegen, welche Rollen welche Module und Aktionen verwenden dürfen.</p></a><a class="content-card" href="{% url 'role-people' %}"><h2>Personenverwaltung</h2><p>Personen suchen und ihre vollständige Personenkarte öffnen.</p></a>{% endif %}
+    <a class="content-card" href="{% url 'school-management' %}"><h2>Schulen &amp; Klassen</h2><p>Schulen, Klassen, Adapter und freigegebene Module in einer fachlichen Strecke verwalten.</p></a>
+    <a class="content-card" href="{% url 'portal-adapter-management' %}"><h2>Adapter &amp; Module</h2><p>Adapter je Schule einrichten, Module aktivieren und Klassenfreigaben pflegen.</p></a>
     <a class="content-card" href="{% url 'theme-management' %}"><h2>Themes</h2><p>Die vorbereiteten Designs prüfen und gezielt freigeben.</p></a>
     <a class="content-card" href="{% url 'menu-management' %}"><h2>Menüstruktur</h2><p>Gruppen, Sichtbarkeit, Texte und Reihenfolge anpassen.</p></a>
     <a class="content-card" href="{% url 'chat-retention-settings' %}"><h2>Chat-Aufbewahrung</h2><p>Automatische Löschregeln bewusst aktivieren, ändern oder ganz ausschalten.</p></a>
+    <a class="content-card" href="{% url 'chat-assets-settings' %}"><h2>Chat-Emojis &amp; Sticker</h2><p>Katalog, Reihenfolge, Sichtbarkeit und Inhalte zentral für alle Chats pflegen.</p></a>
     <a class="content-card" href="{% url 'session-timeout-settings' %}"><h2>Automatische Abmeldung</h2><p>Inaktivitätszeit für alle Sitzungen festlegen.</p></a>
     <a class="content-card" href="{% url 'monitoring-dashboard' %}"><h2>Systemstatus</h2><p>Verfügbarkeit, Speicher, Traffic und technische Meldungen prüfen.</p></a>
-    <a class="content-card" href="{% url 'role-management' %}"><h2>Rollen &amp; Elternvertretung</h2><p>Portal-Admins und Elternvertretungen verwalten.</p></a>
-    <a class="content-card" href="/admin/core/pilotreport/"><h2>Pilotmeldungen</h2><p>{{ pilot_reports }} offene Meldungen.</p></a>
-    <a class="content-card" href="/praesentation/"><h2>Portal-Präsentation</h2><p>Interne Vorstellung des Portals öffnen.</p></a>
+    <a class="content-card" href="{% url 'model-visualizer' %}"><h2>Django-Modellvisualisierung</h2><p>Modelle und Beziehungen grafisch prüfen und als JSON, Excel, CSV, TSV oder Markdown exportieren.</p></a>
+    <a class="content-card" href="{% url 'pilot-reports-management' %}"><h2>Pilotmeldungen</h2><p>{{ pilot_reports }} offene Meldungen. Quelle, Status, Zeitpunkt und sichere Beschreibung zentral prüfen.</p></a>
   </div>
 </section>
 {% endblock %}

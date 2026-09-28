@@ -11,13 +11,16 @@ from klasse5e.core.models import (
     SchoolClass,
     StudentProfile,
 )
-from klasse5e.core.policies import active_roles, has_active_membership
+from klasse5e.core.policies import has_active_membership
+from klasse5e.core.module_permissions import effective_module_roles, may_manage_module
 
 from .models import (
+    ChatAsset,
     ChatMessage,
     ChatReadState,
     ChatRetentionCategory,
     ChatRoom,
+    ChatRoomMember,
     DirectConversation,
 )
 from .safety import filter_chat_language
@@ -58,13 +61,19 @@ def _mentioned_users(room, body):
     users = users.select_related("person").distinct()
     found = []
     for candidate in users:
+        try:
+            require_room_access(candidate, room)
+        except PermissionDenied:
+            continue
         aliases = {candidate.person.first_name.strip(), candidate.person.chat_display_name.strip()}
         if any(alias and re.search(rf"(?<!\w)@{re.escape(alias)}(?!\w)", body, re.IGNORECASE) for alias in aliases):
             found.append(candidate)
     return found
 
 
-def require_room_access(user, room):
+def is_eligible_for_room_audience(user, room):
+    if not user.is_authenticated or not user.is_active or user.locked_at:
+        raise PermissionDenied
     direct = getattr(room, "direct_conversation", None)
     if direct:
         if (
@@ -73,15 +82,10 @@ def require_room_access(user, room):
         ):
             raise PermissionDenied
         return
-    is_portal_admin = user.is_superuser or RoleAssignment.objects.filter(
-        user=user,
-        active=True,
-        role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.SCHOOL_ADMIN, Role.CLASS_ADMIN],
-    ).filter(
-        models.Q(school_class=room.school_class)
-        | models.Q(school=room.school_class.school)
-        | models.Q(school__isnull=True, school_class__isnull=True)
-    ).exists()
+    is_portal_admin = user.is_superuser or bool(
+        effective_module_roles(user, "chat", "read", room.school_class)
+        & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.SCHOOL_ADMIN, Role.CLASS_ADMIN}
+    )
     if is_portal_admin:
         return
     if not has_active_membership(user, room.school_class):
@@ -117,10 +121,71 @@ def require_room_access(user, room):
             raise PermissionDenied
 
 
-def may_moderate(user, room):
-    return bool(
-        active_roles(user, room.school_class)
-        & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.MODERATOR}
+def require_room_access(user, room):
+    is_eligible_for_room_audience(user, room)
+    if getattr(room, "direct_conversation", None):
+        return
+    if room.members.filter(active=True).exists() and not room.members.filter(
+        user=user, active=True
+    ).exists():
+        is_portal_admin = user.is_superuser or bool(
+            effective_module_roles(user, "chat", "read", room.school_class)
+            & {Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN, Role.SCHOOL_ADMIN, Role.CLASS_ADMIN}
+        )
+        if not is_portal_admin:
+            raise PermissionDenied
+
+
+def may_moderate(user, room, *, owner_id=None):
+    if getattr(room, "direct_conversation", None):
+        # Report handlers may moderate a reported message without becoming
+        # participants or gaining access to the private conversation.
+        return may_manage_module(
+            user, "chat", "moderate", room.school_class,
+            legacy_roles={Role.DEPUTY_ADMIN}, owner_id=owner_id,
+        )
+    try:
+        require_room_access(user, room)
+    except PermissionDenied:
+        return False
+    if may_manage_module(
+        user, "chat", "moderate", room.school_class,
+        legacy_roles={Role.DEPUTY_ADMIN}, owner_id=owner_id,
+    ):
+        return True
+    return has_active_membership(user, room.school_class) and room.members.filter(
+        user=user, active=True, role=ChatRoomMember.Role.MODERATOR,
+    ).exists()
+
+
+def may_create_room(user, school_class):
+    return may_manage_module(
+        user, "chat", "create", school_class, owner_id=user.pk,
+        legacy_roles={Role.DEPUTY_ADMIN, Role.SCHOOL_ADMIN, Role.CLASS_ADMIN},
+    )
+
+
+def may_manage_room(user, room, action="edit"):
+    if getattr(room, "direct_conversation", None):
+        return False
+    try:
+        require_room_access(user, room)
+    except PermissionDenied:
+        return False
+    return may_manage_module(
+        user, "chat", action, room.school_class,
+        legacy_roles={Role.DEPUTY_ADMIN, Role.SCHOOL_ADMIN, Role.CLASS_ADMIN},
+    )
+
+
+def may_publish_message(user, room):
+    try:
+        require_room_access(user, room)
+    except PermissionDenied:
+        return False
+    return has_active_membership(user, room.school_class) or may_manage_module(
+        user, "chat", "publish", room.school_class, owner_id=user.pk,
+        legacy_roles={Role.DEPUTY_ADMIN, Role.SCHOOL_ADMIN, Role.CLASS_ADMIN},
     )
 
 
@@ -211,12 +276,24 @@ def room_title_for_user(room, user):
 
 
 @transaction.atomic
-def create_message(room, user, body, reply_to=None, attachment=None):
+def create_message(room, user, body, reply_to=None, attachment=None, sticker_id=None):
     require_room_access(user, room)
+    if not may_publish_message(user, room):
+        raise PermissionDenied
     if not room.is_open:
         raise ValidationError("room_closed")
     body = body.strip()
-    if (not body and not attachment) or len(body) > 2000:
+    sticker = None
+    if sticker_id:
+        raw_id = str(sticker_id)
+        if not raw_id.isascii() or not raw_id.isdecimal() or len(raw_id) > 18:
+            raise ValidationError("invalid_sticker")
+        sticker = ChatAsset.objects.filter(
+            pk=int(raw_id), kind=ChatAsset.Kind.STICKER, is_active=True
+        ).first()
+        if not sticker or not sticker.image:
+            raise ValidationError("invalid_sticker")
+    if (not body and not attachment and not sticker) or len(body) > 2000:
         raise ValidationError("invalid_body")
     if attachment:
         allowed = {"image/jpeg", "image/png", "image/webp", "application/pdf", "audio/webm", "audio/ogg", "audio/mp4"}
@@ -243,6 +320,7 @@ def create_message(room, user, body, reply_to=None, attachment=None):
         room=room,
         author=user,
         body=filtered_body,
+        sticker=sticker,
         reply_to=reply_to,
         attachment=attachment,
         attachment_name=attachment_name,

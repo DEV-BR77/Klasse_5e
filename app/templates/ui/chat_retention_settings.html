@@ -1,33 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="settings-page narrow-page">
-  <header class="page-heading">
-    <div>
-      <p class="eyebrow">Portalverwaltung</p>
-      <h1>Chat-Aufbewahrung</h1>
-      <p class="lede">Chats bleiben grundsätzlich erhalten. Eine automatische Löschung wird nur bewusst für eine Kategorie eingeschaltet.</p>
-    </div>
-    <a class="button button-secondary" href="{% url 'portal-management' %}">← Zur Verwaltung</a>
-  </header>
-
-  <div class="form-stack">
-    {% for category in retention_categories %}
-      <form method="post" class="settings-panel form-stack">
-        {% csrf_token %}
-        <input type="hidden" name="category_id" value="{{ category.id }}">
-        <header class="section-heading">
-          <div>
-            <h2>{{ category.name }}</h2>
-            <p class="muted">{% if category.intended_for_events %}Wird für automatisch angelegte Event-Chats verwendet.{% else %}Kann beim Anlegen eines Klassenchats gewählt werden.{% endif %}</p>
-          </div>
-          <label class="switch-field"><input type="checkbox" name="automatic_deletion_enabled" {% if category.automatic_deletion_enabled %}checked{% endif %}><span>Automatisch löschen</span></label>
-        </header>
-        <label>Löschfrist in Tagen<input type="number" name="retention_days" min="1" max="3650" value="{{ category.retention_days }}" inputmode="numeric"><small>Der Wert wird erst wirksam, wenn „Automatisch löschen“ eingeschaltet ist. Beim Ausschalten werden keine bestehenden Nachrichten entfernt.</small></label>
-        <footer class="form-actions"><a class="button button-secondary" href="{% url 'portal-management' %}">Abbrechen</a><button class="button button-primary" type="submit">Speichern</button></footer>
-      </form>
-    {% empty %}
-      <div class="empty-state"><h2>Noch keine Aufbewahrungskategorie</h2><p>Lege in der Verwaltung zuerst eine Kategorie für Klassen- oder Event-Chats an.</p></div>
-    {% endfor %}
-  </div>
+<section class="settings-page">
+  {% url 'chat-retention-settings' as retention_cancel_url %}
+  <header class="page-heading"><div><p class="eyebrow">Globale Komponenten · Chat</p><h1>Chat-Aufbewahrung</h1><p class="lede">Lege zentral fest, ob und wie lange Nachrichten aufbewahrt werden. Die Regel gilt für alle Chatseiten.</p></div><a class="button button-secondary" href="{% url 'portal-management' %}">← Verwaltung</a></header>
+  <div class="notice notice-warning"><strong>Wichtig:</strong> Nach dem Aktivieren können auch bestehende Nachrichten gelöscht werden, sobald sie älter als die eingestellte Frist sind. Prüfe die Frist vor dem Speichern. Nachrichten mit offenen Meldungen bleiben bis zur Prüfung ausgenommen.</div>
+  <section class="settings-stack">
+    {% for category in retention_categories %}<article class="settings-panel"><form method="post" class="form-stack">{% csrf_token %}<input type="hidden" name="category_id" value="{{ category.id }}"><header><div><p class="eyebrow">Aufbewahrungsregel</p><h2>{{ category.name }}</h2><p class="muted">{% if category.intended_for_events %}Für automatisch erzeugte Veranstaltungs-Chats.{% else %}Für manuell angelegte Klassenräume.{% endif %}</p></div><label class="switch-field"><input type="checkbox" name="automatic_deletion_enabled" {% if category.automatic_deletion_enabled %}checked{% endif %}><span>Automatisch löschen</span></label></header><div class="settings-details-body field-pair"><label>Löschfrist in Tagen<input type="number" name="retention_days" value="{{ category.retention_days }}" min="1" max="3650" required></label><p class="help-text">Erlaubt sind 1 bis 3.650 Tage.</p></div>{% include "ui/_form_actions.html" with cancel_url=retention_cancel_url %}</form></article>{% empty %}<div class="empty-state"><h2>Noch keine Regeln</h2><p>Es sind noch keine Chat-Aufbewahrungskategorien eingerichtet.</p></div>{% endfor %}
+  </section>
 </section>
 {% endblock %}

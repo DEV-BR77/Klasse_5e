@@ -3,7 +3,7 @@ import json
 import pytest
 from django.test import override_settings
 
-from klasse5e.core.models import MonitoringComponent, MonitoringSnapshot
+from klasse5e.core.models import MonitoringComponent, MonitoringConfiguration, MonitoringSnapshot
 
 
 @pytest.mark.django_db
@@ -42,3 +42,28 @@ def test_monitoring_state_is_idempotent(client):
     assert first.json()["changed"] is True
     assert second.json()["changed"] is False
     assert MonitoringComponent.objects.get(component="storage_media").state == "critical"
+
+
+@pytest.mark.django_db
+def test_monitoring_dashboard_exposes_and_saves_admin_configuration(client, admin_user):
+    client.force_login(admin_user)
+    response = client.get("/verwaltung/betrieb/", secure=True)
+    assert response.status_code == 200
+    assert b"Monitoring konfigurieren" in response.content
+    response = client.post(
+        "/verwaltung/betrieb/konfiguration/",
+        {
+            "source_windows_enabled": "on",
+            "warning_threshold_percent": "75",
+            "critical_threshold_percent": "92",
+            "retention_days": "45",
+            "cleanup_enabled": "on",
+        },
+        secure=True,
+    )
+    assert response.status_code == 302
+    configuration = MonitoringConfiguration.objects.get()
+    assert configuration.warning_threshold_percent == 75
+    assert configuration.critical_threshold_percent == 92
+    assert configuration.retention_days == 45
+    assert configuration.source_edge_enabled is False

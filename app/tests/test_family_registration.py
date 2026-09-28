@@ -183,7 +183,7 @@ def test_activation_links_existing_father_without_duplicate_account(
         max_uses=2,
     )
     access_code.existing_guardian = father
-    access_code.existing_guardian_relationship_type = RelationshipType.FATHER
+    access_code.existing_guardian_relationship_type = RelationshipType.GUARDIAN
     access_code.save(update_fields=["existing_guardian", "existing_guardian_relationship_type"])
     family = FamilyRegistrationRequest.objects.create(
         access_code=access_code,
@@ -238,7 +238,7 @@ def test_activation_links_existing_father_without_duplicate_account(
     relationship = GuardianChildRelationship.objects.get(
         guardian_person=father_person, student_person=child
     )
-    assert relationship.relationship_type == RelationshipType.FATHER
+    assert relationship.relationship_type == RelationshipType.GUARDIAN
     assert relationship.status == RelationshipStatus.VERIFIED
     assert relationship.is_legal_guardian
     assert Invitation.objects.filter(email="father@example.test").count() == 0

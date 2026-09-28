@@ -4,6 +4,65 @@ from django.db import models
 from klasse5e.core.models import Person, School, SchoolClass
 
 
+class PortalAdapterDefinition(models.Model):
+    """Reusable, school-independent definition of a reviewed provider."""
+
+    class IntegrationType(models.TextChoices):
+        IMPORT = "import", "Datenimport"
+        EXTERNAL = "external", "Externes Portal"
+        CUSTOM = "custom", "Individuelle Schnittstelle"
+
+    provider = models.CharField(max_length=32, unique=True)
+    label = models.CharField(max_length=120)
+    hint = models.CharField(max_length=300, blank=True)
+    default_url = models.URLField(blank=True)
+    integration_type = models.CharField(
+        max_length=16, choices=IntegrationType.choices, default=IntegrationType.IMPORT
+    )
+    is_published = models.BooleanField(default=False)
+    is_technically_reviewed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("label",)
+
+    def __str__(self):
+        return self.label
+
+
+class PortalAdapterDefinitionModule(models.Model):
+    """Reusable module contract offered by an adapter definition."""
+
+    class AccessModel(models.TextChoices):
+        NONE = "none", "Ohne persönlichen Zugang"
+        CHILD = "child", "Zugang je Kind"
+        FAMILY = "family", "Zugang je Familie"
+        EXTERNAL = "external", "Nur extern öffnen"
+
+    definition = models.ForeignKey(
+        PortalAdapterDefinition, on_delete=models.CASCADE, related_name="modules"
+    )
+    key = models.SlugField(max_length=80)
+    label = models.CharField(max_length=120)
+    description = models.CharField(max_length=300, blank=True)
+    access_model = models.CharField(
+        max_length=16, choices=AccessModel.choices, default=AccessModel.NONE
+    )
+    is_published = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ("label",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["definition", "key"], name="unique_adapter_definition_module"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.definition} · {self.label}"
+
+
 class PortalAdapter(models.Model):
     class Provider(models.TextChoices):
         WEBUNTIS = "webuntis", "WebUntis"
@@ -22,6 +81,13 @@ class PortalAdapter(models.Model):
     # integration data and must never be shared implicitly between schools.
     school = models.ForeignKey(
         School, on_delete=models.CASCADE, related_name="portal_adapters"
+    )
+    definition = models.ForeignKey(
+        PortalAdapterDefinition,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="school_integrations",
     )
     provider = models.CharField(max_length=32, choices=Provider.choices)
     name = models.CharField(max_length=120)
@@ -59,6 +125,13 @@ class PortalAdapterModule(models.Model):
         ERROR = "error", "Prüfung fehlgeschlagen"
 
     adapter = models.ForeignKey(PortalAdapter, on_delete=models.CASCADE, related_name="modules")
+    definition_module = models.ForeignKey(
+        PortalAdapterDefinitionModule,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="school_modules",
+    )
     key = models.SlugField(max_length=80)
     label = models.CharField(max_length=120)
     description = models.CharField(max_length=300, blank=True)
@@ -66,6 +139,12 @@ class PortalAdapterModule(models.Model):
     requires_child_credentials = models.BooleanField(
         default=False,
         help_text="Für dieses Modul hinterlegen Familien einen persönlichen Schulzugang beim Kind.",
+    )
+    access_model = models.CharField(
+        max_length=16,
+        choices=PortalAdapterDefinitionModule.AccessModel.choices,
+        default=PortalAdapterDefinitionModule.AccessModel.NONE,
+        help_text="Fachliches Zugangsmodell für Familien und Kinder.",
     )
     available_to_classes = models.ManyToManyField(
         SchoolClass,

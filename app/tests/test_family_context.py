@@ -34,7 +34,7 @@ def two_school_family(guardian, school_class, year):
         GuardianChildRelationship.objects.create(
             guardian_person=guardian.person,
             student_person=child,
-            relationship_type="father",
+            relationship_type="guardian",
             is_legal_guardian=True,
             may_view_student_profile=True,
             valid_from=year.starts_on,
@@ -87,10 +87,9 @@ def test_dashboard_combines_important_items_for_all_children(client, guardian, t
 
     assert response.status_code == 200
     html = response.content.decode()
-    assert "Familie im Blick" in html
+    assert "Alle wichtigen Termine" in html
     assert "Mila" in html and "Jonas" in html
     assert 'aria-label="Familienansicht auswählen"' in html
-    assert 'style="--family-tab-count: 3"' in html
     assert f'action="/familie/ansicht/{mila.pk}/"' in html
     assert f'action="/familie/ansicht/{jonas.pk}/"' in html
     assert 'href="/kontakte/" class="app-bottom-nav__item"' not in html

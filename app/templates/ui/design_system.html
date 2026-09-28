@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="settings-page design-system-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">Portalverwaltung · Design</p>
+      <h1>Designsystem &amp; CSS-Tokens</h1>
+      <p class="lede">Bearbeite die gemeinsamen Farb-, Typografie-, Abstands- und Oberflächenregeln. Es wird ausschließlich ein sicherer, begrenzter Tokensatz gespeichert – kein frei ausführbares CSS.</p>
+    </div>
+    <a class="button button-secondary" href="{% url 'theme-management' %}">← Themes verwalten</a>
+  </header>
+
+  <section class="settings-panel token-theme-panel">
+    <header><div><h2>Arbeitskopie auswählen</h2><p>Die Auswahl öffnet ein Theme zur Bearbeitung, aktiviert es aber nicht.</p></div></header>
+    <form method="get" class="settings-details-body token-theme-picker">
+      <label for="token-theme">Theme<select id="token-theme" name="theme">{% for theme in themes %}<option value="{{ theme.pk }}" {% if theme.pk == editing_theme.pk %}selected{% endif %}>{{ theme.name }} · {% if theme.is_active %}Freigegeben{% else %}Entwurf{% endif %}</option>{% endfor %}</select></label>
+      <button class="button button-secondary" type="submit">Theme öffnen</button>
+    </form>
+  </section>
+
+  {% if token_form %}
+  <form method="post" class="form-stack token-editor-form" data-token-editor>
+    {% csrf_token %}<input type="hidden" name="theme_id" value="{{ editing_theme.pk }}">
+    <section class="settings-panel">
+      <header><div><p class="eyebrow">Ausgewähltes Theme</p><h2>{{ editing_theme.name }}</h2><p>Die Vorschau reagiert sofort. Erst „Design-Tokens speichern“ übernimmt die Änderungen für dieses Theme.</p></div></header>
+      <div class="settings-details-body token-editor-body">
+        {{ token_form.non_field_errors }}
+        <div class="token-editor-grid">
+          <div class="token-editor-fields">
+            <fieldset class="token-field-group">
+              <legend>Marke und Flächen</legend>
+              {% for field in token_form %}{% if field.name == 'primary' or field.name == 'primary_dark' or field.name == 'primary_light' or field.name == 'accent' or field.name == 'background' or field.name == 'surface' %}<label for="{{ field.id_for_label }}"><span>{{ field.label }}</span>{{ field }}{{ field.errors }}</label>{% endif %}{% endfor %}
+            </fieldset>
+            <fieldset class="token-field-group">
+              <legend>Text, Linien und Zustände</legend>
+              {% for field in token_form %}{% if field.name == 'text' or field.name == 'text_muted' or field.name == 'border' or field.name == 'success' or field.name == 'warning' or field.name == 'danger' %}<label for="{{ field.id_for_label }}"><span>{{ field.label }}</span>{{ field }}{{ field.errors }}</label>{% endif %}{% endfor %}
+            </fieldset>
+            <fieldset class="token-field-group token-field-group--layout">
+              <legend>Typografie und Geometrie</legend>
+              {% for field in token_form %}{% if field.name == 'typography' or field.name == 'density' or field.name == 'radius' or field.name == 'shadow_strength' %}<label for="{{ field.id_for_label }}"><span>{{ field.label }}</span>{{ field }}{{ field.errors }}</label>{% endif %}{% endfor %}
+              <label class="compact-consent" for="{{ token_form.is_dark.id_for_label }}">{{ token_form.is_dark }}<span>{{ token_form.is_dark.label }}</span>{{ token_form.is_dark.errors }}</label>
+            </fieldset>
+          </div>
+
+          <aside class="token-specimen" data-token-specimen style="{{ editing_theme.css_variables }}" aria-label="Live-Vorschau der Design-Tokens">
+            <div><p class="eyebrow">Live-Vorschau · Beispieldaten</p><h2>Dein Schulalltag</h2><p>So wirken Navigation, Karten, Eingaben, Schaltflächen und Zustände zusammen.</p></div>
+            <nav class="token-specimen-nav" aria-label="Beispielnavigation"><a aria-current="page">Übersicht</a><a>Kalender</a><a>Chat</a></nav>
+            <article class="card"><h3>Klassenübersicht</h3><p>Eine Karte mit Text, Hintergrund, Rundungen und Schatten.</p><label>Beispielfeld<input placeholder="Eintrag eingeben" aria-label="Beispielfeld"></label></article>
+            <div class="token-state-grid" aria-label="Statusfarben"><span class="status-success">Erfolgreich</span><span class="status-warning">Hinweis</span><span class="status-error">Fehler</span></div>
+            <div class="form-actions"><button type="button" class="button button-secondary">Abbrechen</button><button type="button" class="button button-primary">Speichern</button></div>
+            <div class="token-contrast-report" data-token-contrast role="status"></div>
+          </aside>
+        </div>
+      </div>
+      <footer class="form-actions"><a class="button button-secondary" href="{% url 'design-system' %}?theme={{ editing_theme.pk }}">Abbrechen</a><button class="button button-primary" type="submit">Design-Tokens speichern</button></footer>
+    </section>
+  </form>
+  {% else %}
+    <div class="empty-state"><h2>Noch kein Theme vorhanden</h2><p>Lege zuerst ein Theme an.</p><a class="button button-primary" href="{% url 'theme-management' %}">Theme anlegen</a></div>
+  {% endif %}
+</section>
+{% endblock %}

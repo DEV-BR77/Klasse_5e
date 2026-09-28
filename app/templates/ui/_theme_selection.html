@@ -1,0 +1,20 @@
+<section class="settings-panel">
+  <header><div><h2>Design &amp; Themes</h2><p>Probiere ein Theme direkt auf dieser Seite aus. Gespeichert wird erst mit „Übernehmen“.</p></div>{% if can_manage_themes %}<a class="button button-secondary" href="{% url 'theme-management' %}">Themes verwalten</a>{% endif %}</header>
+  <div class="theme-grid compact-theme-grid">
+    {% for theme in themes %}
+    <article class="theme-choice {% if request.user.selected_theme_id == theme.id %}is-selected{% endif %}" style="--preview-primary:{{ theme.primary }};--preview-accent:{{ theme.accent }};--preview-bg:{{ theme.background }};--preview-surface:{{ theme.surface }};--preview-text:{{ theme.text }}">
+      <div class="theme-preview" aria-hidden="true"><div class="preview-bar"></div><div class="preview-body"><i></i><span></span><span></span><b></b></div></div>
+      <div><h3>{{ theme.name }}</h3><p>{{ theme.description }}</p>{% if request.user.selected_theme_id == theme.id %}<span class="status-chip">Aktuell ausgewählt</span>{% endif %}</div>
+      <div class="theme-choice-actions">
+        <button type="button" class="button button-primary" data-theme-preview data-theme-id="{{ theme.id }}" data-theme-name="{{ theme.name }}" data-theme-key="{{ theme.key }}" data-theme-mode="{% if theme.is_dark %}dark{% else %}light{% endif %}" data-theme-tokens="{{ theme.css_variables }}">Hier ausprobieren</button>
+        <a class="button button-secondary" href="{% url 'portal-theme-preview' theme_id=theme.id page='uebersicht' %}">Beispielseiten ansehen</a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+<form method="post" class="theme-preview-bar" data-theme-preview-bar hidden aria-label="Theme-Vorschau bestätigen">
+  {% csrf_token %}<input type="hidden" name="tab" value="themes"><input type="hidden" name="save_scope" value="themes"><input type="hidden" name="theme_id" data-theme-preview-id>
+  <p role="status"><strong data-theme-preview-name></strong><span>Nur Vorschau – noch nicht gespeichert.</span></p>
+  <div class="dialog-actions"><button type="button" class="button button-secondary" data-theme-preview-cancel>Abbrechen</button><button type="submit" class="button button-primary">Übernehmen</button></div>
+</form>

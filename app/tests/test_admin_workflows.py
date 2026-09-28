@@ -7,7 +7,7 @@ from klasse5e.core.models import FamilyAccessCode
 
 
 @pytest.mark.django_db
-def test_portal_admin_menu_exposes_school_class_and_family_workflows(
+def test_portal_admin_menu_exposes_grouped_settings_navigation(
     client, admin_user, school_class
 ):
     client.force_login(admin_user)
@@ -16,9 +16,14 @@ def test_portal_admin_menu_exposes_school_class_and_family_workflows(
 
     assert response.status_code == 200
     content = response.content.decode()
+    assert "Einstellungen" in content
     assert "Portalverwaltung" in content
-    assert "/admin/core/school/" in content
-    assert "/admin/core/schoolclass/" in content
+    assert "Schulverwaltung" in content
+    assert "Berechtigungen" in content
+    assert "Chat-Emojis &amp; Sticker" in content
+    assert "Designsystem &amp; CSS-Tokens" in content
+    assert "/verwaltung/schulen/" in content
+    assert "/verwaltung/adapter/" in content
     assert "/verwaltung/familien-einladungen/" in content
 
 

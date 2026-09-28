@@ -15,7 +15,7 @@
 .auth-divider{display:flex;align-items:center;gap:.75rem;margin:1.25rem 0;color:var(--color-text-muted);font-size:.85rem}.auth-divider::before,.auth-divider::after{content:"";height:1px;flex:1;background:var(--color-border)}
 .auth-aside{padding:clamp(1.5rem,4vw,3rem);display:flex;flex-direction:column;justify-content:center;background:var(--gradient-brand);color:#fff}
 .auth-aside .eyebrow{color:#dff9fc}.auth-aside h2{font-size:clamp(1.6rem,3vw,2.2rem);line-height:1.15;margin:.25rem 0 1rem}.auth-aside p{max-width:34rem}
-.auth-benefits{list-style:none;padding:0;margin:1.5rem 0 0;display:grid;gap:.75rem}.auth-benefits li{display:flex;gap:.6rem;align-items:start}.auth-benefits li::before{content:"✓";display:grid;place-items:center;flex:0 0 1.35rem;height:1.35rem;border-radius:50%;background:rgb(255 255 255/18%);font-weight:900}
+.auth-benefits{list-style:none;padding:0;margin:1.5rem 0 0;display:grid;gap:.75rem}.auth-benefits li{display:flex;gap:.6rem;align-items:start}.auth-benefit-icon{display:grid;place-items:center;flex:0 0 1.35rem;height:1.35rem;border-radius:50%;background:rgb(255 255 255/18%);font-weight:900}
 .auth-footer{text-align:center;padding:1rem;color:var(--color-text-muted);font-size:.85rem}
 @media(max-width:720px){.auth-main{grid-template-columns:1fr;margin:1.25rem auto}.auth-aside{display:none}.auth-card{padding:1.4rem}.auth-header{padding:.75rem 1rem}}
 @media(forced-colors:active){.auth-main,.auth-card form button,.auth-card #passkey_login{border:1px solid CanvasText}}

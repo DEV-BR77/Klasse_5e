@@ -4,17 +4,19 @@
   <form method="dialog" class="avatar-designer">
     <header class="dialog-head"><div><p class="eyebrow">Avatar-Designer</p><h2 id="avatar-designer-title">Deinen Avatar gestalten</h2><p class="muted">Wähle echte SVG-Bausteine. Die Vorschau ändert sich sofort.</p></div><button class="icon-button" value="cancel" aria-label="Schließen">×</button></header>
     <div class="avatar-designer__layout">
-      <section class="avatar-designer__preview-panel"><div class="avatar-designer__preview" data-avatar-preview aria-label="Vorschau des Avatars"></div><p class="muted">Mit „Übernehmen“ übernimmst du den Entwurf. Gespeichert wird er erst mit „Profilbild speichern“.</p></section>
+      <section class="avatar-designer__preview-panel"><div class="avatar-designer__preview" data-avatar-preview aria-label="Vorschau des Avatars"></div><p class="muted">Mit „Übernehmen“ übernimmst du den Entwurf. Dauerhaft gespeichert wird er erst mit dem Speichern-Button des Profils.</p></section>
       <section class="avatar-designer__choices" aria-label="Avatar-Bausteine">
         <div class="avatar-category-tabs" role="tablist" aria-label="Bereich wählen">
-          <button type="button" role="tab" aria-selected="true" aria-controls="avatar-panel-background" id="avatar-tab-background" data-avatar-category="background">Hintergrund</button>
+          <button type="button" role="tab" aria-selected="true" aria-controls="avatar-panel-pose" id="avatar-tab-pose" data-avatar-category="pose">Pose</button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="avatar-panel-background" id="avatar-tab-background" data-avatar-category="background">Hintergrund</button>
           <button type="button" role="tab" aria-selected="false" aria-controls="avatar-panel-body" id="avatar-tab-body" data-avatar-category="body">Kleidung</button>
           <button type="button" role="tab" aria-selected="false" aria-controls="avatar-panel-head" id="avatar-tab-head" data-avatar-category="head">Haare</button>
           <button type="button" role="tab" aria-selected="false" aria-controls="avatar-panel-face" id="avatar-tab-face" data-avatar-category="face">Gesicht</button>
           <button type="button" role="tab" aria-selected="false" aria-controls="avatar-panel-facial-hair" id="avatar-tab-facial-hair" data-avatar-category="facial-hair">Bart</button>
           <button type="button" role="tab" aria-selected="false" aria-controls="avatar-panel-accessories" id="avatar-tab-accessories" data-avatar-category="accessories">Extras</button>
         </div>
-        <fieldset class="avatar-option-group" id="avatar-panel-background" role="tabpanel" aria-labelledby="avatar-tab-background" data-avatar-panel="background"><legend>Hintergrund</legend><div class="avatar-swatch-grid" data-avatar-options="background"></div></fieldset>
+        <fieldset class="avatar-option-group" id="avatar-panel-pose" role="tabpanel" aria-labelledby="avatar-tab-pose" data-avatar-panel="pose"><legend>Stehend oder sitzend</legend><div class="avatar-option-grid" data-avatar-options="pose"></div></fieldset>
+        <fieldset class="avatar-option-group" id="avatar-panel-background" role="tabpanel" aria-labelledby="avatar-tab-background" data-avatar-panel="background" hidden><legend>Hintergrund</legend><div class="avatar-swatch-grid" data-avatar-options="background"></div></fieldset>
         <fieldset class="avatar-option-group" id="avatar-panel-body" role="tabpanel" aria-labelledby="avatar-tab-body" data-avatar-panel="body" hidden><legend>Körper &amp; Kleidung</legend><div class="avatar-option-grid" data-avatar-options="body"></div></fieldset>
         <fieldset class="avatar-option-group" id="avatar-panel-head" role="tabpanel" aria-labelledby="avatar-tab-head" data-avatar-panel="head" hidden><legend>Kopf &amp; Haare</legend><div class="avatar-option-grid" data-avatar-options="head"></div></fieldset>
         <fieldset class="avatar-option-group" id="avatar-panel-face" role="tabpanel" aria-labelledby="avatar-tab-face" data-avatar-panel="face" hidden><legend>Gesicht</legend><div class="avatar-option-grid" data-avatar-options="face"></div></fieldset>
@@ -22,6 +24,6 @@
         <fieldset class="avatar-option-group" id="avatar-panel-accessories" role="tabpanel" aria-labelledby="avatar-tab-accessories" data-avatar-panel="accessories" hidden><legend>Accessoires</legend><div class="avatar-option-grid" data-avatar-options="accessories"></div></fieldset>
       </section>
     </div>
-    <footer class="dialog-actions"><button class="button button-secondary" type="button" data-avatar-random>Zufällig</button><button class="button button-primary" value="default" data-avatar-apply>Übernehmen</button></footer>
+    <footer class="dialog-actions"><button class="button button-secondary" value="cancel">Abbrechen</button><button class="button button-secondary" type="button" data-avatar-random>Zufällig</button><button class="button button-primary" value="default" data-avatar-apply>Übernehmen</button></footer>
   </form>
 </dialog>

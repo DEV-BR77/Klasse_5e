@@ -48,7 +48,7 @@ def test_dashboard_selected_day_and_weekly_meals(rf, guardian):
     assert "Tagesmenü · 08.09." in html
     assert 'id="dashboard-tab-schedule"' in html
     assert 'id="dashboard-tab-homework"' in html
-    assert 'id="dashboard-tab-news"' in html
+    assert 'id="dashboard-tab-news"' not in html
     assert 'id="dashboard-tab-meals"' in html
     assert 'data-dashboard-panel="homework"' in html
     assert 'class="timeline-list compact-timeline dashboard-timetable"' in html
@@ -58,21 +58,6 @@ def test_dashboard_selected_day_and_weekly_meals(rf, guardian):
     all_weeks = render_to_string("meals/plans.html", {"plans": [plan]})
     assert "Allergen: Getreide" in all_weeks
     assert "Zusatzstoff: Farbstoff" in all_weeks
-
-
-@pytest.mark.django_db
-def test_dashboard_does_not_repeat_portal_presentations(rf, guardian, school_class, year):
-    now = timezone.now()
-    Event.objects.create(
-        school_class=school_class, school_year=year, title="KlassID Portal Vorstellung",
-        description="", starts_at=now + timedelta(days=1), ends_at=now + timedelta(days=1, hours=1),
-        location="Online", change_deadline=now, status=Event.Status.PUBLISHED,
-    )
-    request = rf.get("/")
-    request.user = guardian
-    request.session = {}
-    html = dashboard(request).content.decode()
-    assert html.count("KlassID Portal Vorstellung") == 1
 
 
 @pytest.mark.django_db

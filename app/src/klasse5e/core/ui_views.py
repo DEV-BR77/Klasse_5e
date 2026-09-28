@@ -27,7 +27,10 @@ from django.utils.http import content_disposition_header
 from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods, require_POST
 
-from klasse5e.chat.models import ChatReadState, ChatRetentionCategory, ChatRoom
+from klasse5e.chat.forms import ChatAssetForm
+from klasse5e.chat.models import ChatAsset, ChatReadState, ChatRetentionCategory, ChatRoom
+from klasse5e.chat.services import may_create_room, may_manage_room, may_publish_message
+from klasse5e.core.module_permissions import may_access_module
 from klasse5e.content.models import Post, ProtectedDocument, TeacherProfile
 from klasse5e.events.models import (
     ContributionCategory,
@@ -45,6 +48,7 @@ from klasse5e.events.services import (
     set_event_participation,
 )
 from klasse5e.events.spoonacular import SpoonacularUnavailable, search_food_items
+from klasse5e.events.policies import may_create_event, may_manage_event
 from klasse5e.itslearning.models import (
     ItslearningCalendarItem,
     ItslearningConnection,
@@ -54,7 +58,7 @@ from klasse5e.itslearning.models import (
 from klasse5e.itslearning.webdav import used_bytes
 from klasse5e.meals.models import MealDay, MealPlan
 from klasse5e.media.models import Gallery
-from klasse5e.media.policies import may_access_gallery, may_manage_gallery
+from klasse5e.media.policies import may_access_gallery, may_manage_gallery, may_create_gallery
 from klasse5e.portal_adapters.catalog import (
     ADAPTER_CATALOG,
     provider_definition,
@@ -63,13 +67,17 @@ from klasse5e.portal_adapters.catalog import (
 from klasse5e.portal_adapters.models import (
     ChildModuleConnection,
     PortalAdapter,
+    PortalAdapterDefinition,
+    PortalAdapterDefinitionModule,
     PortalAdapterModule,
     SchoolmanagerConnection,
 )
 from klasse5e.schedule.models import CalendarEntry, TimetableEntry
 from klasse5e.schoolmanager.crypto import encrypt as encrypt_schoolmanager
+from klasse5e.webuntis.extra_models import WebUntisSubjectMapping, WebUntisTeacherMapping
 from klasse5e.webuntis.models import (
     HomeworkProgress,
+    WebUntisAbsence,
     WebUntisConnection,
     WebUntisHomework,
     WebUntisLesson,
@@ -106,8 +114,7 @@ from .models import (
     UserAccount,
     UserNotification,
 )
-from .policies import active_roles, consent_state, family_label, visible_student_people
-from .presentation import is_portal_presentation_event
+from .policies import active_roles, consent_state, family_label, visible_student_people, has_active_membership
 from .registration import sanitized_profile_photo
 from .school_import import EXPECTED_FIELDS, detect_encoding, import_schools
 from .school_setup_transfer import apply_rows as apply_school_setup_rows
@@ -649,6 +656,14 @@ def dashboard(request):
         .values_list("last_successful_sync_at", flat=True)
         .first()
     )
+    dashboard_absences = list(
+        WebUntisAbsence.objects.filter(
+            connection__in=webuntis_connections,
+            ends_on__gte=day - timedelta(days=14),
+        )
+        .select_related("connection__student")
+        .order_by("-starts_on", "-pk")[:8]
+    )
     personal_lessons = _merge_adjacent_lessons(
         list(
             WebUntisLesson.objects.filter(connection__in=webuntis_connections, starts_at__date=day)
@@ -656,6 +671,22 @@ def dashboard(request):
             .order_by("starts_at")
         )
     )
+    adapter_ids = {connection.adapter_id for connection in webuntis_connections if connection.adapter_id}
+    subject_aliases = dict(
+        WebUntisSubjectMapping.objects.filter(adapter__isnull=True).values_list("code", "label")
+    )
+    subject_aliases.update(
+        WebUntisSubjectMapping.objects.filter(adapter_id__in=adapter_ids).values_list("code", "label")
+    )
+    teacher_aliases = dict(
+        WebUntisTeacherMapping.objects.filter(adapter__isnull=True).values_list("code", "label")
+    )
+    teacher_aliases.update(
+        WebUntisTeacherMapping.objects.filter(adapter_id__in=adapter_ids).values_list("code", "label")
+    )
+    for lesson in personal_lessons:
+        lesson.display_subject = subject_aliases.get(lesson.subject_code, lesson.subject)
+        lesson.display_teacher = teacher_aliases.get(lesson.teacher_code, lesson.teacher_label)
     manual_lessons = (
         TimetableEntry.objects.filter(school_class=school_class, weekday=day.isoweekday())
         if school_class
@@ -677,14 +708,13 @@ def dashboard(request):
         if dashboard_class_ids
         else []
     )
-    # A portal presentation belongs to the prominent "Aktuelles" stream.
-    # Do not render the same event a second time as an upcoming event below it.
-    presentation_events = [
-        event for event in upcoming_events if is_portal_presentation_event(event)
-    ]
-    upcoming_events = [
-        event for event in upcoming_events if not is_portal_presentation_event(event)
-    ]
+    posts = list(
+        Post.objects.filter(
+            school_class_id__in=dashboard_class_ids, status=Post.Status.PUBLISHED
+        ).order_by("-important", "-pinned", "-updated_at")[:3]
+        if dashboard_class_ids
+        else []
+    )
     homework = list(
         WebUntisHomework.objects.filter(
             connection__in=webuntis_connections,
@@ -704,6 +734,7 @@ def dashboard(request):
         item.is_completed = progress.get(
             (item.connection.student_id, item.external_fingerprint), False
         )
+        item.display_subject = subject_aliases.get(item.subject, item.subject)
     homework.sort(key=lambda item: (item.is_completed, item.due_on, item.subject.casefold()))
     homework = homework[:5]
     context.update(
@@ -730,9 +761,13 @@ def dashboard(request):
                 for offset in range(7)
             ],
             "webuntis_last_sync": webuntis_last_sync,
+            "dashboard_absences": dashboard_absences,
             "greeting": greeting,
             "lessons": personal_lessons if personal_lessons else manual_lessons,
             "homework": homework,
+            "manageable_homework_student_ids": set(
+                visible_student_people(request.user).values_list("pk", flat=True)
+            ),
             "family_children": family_children,
             "active_child": active_child,
             "family_overview_items": (
@@ -744,14 +779,7 @@ def dashboard(request):
             "events": upcoming_events[:2],
             "daily_meal": daily_meal,
             "meal_week": meal_week,
-            "posts": (
-                Post.objects.filter(
-                    school_class_id__in=dashboard_class_ids, status=Post.Status.PUBLISHED
-                ).order_by("-important", "-pinned", "-updated_at")[:3]
-                if dashboard_class_ids
-                else Post.objects.none()
-            ),
-            "presentation_events": presentation_events,
+            "posts": posts,
             "documents": (
                 ProtectedDocument.objects.filter(
                     school_class_id__in=dashboard_class_ids,
@@ -762,14 +790,20 @@ def dashboard(request):
             ),
             "chat_unread": _unread_count(request.user, school_class),
             "notification_counts": {
-                row["category"]: row["total"]
-                for row in UserNotification.objects.filter(
-                    user=request.user,
-                    school_class=school_class,
-                    read_at__isnull=True,
-                )
-                .values("category")
-                .annotate(total=Count("id"))
+                **{
+                    row["category"]: row["total"]
+                    for row in UserNotification.objects.filter(
+                        user=request.user,
+                        school_class=school_class,
+                        read_at__isnull=True,
+                    )
+                    .values("category")
+                    .annotate(total=Count("id"))
+                },
+                # The dashboard badges describe the entries currently shown,
+                # not stale unread notifications from an older sync.
+                "homework": len(homework),
+                "news": len(posts),
             },
             "itslearning_entries": ItslearningCalendarItem.objects.filter(
                 connection__in=portal_connections, starts_at__date=day
@@ -792,7 +826,7 @@ def homework_progress(request, homework_id):
         WebUntisHomework.objects.select_related("connection__student"),
         id=homework_id,
         connection__in=_webuntis_connections(request.user),
-        connection__student__user=request.user,
+        connection__student__in=visible_student_people(request.user),
     )
     completed = request.POST.get("completed", "").lower() in {"1", "true", "yes", "on"}
     progress, _ = HomeworkProgress.objects.update_or_create(
@@ -839,6 +873,8 @@ def calendar(request):
         if calendar_child and calendar_child.school_class
         else _class_or_404(request.user, request)
     )
+    if not may_access_module(request.user, "calendar", school_class):
+        raise Http404
     day = _day_from_request(request)
     # A day is the safe, readable default for every viewport and also works
     # without JavaScript.  The explicit week control keeps the full planning
@@ -882,9 +918,20 @@ def calendar(request):
 @require_http_methods(["GET", "POST"])
 def chat_overview(request):
     school_class = _class_or_404(request.user, request)
+    if not may_access_module(request.user, "chat", school_class):
+        raise Http404
     if request.method == "POST":
-        _require_portal_admin(request.user)
-        if request.POST.get("action") == "delete":
+        action = request.POST.get("action")
+        if action in {"save", "archive", "delete"}:
+            target = get_object_or_404(
+                ChatRoom, public_id=request.POST.get("room_id"), school_class=school_class,
+            )
+            required_action = "edit" if action == "save" else "moderate"
+            if not may_manage_room(request.user, target, required_action):
+                raise Http404
+        elif action not in (None, "", "create") or not may_create_room(request.user, school_class):
+            raise Http404
+        if action == "delete":
             room = get_object_or_404(
                 ChatRoom.objects.filter(direct_conversation__isnull=True).prefetch_related(
                     "messages"
@@ -907,6 +954,63 @@ def chat_overview(request):
             )
             messages.success(request, "Der Chatraum wurde gelöscht.")
             return redirect("ui-chat")
+        if action == "archive":
+            room = get_object_or_404(
+                ChatRoom.objects.filter(direct_conversation__isnull=True),
+                public_id=request.POST.get("room_id"),
+                school_class=school_class,
+            )
+            room.is_open = False
+            room.save(update_fields=["is_open"])
+            AuditEvent.objects.create(
+                actor=request.user,
+                action="chat.room.archived",
+                target_type="chat_room",
+                target_id=str(room.public_id),
+                metadata={"title": room.title},
+            )
+            messages.success(request, "Der Chatraum wurde archiviert.")
+            return redirect("ui-chat")
+        if action == "save":
+            room = get_object_or_404(
+                ChatRoom.objects.filter(direct_conversation__isnull=True),
+                public_id=request.POST.get("room_id"),
+                school_class=school_class,
+            )
+            title = request.POST.get("title", "").strip()[:120]
+            if not title:
+                messages.error(request, "Bitte gib einen Namen für den Chatraum an.")
+                return redirect("ui-chat")
+            retention_id = request.POST.get("retention_category", "").strip()
+            retention = ChatRetentionCategory.objects.filter(
+                pk=int(retention_id) if retention_id.isascii() and retention_id.isdecimal() else None,
+                is_active=True,
+                intended_for_events=False,
+            ).first() if retention_id else None
+            appearance = request.POST.get("appearance", ChatRoom.Appearance.STANDARD)
+            audience = request.POST.get("audience", ChatRoom.Audience.GENERAL)
+            is_open = request.POST.get("is_open") == "on"
+            if is_open != room.is_open and not may_manage_room(request.user, room, "moderate"):
+                raise Http404
+            if appearance not in ChatRoom.Appearance.values:
+                appearance = ChatRoom.Appearance.STANDARD
+            if audience not in ChatRoom.Audience.values:
+                audience = ChatRoom.Audience.GENERAL
+            room.title = title
+            room.retention_category = retention
+            room.appearance = appearance
+            room.audience = audience
+            room.is_open = is_open
+            room.save(update_fields=["title", "retention_category", "appearance", "audience", "is_open"])
+            AuditEvent.objects.create(
+                actor=request.user,
+                action="chat.room.updated",
+                target_type="chat_room",
+                target_id=str(room.public_id),
+                metadata={"title": room.title, "appearance": room.appearance, "audience": room.audience, "is_open": room.is_open},
+            )
+            messages.success(request, "Der Chatraum wurde gespeichert.")
+            return redirect("ui-chat-room", room_id=room.public_id)
         title = request.POST.get("title", "").strip()[:120]
         if title:
             retention_id = request.POST.get("retention_category", "").strip()
@@ -937,6 +1041,20 @@ def chat_overview(request):
             )
             messages.success(request, "Der Chatraum wurde angelegt.")
         return redirect("ui-chat")
+    room_rows = _chat_room_rows(request.user, school_class)
+    context = _shared(request, "Chat", "chat")
+    context["can_create_chat"] = may_create_room(request.user, school_class)
+    context["room_rows"] = room_rows
+    context["retention_categories"] = ChatRetentionCategory.objects.filter(
+        is_active=True, intended_for_events=False
+    )
+    context["appearance_choices"] = ChatRoom.Appearance.choices
+    context["audience_choices"] = ChatRoom.Audience.choices
+    return render(request, "ui/chat_overview.html", context)
+
+
+def _chat_room_rows(user, school_class):
+    """Build the same accessible conversation list for overview and detail pages."""
     from klasse5e.chat.services import require_room_access, room_title_for_user
 
     rooms = (
@@ -947,41 +1065,38 @@ def chat_overview(request):
         )
         .order_by("event_id", "title")
     )
-    room_rows = []
+    rows = []
     for room in rooms:
         try:
-            require_room_access(request.user, room)
+            require_room_access(user, room)
         except PermissionDenied:
             continue
-        state = ChatReadState.objects.filter(room=room, user=request.user).first()
-        unread = room.messages.exclude(author=request.user)
+        state = ChatReadState.objects.filter(room=room, user=user).first()
+        visible_messages = room.messages.filter(hidden_at__isnull=True, withdrawn_at__isnull=True)
+        unread = visible_messages.exclude(author=user)
         if state:
             unread = unread.filter(created_at__gt=state.last_read_at)
-        room_rows.append(
+        rows.append(
             {
                 "room": room,
-                "display_title": room_title_for_user(room, request.user),
+                "display_title": room_title_for_user(room, user),
                 "is_direct": bool(getattr(room, "direct_conversation", None)),
+                "can_edit": may_manage_room(user, room),
+                "can_manage": may_manage_room(user, room, "moderate"),
                 "unread": unread.count(),
-                "last_message": room.messages.select_related("author__person")
+                "last_message": visible_messages.select_related("author__person")
                 .order_by("-created_at")
                 .first(),
             }
         )
-    context = _shared(request, "Chat", "chat")
-    context["room_rows"] = room_rows
-    context["retention_categories"] = ChatRetentionCategory.objects.filter(
-        is_active=True, intended_for_events=False
-    )
-    context["appearance_choices"] = ChatRoom.Appearance.choices
-    context["audience_choices"] = ChatRoom.Audience.choices
-    return render(request, "ui/chat_overview.html", context)
+    return rows
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def chat_room(request, room_id):
     room = get_object_or_404(ChatRoom, public_id=room_id)
+    composer_error = ""
     from klasse5e.chat.services import require_room_access, room_title_for_user
 
     try:
@@ -989,17 +1104,77 @@ def chat_room(request, room_id):
     except PermissionDenied:
         raise Http404 from None
     if request.method == "POST":
+        if request.POST.get("action") in {"member_add", "member_remove", "member_role", "member_reset"}:
+            if not may_manage_room(request.user, room, "moderate"):
+                raise Http404
+            from klasse5e.chat.models import ChatRoomMember
+
+            if getattr(room, "direct_conversation", None):
+                raise Http404
+            if request.POST.get("action") == "member_reset":
+                room.members.filter(active=True).update(active=False, updated_at=timezone.now())
+                AuditEvent.objects.create(actor=request.user, action="chat.room.members_reset", target_type="chat_room", target_id=str(room.public_id))
+                messages.success(request, "Der Raum verwendet wieder seine Zielgruppe statt einer Mitgliederauswahl.")
+                return redirect("ui-chat-room", room_id=room.public_id)
+            member_user_id = request.POST.get("user_id", "")
+            if not member_user_id.isascii() or not member_user_id.isdecimal() or len(member_user_id) > 18:
+                raise Http404
+            member = ChatRoomMember.objects.filter(room=room, user_id=member_user_id).first()
+            if request.POST.get("action") == "member_remove":
+                if member and member.active and room.members.filter(active=True).count() == 1:
+                    messages.error(request, "Das letzte Mitglied kann nicht einzeln entfernt werden: Das würde den Raum für die ganze Zielgruppe öffnen. Verwende dafür ausdrücklich ‚Mitgliederauswahl aufheben‘.")
+                elif member:
+                    member.active = False
+                    member.save(update_fields=["active", "updated_at"])
+                    AuditEvent.objects.create(actor=request.user, action="chat.room.member_removed", target_type="chat_room", target_id=str(room.public_id), metadata={"user_id": str(member.user_id)})
+                    messages.success(request, "Das Mitglied wurde aus dem Chatraum entfernt.")
+            else:
+                candidate = UserAccount.objects.filter(pk=member_user_id).first()
+                from klasse5e.chat.services import is_eligible_for_room_audience
+                try:
+                    if not candidate:
+                        raise PermissionDenied
+                    is_eligible_for_room_audience(candidate, room)
+                    allowed = True
+                except PermissionDenied:
+                    allowed = False
+                if not allowed:
+                    messages.error(request, "Dieses Konto gehört nicht zur Zielgruppe dieses Chatraums.")
+                else:
+                    role = request.POST.get("role", ChatRoomMember.Role.MEMBER)
+                    if role not in ChatRoomMember.Role.values:
+                        role = ChatRoomMember.Role.MEMBER
+                    if member:
+                        member.role = role
+                        member.active = True
+                        member.added_by = request.user
+                        member.save(update_fields=["role", "active", "added_by", "updated_at"])
+                    else:
+                        ChatRoomMember.objects.create(room=room, user_id=member_user_id, role=role, added_by=request.user)
+                    AuditEvent.objects.create(actor=request.user, action="chat.room.member_updated", target_type="chat_room", target_id=str(room.public_id), metadata={"user_id": str(member_user_id), "role": role})
+                    messages.success(request, "Die Chatraum-Mitglieder wurden gespeichert.")
+            return redirect("ui-chat-room", room_id=room.public_id)
         from klasse5e.chat.services import create_message
 
-        create_message(
-            room, request.user, request.POST.get("body", ""), None, request.FILES.get("attachment")
-        )
-        return redirect("ui-chat-room", room_id=room.public_id)
+        try:
+            create_message(
+                room, request.user, request.POST.get("body", ""), None, request.FILES.get("attachment"),
+                request.POST.get("sticker_id"),
+            )
+        except ValidationError as exc:
+            composer_error = {
+                "room_closed": "Dieser Raum ist archiviert. Du kannst hier nicht mehr schreiben.",
+                "invalid_body": "Bitte eine Nachricht mit höchstens 2000 Zeichen oder einen Anhang auswählen.",
+                "invalid_attachment": "Der Anhang ist ungültig. Erlaubt sind Bilder, PDF und Audio bis 8 MB.",
+                "invalid_sticker": "Dieser Sticker ist nicht mehr verfügbar. Bitte wähle einen anderen.",
+            }.get(exc.messages[0], "Die Nachricht konnte nicht gespeichert werden. Bitte prüfe deine Eingaben.")
+        else:
+            return redirect("ui-chat-room", room_id=room.public_id)
     ChatReadState.objects.update_or_create(
         room=room, user=request.user, defaults={"last_read_at": timezone.now()}
     )
     chat_messages = list(
-        room.messages.select_related("author__person", "reply_to__author__person")
+        room.messages.select_related("author__person", "reply_to__author__person", "sticker")
         .order_by("created_at")
     )
     direct = getattr(room, "direct_conversation", None)
@@ -1017,19 +1192,54 @@ def chat_room(request, room_id):
             .distinct()
         ]
     context = _shared(request, room_title_for_user(room, request.user), "chat")
+    from klasse5e.chat.models import ChatRoomMember
+    from klasse5e.chat.services import may_moderate
+    for message in chat_messages:
+        message.can_moderate = may_moderate(request.user, room, owner_id=message.author_id) and (
+            not direct or message.reports.filter(resolved_at__isnull=True).exists()
+        )
+    explicit_members = list(
+        room.members.filter(active=True).select_related("user__person")
+    ) if not direct else []
+    member_candidates = list(
+        Person.objects.filter(
+            classmembership__school_class=room.school_class,
+            classmembership__status="active",
+            user__isnull=False,
+        ).exclude(user=request.user).select_related("user").distinct().order_by("first_name", "last_name")
+    ) if not direct else []
     context.update(
         {
+            "room_rows": _chat_room_rows(request.user, room.school_class),
+            "retention_categories": ChatRetentionCategory.objects.filter(
+                is_active=True, intended_for_events=False
+            ),
+            "appearance_choices": ChatRoom.Appearance.choices,
+            "audience_choices": ChatRoom.Audience.choices,
             "room": room,
+            "composer_error": composer_error,
+            "composer_body": request.POST.get("body", "") if composer_error else "",
             "room_title": room_title_for_user(room, request.user),
             "is_direct": bool(direct),
             "chat_messages": chat_messages,
             "chat_poll_url": reverse("chat-messages", kwargs={"room_id": room.public_id}),
             "chat_latest_at": chat_messages[-1].created_at if chat_messages else None,
-            "emojis": "😀 😄 😂 😊 😍 🥳 😎 🤔 👍 👏 🙌 💪 ❤️ 🎉 🚲 ⚽ 📚 ✏️".split(),
+            "chat_assets": ChatAsset.objects.filter(is_active=True),
+            "emojis": list(
+                ChatAsset.objects.filter(kind=ChatAsset.Kind.EMOJI, is_active=True)
+                .order_by("sort_order", "label")
+                .values_list("value", flat=True)
+            ) or "😀 😄 😂 😊 😍 🥳 😎 🤔 👍 👏 🙌 💪 ❤️ 🎉 🚲 ⚽ 📚 ✏️".split(),
             "mention_names": mention_names,
+            "chat_members": explicit_members,
+            "chat_member_candidates": member_candidates,
+            "chat_member_roles": ChatRoomMember.Role.choices,
+            "can_create_chat": may_create_room(request.user, room.school_class),
+            "can_manage_chat_members": may_manage_room(request.user, room, "moderate"),
+            "can_publish_chat": may_publish_message(request.user, room),
         }
     )
-    return render(request, "ui/chat_room.html", context)
+    return render(request, "ui/chat_room.html", context, status=400 if composer_error else 200)
 
 
 @login_required
@@ -1114,6 +1324,102 @@ def portal_management(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+def pilot_reports_management(request):
+    """Review pilot feedback within the administrator's school scope."""
+
+    _require_portal_admin(request.user)
+    manageable_classes = _manageable_classes(request.user)
+    reports = PilotReport.objects.filter(school_class__in=manageable_classes).select_related(
+        "reporter", "school_class", "school_class__school"
+    )
+    if request.method == "POST":
+        report = get_object_or_404(reports, pk=request.POST.get("report_id"))
+        action = request.POST.get("action")
+        if action == "resolve":
+            report.resolved_at = timezone.now()
+            report.save(update_fields=["resolved_at"])
+            messages.success(request, "Meldung als erledigt markiert.")
+        elif action == "reopen":
+            report.resolved_at = None
+            report.save(update_fields=["resolved_at"])
+            messages.success(request, "Meldung wieder geöffnet.")
+        return redirect("pilot-reports-management")
+    status = request.GET.get("status", "open")
+    if status == "resolved":
+        reports = reports.filter(resolved_at__isnull=False)
+    elif status != "all":
+        reports = reports.filter(resolved_at__isnull=True)
+    context = _shared(request, "Pilotmeldungen", "management")
+    context.update(
+        {
+            "pilot_reports": reports,
+            "pilot_report_status": status,
+        }
+    )
+    return render(request, "ui/pilot_reports_management.html", context)
+
+
+@login_required
+def pilot_report_screenshot(request, report_id):
+    """Serve a pilot screenshot only to administrators of its school scope."""
+
+    _require_portal_admin(request.user)
+    report = get_object_or_404(
+        PilotReport.objects.filter(school_class__in=_manageable_classes(request.user)),
+        pk=report_id,
+    )
+    if not report.screenshot:
+        raise Http404("Für diese Meldung ist kein Screenshot gespeichert.")
+    response = FileResponse(report.screenshot.open("rb"), content_type="image/*")
+    response["Content-Disposition"] = content_disposition_header(
+        False, Path(report.screenshot.name).name
+    )
+    return response
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def chat_assets_settings(request):
+    _require_portal_admin(request.user)
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "delete":
+            from django.db.models.deletion import ProtectedError
+
+            asset = get_object_or_404(ChatAsset, pk=request.POST.get("asset_id"))
+            image_name = asset.image.name
+            try:
+                asset.delete()
+            except ProtectedError:
+                messages.error(request, "Dieser Sticker wird bereits in Nachrichten verwendet. Deaktiviere ihn stattdessen.")
+            else:
+                if image_name:
+                    asset.image.storage.delete(image_name)
+                messages.success(request, "Das Chat-Element wurde entfernt.")
+        elif action == "save":
+            asset = get_object_or_404(ChatAsset, pk=request.POST.get("asset_id")) if request.POST.get("asset_id") else ChatAsset()
+            previous_image = asset.image.name
+            form = ChatAssetForm(request.POST, request.FILES, instance=asset)
+            if asset.pk and asset.messages.exists() and request.FILES.get("image"):
+                form.add_error("image", "Ein bereits versendeter Grafik-Sticker bleibt unverändert. Lege für ein neues Bild einen neuen Sticker an.")
+            if not form.is_valid():
+                context = _shared(request, "Chat-Element bearbeiten", "management")
+                context.update(asset_form=form, editing_asset=asset)
+                return render(request, "ui/chat_asset_form.html", context, status=400)
+            saved = form.save()
+            if previous_image and previous_image != saved.image.name:
+                saved.image.storage.delete(previous_image)
+            messages.success(request, "Das Chat-Element wurde gespeichert.")
+        else:
+            raise Http404
+        return redirect("chat-assets-settings")
+    context = _shared(request, "Chat-Elemente", "management")
+    context["chat_assets"] = ChatAsset.objects.all()
+    return render(request, "ui/chat_assets_settings.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
 def session_timeout_settings(request):
     """Configure one globally enforced timeout, never scoped to an individual class."""
 
@@ -1122,11 +1428,11 @@ def session_timeout_settings(request):
         try:
             minutes = int(request.POST.get("idle_timeout_minutes", ""))
         except (TypeError, ValueError):
-            minutes = 0
-        if not MIN_IDLE_TIMEOUT_MINUTES <= minutes <= MAX_IDLE_TIMEOUT_MINUTES:
+            minutes = None
+        if minutes is None or not MIN_IDLE_TIMEOUT_MINUTES <= minutes <= MAX_IDLE_TIMEOUT_MINUTES:
             messages.error(
                 request,
-                f"Bitte gib eine ganze Zahl zwischen {MIN_IDLE_TIMEOUT_MINUTES} und {MAX_IDLE_TIMEOUT_MINUTES} Minuten an.",
+                f"Bitte gib 0 (keine automatische Abmeldung) oder eine ganze Zahl zwischen 1 und {MAX_IDLE_TIMEOUT_MINUTES} Minuten an.",
             )
             return redirect("session-timeout-settings")
         else:
@@ -1150,7 +1456,7 @@ def session_timeout_settings(request):
                 metadata={"minutes": minutes},
             )
             messages.success(request, "Automatische Abmeldung gespeichert.")
-            return redirect("session-timeout-settings")
+            return redirect("portal-management")
     context = _shared(request, "Automatische Abmeldung", "management")
     context.update(
         {
@@ -1463,6 +1769,53 @@ def school_detail(request, school_id):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+def school_class_detail(request, class_id):
+    """Edit one class and its school-approved module availability."""
+
+    _require_portal_admin(request.user)
+    school_class = get_object_or_404(_manageable_classes(request.user), pk=class_id)
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "save_class":
+            school_class.name = request.POST.get("name", "").strip()[:64] or school_class.name
+            school_class.display_name = request.POST.get("display_name", "").strip()[:100]
+            school_class.code = request.POST.get("code", "").strip()[:64]
+            school_class.grade_level = request.POST.get("grade_level", "").strip()[:32]
+            school_class.save(update_fields=["name", "display_name", "code", "grade_level"])
+            messages.success(request, "Klassenstammdaten gespeichert.")
+        elif action == "toggle_module":
+            module = get_object_or_404(
+                PortalAdapterModule,
+                pk=request.POST.get("module_id"),
+                adapter__school=school_class.school,
+            )
+            assigned = module.available_to_classes.filter(pk=school_class.pk).exists()
+            if assigned:
+                module.available_to_classes.remove(school_class)
+            else:
+                module.available_to_classes.add(school_class)
+            messages.success(
+                request,
+                f"{module.label} für diese Klasse {'freigegeben' if not assigned else 'entfernt'}.",
+            )
+        return redirect("school-class-detail", class_id=school_class.pk)
+    modules = (
+        PortalAdapterModule.objects.filter(adapter__school=school_class.school)
+        .select_related("adapter", "adapter__definition")
+        .prefetch_related("available_to_classes")
+        .order_by("adapter__name", "label")
+    )
+    module_rows = [
+        {"module": module, "assigned": module.available_to_classes.filter(pk=school_class.pk).exists()}
+        for module in modules
+    ]
+    context = _shared(request, school_class.display_name or school_class.name, "management")
+    context.update({"school_class": school_class, "module_rows": module_rows})
+    return render(request, "ui/school_class_detail.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
 def school_catalog_import(request):
     """Preview a bounded set of matching CSV records before importing them."""
 
@@ -1656,6 +2009,7 @@ def portal_adapter_management(request):
             messages.error(request, "Bitte wähle einen bekannten Adapter aus.")
             return redirect("portal-adapter-management")
         definition = provider_definition(provider)
+        adapter_definition = PortalAdapterDefinition.objects.filter(provider=provider).first()
         name = request.POST.get("name", "").strip()[:120] or definition["label"]
         school = (
             _manageable_schools(request.user).filter(pk=request.POST.get("school_id")).first()
@@ -1668,6 +2022,7 @@ def portal_adapter_management(request):
             name=name,
             school=school,
             defaults={
+                "definition": adapter_definition,
                 "base_url": definition["default_url"],
                 "requires_child_credentials": request.POST.get("requires_child_credentials")
                 == "on",
@@ -1689,14 +2044,80 @@ def portal_adapter_management(request):
             messages.info(request, "Dieser Adapter ist für die Schule bereits vorhanden.")
         return redirect("portal-adapter-detail", adapter_id=adapter.pk)
     adapters = _manageable_portal_adapters(request.user).prefetch_related("modules")
+    selected_school_id = request.GET.get("school_id", "").strip()
+    selected_school = (
+        _manageable_schools(request.user).filter(pk=selected_school_id).first()
+        if selected_school_id.isdigit()
+        else None
+    )
     context = _shared(request, "Schulportal-Adapter", "management")
     context.update(
         {
             "adapters": adapters,
+            "adapter_definitions": PortalAdapterDefinition.objects.filter(
+                is_published=True
+            ).prefetch_related("modules"),
             "adapter_catalog": ADAPTER_CATALOG.items(),
+            "manageable_schools": _manageable_schools(request.user),
+            "selected_school": selected_school,
         }
     )
     return render(request, "ui/portal_adapter_management.html", context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def portal_adapter_definition_detail(request, definition_id):
+    _require_portal_admin(request.user)
+    definition = get_object_or_404(PortalAdapterDefinition, pk=definition_id)
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "save_definition":
+            definition.label = request.POST.get("label", "").strip()[:120] or definition.label
+            definition.hint = request.POST.get("hint", "").strip()[:300]
+            definition.default_url = request.POST.get("default_url", "").strip()[:200]
+            definition.integration_type = request.POST.get(
+                "integration_type", definition.integration_type
+            )
+            definition.is_published = request.POST.get("is_published") == "on"
+            definition.is_technically_reviewed = request.POST.get("is_technically_reviewed") == "on"
+            definition.save()
+            messages.success(request, "Adapterdefinition gespeichert.")
+        elif action in {"save_module", "add_module"}:
+            module = (
+                get_object_or_404(
+                    PortalAdapterDefinitionModule,
+                    pk=request.POST.get("module_id"),
+                    definition=definition,
+                )
+                if action == "save_module"
+                else PortalAdapterDefinitionModule(definition=definition)
+            )
+            module.key = slugify(request.POST.get("key", "") or request.POST.get("label", ""))[:80]
+            module.label = request.POST.get("label", "").strip()[:120]
+            module.description = request.POST.get("description", "").strip()[:300]
+            module.access_model = request.POST.get(
+                "access_model", PortalAdapterDefinitionModule.AccessModel.NONE
+            )
+            module.is_published = request.POST.get("is_published") == "on"
+            if not module.key or not module.label:
+                messages.error(request, "Technische Kennung und Bezeichnung sind erforderlich.")
+            elif definition.modules.exclude(pk=module.pk).filter(key=module.key).exists():
+                messages.error(request, "Diese Modulkennung ist in der Definition bereits vorhanden.")
+            else:
+                module.save()
+                messages.success(request, "Moduldefinition gespeichert.")
+        return redirect("portal-adapter-definition-detail", definition_id=definition.pk)
+    context = _shared(request, definition.label, "management")
+    context.update(
+        {
+            "adapter_definition": definition,
+            "definition_modules": definition.modules.all(),
+            "integration_types": PortalAdapterDefinition.IntegrationType.choices,
+            "access_models": PortalAdapterDefinitionModule.AccessModel.choices,
+        }
+    )
+    return render(request, "ui/portal_adapter_definition_detail.html", context)
 
 
 @login_required
@@ -1759,6 +2180,7 @@ def portal_adapter_detail(request, adapter_id):
                 module.configuration_note = request.POST.get("configuration_note", "").strip()[
                     :1200
                 ]
+                module.access_model = request.POST.get("access_model", module.access_model)
             if module.is_enabled and module.status == PortalAdapterModule.Status.NOT_CONFIGURED:
                 module.status = PortalAdapterModule.Status.READY
             module.save()
@@ -1780,6 +2202,14 @@ def portal_adapter_detail(request, adapter_id):
         elif action == "add_module":
             label = request.POST.get("label", "").strip()[:120]
             key = slugify(request.POST.get("key", "") or label)[:80]
+            # Stable application key; the German display label must not create
+            # ``abwesenheiten`` because feature/consent resolution uses
+            # ``absences``.
+            if adapter.provider == PortalAdapter.Provider.WEBUNTIS and key in {
+                "abwesenheiten",
+                "abwesenheit",
+            }:
+                key = "absences"
             if not label or not key:
                 messages.error(request, "Bitte gib für das neue Modul mindestens einen Namen an.")
             elif adapter.modules.filter(key=key).exists():
@@ -1805,6 +2235,7 @@ def portal_adapter_detail(request, adapter_id):
         {
             "adapter": adapter,
             "provider_definition": provider_definition(adapter.provider),
+            "adapter_definition": adapter.definition,
             "school_classes": SchoolClass.objects.filter(
                 school=adapter.school, status="active"
             ).order_by("display_name", "name"),
@@ -1920,16 +2351,6 @@ def presentation_poll_settings(request):
 
 
 @login_required
-def presentation(request):
-    _class_or_404(request.user, request)
-    return render(
-        request,
-        "ui/presentation.html",
-        _shared(request, "KlassID kennenlernen", "more"),
-    )
-
-
-@login_required
 def registration_invitation(request):
     _require_portal_admin(request.user)
     context = _shared(request, "Anmeldung weitergeben", "management")
@@ -2039,7 +2460,7 @@ def pilot_report(request):
 
 @login_required
 def more(request):
-    context = _shared(request, "Mehr", "more")
+    context = _shared(request, "Bereiche", "more")
     school_class = _class_or_404(request.user, request)
     catalog = _menu_catalog()
     stored = (
@@ -2054,12 +2475,22 @@ def more(request):
         for key, item in catalog.items()
         if key not in configured_keys
     )
-    labels = {"class": "Klassenleben", "communication": "Kommunikation", "account": "Mein Konto"}
+    labels = {
+        "class": "Klassenleben",
+        "communication": "Kommunikation",
+        "account": "Mein Konto",
+        "beta": "Beta",
+    }
     labels.update(stored.get("group_labels") or {})
+    # These features remain available, but are deliberately kept outside the
+    # active production navigation until their final UX is approved.
+    for row in configured:
+        if row.get("key") in {"tutorial", "mobility"}:
+            row["group"] = "beta"
     groups = []
     # Personal settings are the most frequent entry point, so they lead the
     # menu and are the only group opened initially in the template.
-    for group_key in ("account", "communication", "class"):
+    for group_key in ("account", "communication", "class", "beta"):
         entries = []
         for row in configured:
             if (
@@ -2076,50 +2507,141 @@ def more(request):
     if _can_manage_portal(request.user):
         groups.append(
             {
-                "key": "management",
-                "label": "Portalverwaltung",
-                "items": [
+                "key": "settings",
+                "label": "Einstellungen",
+                "open": request.GET.get("bereich") == "einstellungen",
+                "sections": [
                     {
-                        "key": "management_overview",
-                        "label": "Verwaltungsübersicht",
-                        "url": "/verwaltung/",
-                        "icon": "home",
+                        "key": "portal-management",
+                        "label": "Portalverwaltung",
+                        "items": [
+                            {
+                                "key": "model-visualizer",
+                                "label": "Django-Modellvisualisierung",
+                                "url": reverse("model-visualizer"),
+                                "icon": "document",
+                            },
+                            {
+                                "key": "pilot-reports",
+                                "label": "Pilotmeldungen",
+                                "url": reverse("portal-management") + "#pilotmeldungen",
+                                "icon": "news",
+                            },
+                            {
+                                "key": "session-timeout",
+                                "label": "Automatische Abmeldung",
+                                "url": reverse("session-timeout-settings"),
+                                "icon": "consent",
+                            },
+                            {
+                                "key": "system-status",
+                                "label": "Systemstatus",
+                                "url": reverse("monitoring-dashboard"),
+                                "icon": "home",
+                            },
+                            {
+                                "key": "menu-structure",
+                                "label": "Menüstruktur",
+                                "url": reverse("menu-management"),
+                                "icon": "more",
+                            },
+                            {
+                                "key": "family-invitations",
+                                "label": "Registrierungen & Einladungen",
+                                "url": reverse("family-invitations"),
+                                "icon": "document",
+                            },
+                        ],
                     },
                     {
-                        "key": "schools",
-                        "label": "Schulen & Klassen",
-                        "url": "/verwaltung/schulen/",
-                        "icon": "teacher",
+                        "key": "chat-settings",
+                        "label": "Chat",
+                        "items": [
+                            {
+                                "key": "chat-retention",
+                                "label": "Chat-Aufbewahrung",
+                                "url": reverse("chat-retention-settings"),
+                                "icon": "chat",
+                            },
+                            {
+                                "key": "chat-assets",
+                                "label": "Chat-Emojis & Sticker",
+                                "url": reverse("chat-assets-settings"),
+                                "icon": "chat",
+                            },
+                        ],
                     },
                     {
-                        "key": "school_admin",
-                        "label": "Schulen verwalten",
-                        "url": "/admin/core/school/",
-                        "icon": "teacher",
+                        "key": "design-settings",
+                        "label": "Design",
+                        "items": [
+                            {
+                                "key": "themes",
+                                "label": "Themes",
+                                "url": reverse("theme-management"),
+                                "icon": "photo",
+                            },
+                            {
+                                "key": "design-system",
+                                "label": "Designsystem & CSS-Tokens",
+                                "url": reverse("design-system"),
+                                "icon": "photo",
+                            },
+                        ],
                     },
                     {
-                        "key": "class_admin",
-                        "label": "Klassen verwalten",
-                        "url": "/admin/core/schoolclass/",
-                        "icon": "teacher",
+                        "key": "school-settings",
+                        "label": "Schulverwaltung",
+                        "items": [
+                            {
+                                "key": "schools",
+                                "label": "Schulen",
+                                "url": reverse("school-management"),
+                                "icon": "teacher",
+                            },
+                            {
+                                "key": "classes",
+                                "label": "Klassen",
+                                "url": reverse("school-management") + "#klassen",
+                                "icon": "teacher",
+                            },
+                            {
+                                "key": "adapters",
+                                "label": "Adapter",
+                                "url": reverse("portal-adapter-management"),
+                                "icon": "calendar",
+                            },
+                            {
+                                "key": "modules",
+                                "label": "Module",
+                                "url": reverse("portal-adapter-management") + "#module",
+                                "icon": "document",
+                            },
+                        ],
                     },
                     {
-                        "key": "school_portal_adapters",
-                        "label": "Schulportaladapter",
-                        "url": reverse("portal-adapter-management"),
-                        "icon": "calendar",
-                    },
-                    {
-                        "key": "family_invitations",
-                        "label": "QR-Familieneinladungen",
-                        "url": "/verwaltung/familien-einladungen/",
-                        "icon": "document",
-                    },
-                    {
-                        "key": "registrations",
-                        "label": "Neue Registrierungen",
-                        "url": "/admin/core/registrationapplication/",
-                        "icon": "consent",
+                        "key": "permission-settings",
+                        "label": "Berechtigungen",
+                        "items": [
+                            {
+                                "key": "role-permissions",
+                                "label": "Rollenberechtigungen",
+                                "url": reverse("role-permissions"),
+                                "icon": "consent",
+                            },
+                            {
+                                "key": "roles",
+                                "label": "Rollenverwaltung",
+                                "url": reverse("role-management"),
+                                "icon": "people",
+                            },
+                            {
+                                "key": "people",
+                                "label": "Personenverwaltung",
+                                "url": reverse("role-people"),
+                                "icon": "people",
+                            },
+                        ],
                     },
                 ],
             }
@@ -2178,7 +2700,7 @@ def _menu_catalog():
         "gallery": ("Fotos & Galerie", "/mehr/fotos/", "photo", "class"),
         "meals": ("Speiseplan", "/mehr/speiseplan/", "event", "class"),
         "learning_portals": ("Lernportale", "/mehr/lernportale/", "document", "class"),
-        "school_data": ("Kalender-Synchronisation", "/mehr/webuntis/", "calendar", "communication"),
+        "school_data": ("Schulzugänge", "/mehr/familie/?tab=overview", "calendar", "account"),
         "contacts": ("Adressliste", "/kontakte/", "people", "communication"),
         "profile": ("Mein Konto", "/einstellungen/profil/", "people", "account"),
         "family": ("Familien-Zentrale", "/mehr/familie/", "people", "account"),
@@ -2200,7 +2722,7 @@ def menu_management(request):
         items = []
         for key in catalog:
             group = request.POST.get(f"group_{key}", catalog[key][3])
-            if group not in {"class", "communication", "account"}:
+            if group not in {"class", "communication", "account", "beta"}:
                 group = catalog[key][3]
             try:
                 position = int(request.POST.get(f"position_{key}", "99"))
@@ -2222,6 +2744,7 @@ def menu_management(request):
                 "class": request.POST.get("label_class", "Klassenleben")[:60],
                 "communication": request.POST.get("label_communication", "Kommunikation")[:60],
                 "account": request.POST.get("label_account", "Mein Konto")[:60],
+                "beta": request.POST.get("label_beta", "Beta")[:60],
             },
             "items": items,
         }
@@ -2254,28 +2777,15 @@ def theme_settings(request):
 
 @login_required
 def portal_theme_preview(request, theme_id, page):
+    from .theme_policy import available_themes, can_manage_themes as may_manage_themes
+
     page_labels = {"uebersicht": "Übersicht", "kalender": "Kalender"}
     if page not in page_labels:
         raise Http404
-    can_manage_themes = (
-        request.user.is_superuser
-        or request.user.roleassignment_set.filter(
-            active=True, role__in=[Role.PRIMARY_ADMIN, Role.DEPUTY_ADMIN]
-        ).exists()
-    )
-    if can_manage_themes:
-        themes = PortalTheme.objects.all()
-    else:
+    can_manage_themes = may_manage_themes(request.user)
+    if not can_manage_themes:
         _class_or_404(request.user, request)
-        audience = (
-            PortalTheme.Audience.CHILDREN
-            if hasattr(request.user, "person")
-            and StudentProfile.objects.filter(person=request.user.person).exists()
-            else PortalTheme.Audience.ADULTS
-        )
-        themes = PortalTheme.objects.filter(is_active=True).filter(
-            Q(audience=PortalTheme.Audience.ALL) | Q(audience=audience)
-        )
+    themes = available_themes(request.user, include_drafts=True)
     preview_theme = get_object_or_404(themes, pk=theme_id)
     back_to_management = can_manage_themes and request.GET.get("zurueck") == "verwaltung"
     context = _shared(
@@ -2322,55 +2832,29 @@ def theme_management(request):
                 request, f"„{item.name}“ wurde {'aktiviert' if item.is_active else 'deaktiviert'}."
             )
             return redirect("theme-management")
-        import re
+        if action not in {"create", "update"}:
+            raise Http404
+        from .theme_views import ThemeForm
 
-        colors = {
-            field: request.POST.get(field, "").strip().upper()
-            for field in (
-                "primary",
-                "primary_dark",
-                "primary_light",
-                "accent",
-                "background",
-                "surface",
-                "text",
-                "text_muted",
-            )
-        }
-        if not all(re.fullmatch(r"#[0-9A-F]{6}", value) for value in colors.values()):
-            messages.error(request, "Bitte für jede Farbe einen vollständigen HEX-Wert angeben.")
-        else:
-            base_key = slugify(request.POST.get("name", ""))[:45] or "theme"
+        item = get_object_or_404(PortalTheme, pk=request.POST.get("theme_id")) if action == "update" else None
+        form = ThemeForm(request.POST, instance=item)
+        if not form.is_valid():
+            context = _shared(request, "Theme bearbeiten", "management")
+            context.update({"theme_form": form, "editing_theme": item})
+            return render(request, "ui/theme_form.html", context, status=400)
+        item = form.save(commit=False)
+        if action == "create":
+            base_key = slugify(item.name)[:45] or "theme"
             key = base_key
             suffix = 2
             while PortalTheme.objects.filter(key=key).exists():
                 key, suffix = f"{base_key}-{suffix}", suffix + 1
-            try:
-                shadow_strength = min(
-                    30, max(0, int(request.POST.get("shadow_strength", "10") or 10))
-                )
-            except ValueError:
-                shadow_strength = 10
-            PortalTheme.objects.create(
-                key=key,
-                name=request.POST.get("name", "Neues Theme").strip()[:80],
-                description=request.POST.get("description", "").strip()[:180],
-                audience=request.POST.get("audience")
-                if request.POST.get("audience") in PortalTheme.Audience.values
-                else PortalTheme.Audience.ALL,
-                is_dark=request.POST.get("is_dark") == "on",
-                radius=request.POST.get("radius")
-                if request.POST.get("radius") in {".7rem", "1rem", "1.35rem", "1.7rem"}
-                else "1rem",
-                shadow_strength=shadow_strength,
-                is_active=False,
-                **colors,
-            )
-            messages.success(
-                request,
-                "Das neue Theme wurde angelegt. Gib es in der Liste erst frei, wenn du es geprüft hast.",
-            )
-            return redirect("theme-management")
+            item.key = key
+            item.is_active = False
+        item.save()
+        messages.success(request, f"„{item.name}“ wurde aktualisiert." if action == "update" else
+                         "Das neue Theme wurde als Entwurf angelegt. Prüfe es vor der Freigabe.")
+        return redirect("theme-management")
     context = _shared(request, "Themes verwalten", "management")
     context.update(
         {
@@ -2384,6 +2868,8 @@ def theme_management(request):
 @login_required
 def documents(request):
     school_class = _class_or_404(request.user, request)
+    if not may_access_module(request.user, "pdf_forms", school_class):
+        raise Http404
     query = ProtectedDocument.objects.filter(
         school_class=school_class, status=ProtectedDocument.Status.PUBLISHED
     )
@@ -2418,8 +2904,11 @@ def post_detail(request, post_id):
 @require_http_methods(["GET", "POST"])
 def events(request):
     school_class = _class_or_404(request.user, request)
+    if not may_access_module(request.user, "events", school_class):
+        raise Http404
     if request.method == "POST":
-        _require_portal_admin(request.user)
+        if not may_create_event(request.user, school_class):
+            raise Http404
         event_times = _event_times_from_request(request)
         if not event_times:
             messages.error(request, "Bitte prüfe Beginn und Ende.")
@@ -2488,6 +2977,7 @@ def events(request):
         messages.success(request, "Die Veranstaltung wurde veröffentlicht.")
         return redirect("ui-event", event_id=item.pk)
     context = _shared(request, "Veranstaltungen", "more")
+    context["can_create_event"] = may_create_event(request.user, school_class)
     context["events"] = Event.objects.filter(
         school_class=school_class, status=Event.Status.PUBLISHED
     ).order_by("starts_at")
@@ -2514,7 +3004,7 @@ def _owned_event_or_404(request, event_id):
     item = get_object_or_404(
         Event, id=event_id, school_class=school_class, status=Event.Status.PUBLISHED
     )
-    if not item.organizers.filter(id=request.user.id).exists():
+    if not may_manage_event(request.user, item):
         raise Http404
     return item
 
@@ -2614,7 +3104,8 @@ def _contribution_items_from_request(request):
 @require_POST
 def create_event_poll(request):
     school_class = _class_or_404(request.user, request)
-    _require_portal_admin(request.user)
+    if not may_create_event(request.user, school_class):
+        raise Http404
     try:
         closes_at = timezone.datetime.fromisoformat(request.POST.get("closes_at", ""))
         if timezone.is_naive(closes_at):
@@ -2657,6 +3148,8 @@ def create_event_poll(request):
 @require_http_methods(["GET", "POST"])
 def event_poll(request, poll_id):
     school_class = _class_or_404(request.user, request)
+    if not may_access_module(request.user, "events", school_class):
+        raise Http404
     poll = get_object_or_404(EventPoll, id=poll_id, school_class=school_class)
     options = poll.options.annotate(vote_count=Count("votes")).order_by("starts_at")
     if request.method == "POST" and poll.is_open:
@@ -2678,7 +3171,7 @@ def event_poll(request, poll_id):
                     "option_id", flat=True
                 )
             ),
-            "is_organizer": poll.created_by_id == request.user.id or request.user.is_superuser,
+            "is_organizer": may_create_event(request.user, school_class),
         }
     )
     return render(request, "ui/event_poll.html", context)
@@ -2688,7 +3181,8 @@ def event_poll(request, poll_id):
 @require_POST
 def finalize_event_poll(request, poll_id):
     school_class = _class_or_404(request.user, request)
-    _require_portal_admin(request.user)
+    if not may_create_event(request.user, school_class):
+        raise Http404
     poll = get_object_or_404(
         EventPoll, id=poll_id, school_class=school_class, finalized_event__isnull=True
     )
@@ -2730,6 +3224,8 @@ def finalize_event_poll(request, poll_id):
 @login_required
 def event(request, event_id):
     school_class = _class_or_404(request.user, request)
+    if not may_access_module(request.user, "events", school_class):
+        raise Http404
     item = get_object_or_404(Event, id=event_id, school_class=school_class, status="published")
     categories = list(item.categories.prefetch_related("items__reservations__user__person"))
     reservations = Reservation.objects.filter(
@@ -2738,7 +3234,7 @@ def event(request, event_id):
     food_query = request.GET.get("food_q", "").strip()
     food_results = []
     food_error = ""
-    is_organizer = item.organizers.filter(id=request.user.id).exists()
+    is_organizer = may_manage_event(request.user, item)
     attendee_names = sorted(
         set(item.participations.order_by("family_name").values_list("family_name", flat=True)),
         key=str.casefold,
@@ -2822,7 +3318,7 @@ def add_contribution_list(request, event_id):
     item_event = get_object_or_404(
         Event, id=event_id, school_class=school_class, status=Event.Status.PUBLISHED
     )
-    if not item_event.organizers.filter(id=request.user.id).exists():
+    if not may_manage_event(request.user, item_event):
         raise Http404
     name = request.POST.get("bring_list_name", "").strip()[:100]
     requested_items = _contribution_items_from_request(request)
@@ -2922,7 +3418,7 @@ def fulfill_reservation(request, reservation_id):
     event_item = reservation.item.category.event
     if (
         reservation.user_id != request.user.id
-        and not event_item.organizers.filter(id=request.user.id).exists()
+        and not may_manage_event(request.user, event_item)
     ):
         raise Http404
     reservation.fulfilled_at = timezone.now() if not reservation.fulfilled_at else None
@@ -2944,22 +3440,9 @@ def teachers(request):
 @require_http_methods(["GET", "POST"])
 def galleries(request):
     school_class = _class_or_404(request.user, request)
-    roles = active_roles(request.user, school_class)
-    can_create = bool(
-        request.user.is_superuser
-        or roles
-        & {
-            Role.PRIMARY_ADMIN,
-            Role.DEPUTY_ADMIN,
-            Role.CLASS_ADMIN,
-            Role.TEACHER,
-            Role.SCHOOL_LEADERSHIP,
-            Role.CONTENT_MANAGER,
-            Role.EDITOR,
-            Role.PARENT_REPRESENTATIVE,
-            Role.DEPUTY_PARENT_REPRESENTATIVE,
-        }
-    )
+    if not may_access_module(request.user, "gallery", school_class):
+        raise Http404
+    can_create = may_create_gallery(request.user, school_class)
     if request.method == "POST":
         if not can_create:
             raise Http404
@@ -3062,6 +3545,7 @@ def family(request):
         save_person,
     )
     from .models import ChildJoinRequest
+    from .onboarding import active_decision, may_decide, record_decision
 
     relationships = list(
         GuardianChildRelationship.objects.filter(guardian_person=request.user.person)
@@ -3286,6 +3770,20 @@ def family(request):
                 "configured_by": request.user,
             },
         )
+        if module.adapter.provider == PortalAdapter.Provider.WEBUNTIS:
+            consent_type = ConsentType.objects.filter(key=f"webuntis_{module.key}").first()
+            if consent_type and may_decide(request.user, relationship.student_person, consent_type):
+                record_decision(
+                    user=request.user,
+                    subject=relationship.student_person,
+                    key=consent_type.key,
+                    decision=(
+                        ConsentDecision.Decision.GRANTED
+                        if enabled
+                        else ConsentDecision.Decision.DENIED
+                    ),
+                    source="family-module",
+                )
         AuditEvent.objects.create(
             actor=request.user,
             action="family.module_connection.changed",
@@ -3323,6 +3821,17 @@ def family(request):
                 "module": module,
                 "connection": connection,
                 "connection_url": _module_connection_url(module, relationship.student_person),
+                "school_consent_enabled": bool(
+                    (consent_type := ConsentType.objects.filter(key=f"webuntis_{module.key}").first())
+                    and may_decide(request.user, relationship.student_person, consent_type)
+                    and (
+                        active_decision(consent_type, relationship.student_person, request.user.person)
+                        and active_decision(consent_type, relationship.student_person, request.user.person).decision
+                        == ConsentDecision.Decision.GRANTED
+                    )
+                )
+                if module.adapter.provider == PortalAdapter.Provider.WEBUNTIS
+                else True,
             }
             module_rows.append(module_row)
             adapter_row = adapter_rows.setdefault(
@@ -3436,14 +3945,9 @@ def family(request):
                 ),
             }
         )
-    template_name = (
-        "ui/family_child_data.html"
-        if active_tab == "data" and context["active_row"]
-        else "ui/family_overview.html"
-        if active_tab == "overview"
-        else "ui/family.html"
-    )
-    return render(request, template_name, context)
+    # Keep overview, child details and add-child in one shell so the same
+    # context switcher and navigation are used throughout the family flow.
+    return render(request, "ui/family.html", context)
 
 
 @login_required
@@ -3611,73 +4115,11 @@ def students(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def consents(request):
-    _class_or_404(request.user, request)
-    from klasse5e.webuntis.services import eligible_students
-
-    from .onboarding import active_decision, may_decide, record_decision
-
-    feature_options = (
-        ("timetable", "Stundenplan", "Unterricht und Zeiten im persönlichen Überblick."),
-        ("substitutions", "Vertretungen", "Ausfälle und Änderungen am Unterricht."),
-        ("absences", "Abwesenheiten", "Persönliche Fehlzeiten und Statusmeldungen."),
-        ("homework", "Hausaufgaben", "Aufgaben, Fälligkeiten und Fachzuordnung."),
-        ("exams", "Prüfungen", "Angekündigte Arbeiten und Prüfungstermine."),
-    )
-    subjects = list(eligible_students(request.user).order_by("first_name", "last_name"))
-    option_keys = {key for key, _label, _description in feature_options}
-    if request.method == "POST":
-        try:
-            subject = next(item for item in subjects if str(item.pk) == request.POST.get("subject"))
-        except StopIteration:
-            raise PermissionDenied from None
-        feature = request.POST.get("feature", "")
-        if feature not in option_keys:
-            raise Http404
-        decision = (
-            ConsentDecision.Decision.GRANTED
-            if request.POST.get("enabled") == "on"
-            else ConsentDecision.Decision.DENIED
-        )
-        record_decision(
-            user=request.user,
-            subject=subject,
-            key=f"webuntis_{feature}",
-            decision=decision,
-            source="settings",
-        )
-        messages.success(
-            request,
-            f"{dict((key, label) for key, label, _description in feature_options)[feature]} wurde {'aktiviert' if decision == ConsentDecision.Decision.GRANTED else 'ausgeschaltet'}.",
-        )
-        return redirect("ui-consents")
-
-    rows = []
-    for subject in subjects:
-        options = []
-        for feature, label, description in feature_options:
-            consent_type = ConsentType.objects.filter(key=f"webuntis_{feature}").first()
-            decision = (
-                active_decision(consent_type, subject, request.user.person)
-                if consent_type
-                else None
-            )
-            options.append(
-                {
-                    "key": feature,
-                    "label": label,
-                    "description": description,
-                    "allowed": bool(
-                        consent_type and may_decide(request.user, subject, consent_type)
-                    ),
-                    "enabled": bool(
-                        decision and decision.decision == ConsentDecision.Decision.GRANTED
-                    ),
-                }
-            )
-        rows.append({"student": subject, "options": options})
-    context = _shared(request, "Synchronisation", "more")
-    context["sync_rows"] = rows
-    return render(request, "ui/consents_v2.html", context)
+    # The old global school-data switchboard is intentionally no longer a
+    # second editing surface. School-data choices are managed with the child
+    # module toggles in the family centre; keep this route as a compatibility
+    # redirect for bookmarks and old onboarding links.
+    return redirect(f"{reverse('ui-family')}?tab=overview")
 
 
 @login_required

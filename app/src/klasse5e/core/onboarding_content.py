@@ -170,7 +170,7 @@ TUTORIAL_STEPS = (
         "body": "Für ein bestätigtes Kind können Stundenplan und Hausaufgaben automatisch aktualisiert werden. Die Verbindung und jede Datenart bleiben persönlich einstellbar. Bei einer neuen Verbindung gibt es zunächst noch keine Fachdaten.",
         "bullets": ("Kind eindeutig auswählen", "automatisch nach dem Login aktualisieren", "Kalender herunterladen oder abonnieren"),
         "illustration": "sync",
-        "action_href": "/mehr/webuntis/",
+        "action_href": "/mehr/familie/?tab=overview",
         "action_label": "Synchronisierung öffnen",
     },
     {

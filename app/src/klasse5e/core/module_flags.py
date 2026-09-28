@@ -62,7 +62,10 @@ def module_context(request):
             "family_children": (),
             "active_child": None,
         }
+    from .navigation import parent_navigation
+
     family_children, active_child = active_child_context(request)
+    context_switcher_visible = request.path in {"/", "/kalender/", "/abwesenheiten/"}
     person = request.user.person if hasattr(request.user, "person") else None
     school_class = active_child_school_class(request) or active_class_for_user(request.user)
     if school_class is None:
@@ -72,12 +75,11 @@ def module_context(request):
     unread_count = 0
     chat_unread_count = 0
     if school_class:
-        from .presentation import ensure_presentation_notifications, purge_stale_event_notifications
+        from .presentation import purge_stale_event_notifications
 
         # Notification targets are revalidated after authentication so deleted
         # events disappear from the badge and list without waiting for a job.
         purge_stale_event_notifications(user=request.user)
-        ensure_presentation_notifications(request.user, school_class)
         unread_count = UserNotification.objects.filter(
             user=request.user, school_class=school_class, read_at__isnull=True
         ).count()
@@ -95,6 +97,7 @@ def module_context(request):
                 messages = messages.filter(created_at__gt=state.last_read_at)
             chat_unread_count += messages.count()
     return {
+        "page_parent": parent_navigation(request),
         "enabled_modules": {key: module_enabled(key, school_class) for key in keys},
         "personal_display_name": person.first_name if person else "",
         "profile_image_mode": person.profile_image_mode if person else "avatar",
@@ -105,6 +108,7 @@ def module_context(request):
         "chat_unread_count": chat_unread_count,
         "family_children": family_children,
         "active_child": active_child,
+        "context_switcher_visible": context_switcher_visible,
         "current_theme": request.user.selected_theme if request.user.selected_theme_id and request.user.selected_theme.is_active else None,
         "can_manage_portal": request.user.is_superuser
         or request.user.roleassignment_set.filter(
